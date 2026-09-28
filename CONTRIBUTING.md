@@ -1,4 +1,4 @@
-# Guía de Contribución — AI Narrator
+# Guía de Contribución — Narrador TTRPG
 
 ## Reglas generales
 

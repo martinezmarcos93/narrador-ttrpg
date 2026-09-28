@@ -1,4 +1,4 @@
-# AI NARRATOR — Motor de Rol con Agentes y Ollama
+# Narrador TTRPG — Motor de Rol con Agentes y Ollama
 
 Sistema narrador de TTRPG impulsado por LLMs locales. Un ecosistema de agentes especializados mantiene la coherencia del mundo mientras un modelo pequeño (7B) narra las escenas.
 
@@ -123,7 +123,7 @@ Cada sistema define en su YAML una `character_sheet_schema` con secciones base y
 ## Estructura del repositorio
 
 ```
-ai-narrator/
+narrador-ttrpg/
 ├── main.py                    ← punto de entrada
 ├── pyproject.toml             ← dependencias y packaging
 ├── config/

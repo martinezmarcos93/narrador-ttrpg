@@ -120,7 +120,7 @@ PDF → [Extractor] → VAULT (MD/YAML)
 - Implementado: agents/extractor_agent.py — pipeline completo PDF → vault
 - Integrado botón "Construir Vault" en GUI
 - Implementado: core/vault_writer.py — vault en tiempo real (Obsidian live reload)
-- Repo GitHub creado: https://github.com/martinezmarcos93/AI_NARRATOR.git
+- Repo GitHub creado: https://github.com/martinezmarcos93/narrador-ttrpg.git (creado como `AI_NARRATOR`, renombrado el 2026-09-27)
 - Pusheados dos commits (initial + vault_writer)
 
 ### Sesión 2026-05-11 (parte 4)
