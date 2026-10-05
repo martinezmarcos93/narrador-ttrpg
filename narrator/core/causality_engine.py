@@ -55,7 +55,7 @@ class CausalityEngine:
     def _effects(item: dict) -> list[dict]:
         return [dict(effect) for effect in item.get("effects", []) if isinstance(effect, dict)]
 
-    def _apply_secondary_effects(self, effects: list[dict]) -> list[str]:
+    def _apply_secondary_effects(self, effects: list[dict], *, parent_id: str = "") -> list[str]:
         """Aplica efectos que generan nuevos eventos o consecuencias."""
         emitted_events = []
         pending = self.state.data.setdefault("consecuencias_pendientes", [])
@@ -94,7 +94,7 @@ class CausalityEngine:
                     "effects": [dict(x) for x in effect.get("effects", []) if isinstance(x, dict)],
                     "estado": "pendiente",
                     "sesion_creacion": self.state.get_session_number(),
-                    "causal_parent": str(effect.get("parent") or provenance_id),
+                    "causal_parent": str(effect.get("parent") or parent_id),
                 })
                 emitted_events.append(consequence)
         if any(str(e.get("type") or "").strip().lower() == "queue_consequence" for e in effects):
@@ -153,7 +153,7 @@ class CausalityEngine:
                     outcome=f"Activada automáticamente ({reason}, profundidad {depth})",
                     effects=effects,
                 )
-                emitted.extend(self._apply_secondary_effects(effects))
+                emitted.extend(self._apply_secondary_effects(effects, parent_id=provenance_id))
                 activations.append(activation)
 
             # Una activación solo puede re-disparar por un evento explícito.
