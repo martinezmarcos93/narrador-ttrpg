@@ -375,6 +375,28 @@ class Orchestrator:
             "validation": result.report.to_dict(),
         }
 
+    def apply_world_advances(self, advances: list[dict]) -> list[str]:
+        """Aplica avances de mundo en el límite de servicio, no desde la UI."""
+        applied = []
+        for adv in advances or []:
+            nombre = str(adv.get("nombre") or "").strip()
+            if not nombre:
+                continue
+            try:
+                ticks = int(adv.get("ticks", 1))
+            except (TypeError, ValueError):
+                ticks = 1
+            razon = str(adv.get("razon") or "").strip()
+            self.state.add_front(nombre, razon)
+            self.state.advance_front_clock(nombre, ticks)
+            if self.world_sim.get_front_stage(nombre) is None:
+                self.world_sim.initialize_front(
+                    nombre, razon, initial_stage=0, max_stage=6
+                )
+            self.world_sim.advance_front(nombre, ticks)
+            applied.append(nombre)
+        return applied
+
     def evaluate_causality(self, event_text: str = "", *, next_turn: bool = False) -> dict:
         """Activa consecuencias pendientes cuando su trigger/due ya se cumple."""
         activations = self.causality.evaluate(event_text, next_turn=next_turn)
