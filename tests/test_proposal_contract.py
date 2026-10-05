@@ -154,3 +154,25 @@ def test_proposal_rejects_unknown_front_when_contract_is_configured():
     ).validate(proposal)
     assert not report.valid
     assert any(issue.code == "unknown_front" for issue in report.issues)
+
+
+def test_proposal_validator_rejects_unknown_clock_change(tmp_path):
+    state = StateManager(str(tmp_path / "estado.yaml"))
+    proposal = NarrativeProposal.from_dict({
+        "clock_changes": [{"name": "inexistente", "delta": 1}],
+    })
+    report = ProposalValidator(ContinuityValidator(state)).validate(proposal)
+    assert not report.valid
+    assert any(issue.code == "unknown_clock" for issue in report.errors)
+
+
+def test_proposal_validator_rejects_clock_overflow(tmp_path):
+    state = StateManager(str(tmp_path / "estado.yaml"))
+    state.add_clock("alarma", segments=3)
+    state.data["relojes"]["alarma"]["llenos"] = 3
+    proposal = NarrativeProposal.from_dict({
+        "clock_changes": [{"name": "alarma", "delta": 1}],
+    })
+    report = ProposalValidator(ContinuityValidator(state)).validate(proposal)
+    assert not report.valid
+    assert any(issue.code == "clock_out_of_bounds" for issue in report.errors)
