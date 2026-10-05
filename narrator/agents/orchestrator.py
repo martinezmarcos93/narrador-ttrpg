@@ -358,6 +358,7 @@ class Orchestrator:
         """
         system_slug = self.get_active_system(app_state)
         input_text = self._get_last_user_message(app_state)
+        causal_result = self.evaluate_causality("", next_turn=True)
         contract = TurnContract(
             input_text=input_text,
             system_slug=system_slug,
@@ -368,6 +369,10 @@ class Orchestrator:
         contract.advance("intent")
         contract.intent, intent_reason = self._infer_intent(input_text)
         contract.provenance.append(f"interpretación: {intent_reason}")
+        if causal_result.get("activated"):
+            contract.provenance.append(
+                f"causalidad: {causal_result.get('count', 0)} consecuencia(s) activada(s)"
+            )
 
         contract.advance("rule_need")
         if app_state.get("resolucion_mecanica"):
