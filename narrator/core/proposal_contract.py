@@ -14,6 +14,8 @@ ALLOWED_KEYS = {
     "facts",
     "events",
     "npc_presence",
+    "npcs",
+    "locations",
     "consequences",
     "character_changes",
     "scene_changes",
@@ -26,6 +28,8 @@ class NarrativeProposal:
     facts: dict[str, Any] = field(default_factory=dict)
     events: list[str] = field(default_factory=list)
     npc_presence: dict[str, bool] = field(default_factory=dict)
+    npcs: list[dict[str, Any]] = field(default_factory=list)
+    locations: list[dict[str, Any]] = field(default_factory=list)
     consequences: list[dict[str, Any]] = field(default_factory=list)
     character_changes: list[dict[str, Any]] = field(default_factory=list)
     scene_changes: dict[str, Any] = field(default_factory=dict)
@@ -42,6 +46,8 @@ class NarrativeProposal:
             facts=dict(data.get("facts") or {}),
             events=[str(x).strip() for x in data.get("events", []) if str(x).strip()],
             npc_presence={str(k): bool(v) for k, v in (data.get("npc_presence") or {}).items()},
+            npcs=[dict(x) for x in data.get("npcs", []) if isinstance(x, dict)],
+            locations=[dict(x) for x in data.get("locations", []) if isinstance(x, dict)],
             consequences=[dict(x) for x in data.get("consequences", []) if isinstance(x, dict)],
             character_changes=[dict(x) for x in data.get("character_changes", []) if isinstance(x, dict)],
             scene_changes=dict(data.get("scene_changes") or {}),
@@ -53,6 +59,8 @@ class NarrativeProposal:
             "facts": dict(self.facts),
             "events": list(self.events),
             "npc_presence": dict(self.npc_presence),
+            "npcs": [dict(x) for x in self.npcs],
+            "locations": [dict(x) for x in self.locations],
             "consequences": [dict(x) for x in self.consequences],
             "character_changes": [dict(x) for x in self.character_changes],
             "scene_changes": dict(self.scene_changes),
@@ -73,16 +81,26 @@ class ProposalValidator:
             "npc_presence": proposal.npc_presence,
         }
         report = self.continuity.validate(continuity_payload)
+        from narrator.core.continuity_validator import ContinuityIssue
+
+        for item in proposal.npcs:
+            if not str(item.get("nombre") or "").strip():
+                report.issues.append(ContinuityIssue(
+                    "invalid_npc", "error", "Cada NPC propuesto debe declarar nombre."
+                ))
+        for item in proposal.locations:
+            if not str(item.get("nombre") or "").strip():
+                report.issues.append(ContinuityIssue(
+                    "invalid_location", "error", "Cada locación propuesta debe declarar nombre."
+                ))
 
         if any(not isinstance(item.get("field"), str) for item in proposal.character_changes):
-            from narrator.core.continuity_validator import ContinuityIssue
             report.issues.append(ContinuityIssue(
                 "invalid_character_change", "error",
                 "Cada cambio de personaje debe declarar un field.",
             ))
         for item in proposal.clock_changes:
             if "name" not in item or "delta" not in item:
-                from narrator.core.continuity_validator import ContinuityIssue
                 report.issues.append(ContinuityIssue(
                     "invalid_clock_change", "error",
                     "Cada cambio de reloj debe declarar name y delta.",
