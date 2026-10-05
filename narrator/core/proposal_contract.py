@@ -42,16 +42,60 @@ class NarrativeProposal:
         unknown = set(data) - ALLOWED_KEYS
         if unknown:
             raise ValueError(f"Claves de propuesta no permitidas: {sorted(unknown)}")
+
+        def optional_map(key: str) -> dict[str, Any]:
+            value = data.get(key, {})
+            if value is None:
+                return {}
+            if not isinstance(value, dict):
+                raise ValueError(f"'{key}' debe ser un objeto.")
+            return dict(value)
+
+        def optional_list(key: str) -> list[Any]:
+            value = data.get(key, [])
+            if value is None:
+                return []
+            if not isinstance(value, list):
+                raise ValueError(f"'{key}' debe ser una lista.")
+            return list(value)
+
+        facts = optional_map("facts")
+        events = optional_list("events")
+        npc_presence = optional_map("npc_presence")
+        npcs = optional_list("npcs")
+        locations = optional_list("locations")
+        consequences = optional_list("consequences")
+        character_changes = optional_list("character_changes")
+        scene_changes = optional_map("scene_changes")
+        clock_changes = optional_list("clock_changes")
+
+        if any(not isinstance(item, str) for item in events):
+            raise ValueError("'events' solo admite cadenas.")
+        if any(
+            not isinstance(key, str) or not isinstance(value, bool)
+            for key, value in npc_presence.items()
+        ):
+            raise ValueError("'npc_presence' requiere nombres de texto y valores booleanos.")
+        for key, items in {
+            "npcs": npcs,
+            "locations": locations,
+            "consequences": consequences,
+            "character_changes": character_changes,
+            "clock_changes": clock_changes,
+        }.items():
+            if any(not isinstance(item, dict) for item in items):
+                raise ValueError(f"'{key}' solo admite objetos.")
+
         return cls(
-            facts=dict(data.get("facts") or {}),
-            events=[str(x).strip() for x in data.get("events", []) if str(x).strip()],
-            npc_presence={str(k): bool(v) for k, v in (data.get("npc_presence") or {}).items()},
-            npcs=[dict(x) for x in data.get("npcs", []) if isinstance(x, dict)],
-            locations=[dict(x) for x in data.get("locations", []) if isinstance(x, dict)],
-            consequences=[dict(x) for x in data.get("consequences", []) if isinstance(x, dict)],
-            character_changes=[dict(x) for x in data.get("character_changes", []) if isinstance(x, dict)],
-            scene_changes=dict(data.get("scene_changes") or {}),
-            clock_changes=[dict(x) for x in data.get("clock_changes", []) if isinstance(x, dict)],
+            facts=facts,
+            events=[item.strip() for item in events if item.strip()],
+            npc_presence={str(k).strip(): v for k, v in npc_presence.items()},
+            npcs=[dict(x) for x in npcs],
+            locations=[dict(x) for x in locations],
+            consequences=[dict(x) for x in consequences],
+            character_changes=[dict(x) for x in character_changes],
+            scene_changes=scene_changes,
+            clock_changes=[dict(x) for x in clock_changes],
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -80,75 +124,34 @@ class ProposalValidator:
             "facts": proposal.facts,
             "events": proposal.events,
             "npc_presence": proposal.npc_presence,
+            "npcs": proposal.npcs,
+            "locations": proposal.locations,
+            "consequences": proposal.consequences,
+            "scene_changes": proposal.scene_changes,
             "clock_changes": proposal.clock_changes,
         }
         report = self.continuity.validate(continuity_payload)
         from narrator.core.continuity_validator import ContinuityIssue
-
-        for item in proposal.npcs:
-            if not str(item.get("nombre") or "").strip():
-                report.issues.append(ContinuityIssue(
-                    "invalid_npc", "error", "Cada NPC propuesto debe declarar nombre."
-                ))
-        for item in proposal.locations:
-            if not str(item.get("nombre") or "").strip():
-                report.issues.append(ContinuityIssue(
-                    "invalid_location", "error", "Cada locación propuesta debe declarar nombre."
-                ))
 
         if any(not isinstance(item.get("field"), str) for item in proposal.character_changes):
             report.issues.append(ContinuityIssue(
                 "invalid_character_change", "error",
                 "Cada cambio de personaje debe declarar un field.",
             ))
-        allowed_effects = {"fact", "flag", "npc_presence", "scene_location", "clock_delta", "event", "queue_consequence", "world_fact", "character_fact", "player_fact", "relation", "front_clock_delta"}
+
+        allowed_effects = {
+            "fact", "flag", "npc_presence", "scene_location", "clock_delta",
+            "event", "queue_consequence", "world_fact", "character_fact",
+            "player_fact", "relation", "front_clock_delta",
+        }
         for consequence in proposal.consequences:
             for effect in consequence.get("effects", []) or []:
                 if not isinstance(effect, dict) or effect.get("type") not in allowed_effects:
                     report.issues.append(ContinuityIssue(
                         "invalid_causal_effect", "error",
-                        f"Efecto causal no permitido: {effect.get('type') if isinstance(effect, dict) else '<inválido>'}.",
+                        f"Efecto causal no permitido: "
+                        f"{effect.get('type') if isinstance(effect, dict) else '<inválido>'}.",
                     ))
-                    continue
-                kind = effect.get("type")
-                required = {
-                    "fact": ("key",),
-                    "flag": ("name",),
-                    "npc_presence": ("name", "present"),
-                    "scene_location": ("value",),
-                    "clock_delta": ("name", "delta"),
-                    "event": ("text",),
-                    "queue_consequence": ("consequence",),
-                    "world_fact": ("key", "value"),
-                    "character_fact": ("character", "key", "value"),
-                    "player_fact": ("key", "value"),
-                    "relation": ("source", "target", "relation"),
-                    "front_clock_delta": ("name", "delta"),
-                }[kind]
-                if any(key not in effect for key in required):
-                    report.issues.append(ContinuityIssue(
-                        "invalid_causal_effect", "error",
-                        f"Efecto causal '{kind}' incompleto.",
-                    ))
-                    continue
-                if kind == "relation":
-                    try:
-                        strength = int(effect.get("strength", 0))
-                    except (TypeError, ValueError):
-                        strength = 0
-                    if not -100 <= strength <= 100:
-                        report.issues.append(ContinuityIssue(
-                            "invalid_relation_strength", "error",
-                            "La fuerza de una relación debe estar entre -100 y 100.",
-                        ))
-                if kind == "front_clock_delta":
-                    try:
-                        int(effect.get("delta", 0))
-                    except (TypeError, ValueError):
-                        report.issues.append(ContinuityIssue(
-                            "invalid_front_clock_delta", "error",
-                            "El delta de un frente debe ser entero.",
-                        ))
 
         if self.allowed_fronts:
             for consequence in proposal.consequences:
@@ -163,19 +166,5 @@ class ProposalValidator:
                                 f"Frente no declarado por el contrato activo: {name}.",
                             ))
 
-        for item in proposal.clock_changes:
-            if "name" not in item or "delta" not in item:
-                report.issues.append(ContinuityIssue(
-                    "invalid_clock_change", "error",
-                    "Cada cambio de reloj debe declarar name y delta.",
-                ))
-                continue
-            try:
-                int(item.get("delta"))
-            except (TypeError, ValueError):
-                report.issues.append(ContinuityIssue(
-                    "invalid_clock_delta", "error",
-                    "El delta de un reloj debe ser entero.",
-                ))
         report.valid = not any(issue.severity == "error" for issue in report.issues)
         return report
