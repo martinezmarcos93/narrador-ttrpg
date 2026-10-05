@@ -49,7 +49,7 @@ class NarratorAgent:
 
     def extract_narrative_proposal(self, text: str) -> dict | None:
         """Extrae exclusivamente el bloque técnico json-proposal."""
-        match = re.search(r"\`\`\`json-proposal\\s*(.*?)\\s*\`\`\`", text, re.DOTALL | re.IGNORECASE)
+        match = re.search(r"```json-proposal\s*(.*?)\s*```", text, re.DOTALL | re.IGNORECASE)
         if not match:
             return None
         data = json_repair.try_parse(match.group(1))
