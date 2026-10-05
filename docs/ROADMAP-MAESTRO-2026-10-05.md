@@ -48,7 +48,7 @@ Precedencia: STATE > MANUAL > SYSTEM PACK > UNIVERSAL BRAIN > conocimiento gener
 - ADR y handoff del núcleo.
 
 ### 1.2 Rama actual
-feat/retrieval-evaluation. Está 101 commits por delante de main y 1 por detrás; main avanzó externamente y no se realizó rebase. El último commit pertenece a la pasada de consolidación de continuidad/causalidad del 2026-10-05. No mergear sin autorización expresa.
+feat/retrieval-evaluation. Está 122 commits por delante de main y 2 por detrás; main avanzó externamente y no se realizó rebase. El último commit pertenece a la pasada de consolidación de continuidad/causalidad del 2026-10-05. No mergear sin autorización expresa.
 
 ## 2. FASE A — Consolidación del núcleo
 
@@ -61,7 +61,7 @@ feat/retrieval-evaluation. Está 101 commits por delante de main y 1 por detrás
 - HECHO: Service Boundary inicial.
 - HECHO: NarratorService reutiliza el NarratorAgent del Orchestrator.
 - HECHO: UI usa NarratorService para detección de sistema, eventos, preparación de turno, propuestas y persistencia del contrato.
-- PARCIAL: quedan accesos internos de UI necesarios para compatibilidad/estado visual y deben aislarse en una pasada posterior.
+- PARCIAL: quedan accesos internos de UI necesarios para compatibilidad/estado visual y deben aislarse en una pasada posterior.\n- HECHO: avance de frentes generado por World Agent ya no muta StateManager directamente desde la UI; atraviesa NarratorService/Orchestrator.
 - PENDIENTE: formalizar interfaces públicas Core/Service/UI.
 - PENDIENTE: formalizar interfaces públicas Core/Service/UI.
 
@@ -116,7 +116,7 @@ feat/retrieval-evaluation. Está 101 commits por delante de main y 1 por detrás
 - HECHO: regresión cross-front: un reloj lleno dispara una consecuencia que avanza otro frente.
 - HECHO: el contexto neutral de estado ya no expone `hechos_conocidos` legacy; la exposición de conocimiento queda bajo KnowledgeVisibility.
 - HECHO: auditoría del VaultWriter confirma que la escritura de sesión es narrativa/player-facing; las mutaciones estructuradas de entidades siguen exclusivamente bajo ProposalExecutor.
-- PENDIENTE: benchmark sobre manuales y campaña.
+- HECHO: inventario de System Packs verificado en la rama: `vtm_v20`, `dnd_5e`, `coc_7e`, `pathfinder_2e`, `generic`; ground truth ampliado para Cthulhu 7e y Pathfinder 2e.\n- PENDIENTE: benchmark sobre manuales y campaña.
 - LOCAL PENDIENTE: ejecutar benchmark real.
 - LOCAL PENDIENTE: ajustar pesos según resultados reales.
 
@@ -142,7 +142,7 @@ Objetivo: input → interpretation → intent → rule_need → retrieval → re
 - HECHO: JSON legacy, [state:], propuesta narrativa y entidades se deduplican antes de ejecutar.
 - HECHO: auditoría del postprocesado no encontró otro bypass de personaje/entidades en app/orchestrator.
 - HECHO: propuesta inválida degrada explícitamente a narración-only y se registra en TurnContract.
-- PENDIENTE: auditoría de writers/background persistence fuera del postprocesado.
+- HECHO: auditoría de writers/background persistence fuera del postprocesado. El VaultWriter player-facing quedó aislado en un worker seguro; sus fallos no interrumpen el turno ni la transacción estructurada.
 - HECHO: resultado de propuesta y persistencia del contrato atraviesan NarratorService.
 
 ## 5. FASE D — Causalidad y mundo dinámico
@@ -153,7 +153,7 @@ Objetivo: input → interpretation → intent → rule_need → retrieval → re
 - HECHO: regresiones de cadena larga y ciclo causal.
 - HECHO: múltiples consecuencias en una cascada.
 - HECHO: `front_clock_delta` valida reloj existente y límites acumulados.
-- PENDIENTE: interacción cross-front entre múltiples relojes en campaña real.
+- HECHO: interacción cross-front determinista básica entre relojes, incluyendo evento de umbral `frente <nombre> lleno`, sin re-disparo si ya estaba lleno y con clamp de decrementos.\n- PENDIENTE: interacción cross-front compleja entre múltiples consecuencias/relojes en campaña real.
 - HECHO: contratos de facciones/fronts.
 - PENDIENTE: reglas de avance, umbrales, interacción entre fronts y campaña real.
 - HECHO: grafo social.
