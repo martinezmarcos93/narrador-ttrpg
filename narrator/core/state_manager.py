@@ -36,6 +36,7 @@ class StateManager:
             "escenas": {},
             "downtime": {"pendiente": [], "npcs_activos": []},
             "historial": [],
+            "turnos": [],
         }
 
     # ── Persistencia ──────────────────────────────────────────
@@ -103,6 +104,33 @@ class StateManager:
         if combat:
             lines.append("Combate: " + combat)
         return "\n".join(lines)
+
+    # ── Trazabilidad de turnos ─────────────────────────────────
+    def record_turn(self, contract: dict) -> None:
+        """Persiste un resumen técnico del turno sin almacenar el prompt completo."""
+        if not isinstance(contract, dict) or not contract.get("turn_id"):
+            return
+        entry = {
+            "turn_id": contract["turn_id"],
+            "created_at": contract.get("created_at", ""),
+            "completed_at": contract.get("completed_at", ""),
+            "system": contract.get("system", self.data.get("meta", {}).get("sistema", "generic")),
+            "stage": contract.get("stage", ""),
+            "intent": contract.get("intent", ""),
+            "rule_need": contract.get("rule_need", ""),
+            "mechanical_resolution": contract.get("mechanical_resolution"),
+            "state_delta": contract.get("state_delta", {}),
+            "provenance": contract.get("provenance", []),
+            "errors": contract.get("errors", []),
+        }
+        turns = self.data.setdefault("turnos", [])
+        turns.append(entry)
+        del turns[:-200]
+        self.save()
+
+    def get_recent_turns(self, limit: int = 20) -> list[dict]:
+        """Devuelve los últimos resúmenes técnicos, sin prompts ni respuestas LLM."""
+        return list(self.data.get("turnos", [])[-max(0, int(limit)):])
 
     # ── Escena actual ─────────────────────────────────────────
     def set_location(self, loc: str):
