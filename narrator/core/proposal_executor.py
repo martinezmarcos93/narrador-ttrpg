@@ -39,7 +39,7 @@ class ProposalExecutor:
         )
         for item in proposal.character_changes:
             field = str(item.get("field") or "").strip()
-            if not field or (allowed and field not in allowed):
+            if not field or not allowed or field not in allowed:
                 report.issues.append(ContinuityIssue(
                     "undeclared_character_field", "error",
                     f"Campo de personaje no declarado: {field or '<vacío>'}.",
