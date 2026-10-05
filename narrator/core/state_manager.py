@@ -390,6 +390,7 @@ class StateManager:
             "rule_need": contract.get("rule_need", ""),
             "mechanical_resolution": contract.get("mechanical_resolution"),
             "retrieval_metrics": contract.get("retrieval_metrics", {}),
+            "causal_metrics": contract.get("causal_metrics", {}),
             "state_delta": contract.get("state_delta", {}),
             "provenance": contract.get("provenance", []),
             "errors": contract.get("errors", []),
