@@ -94,3 +94,59 @@ cases:
     system: generic
     expected_layers:
       - universal
+
+  - id: ambiguous_investigacion_campaign
+    query: "pista encontrada durante una investigación que también afecta una amenaza de campaña"
+    relevant_ids:
+      - universal-investigacion
+      - universal-consecuencias
+    graded_relevance:
+      universal-investigacion: 3
+      universal-consecuencias: 2
+    system: generic
+    expected_layers:
+      - universal
+      - campaign
+
+  - id: ambiguous_combate_estado
+    query: "combate que modifica al personaje y deja consecuencias persistentes"
+    relevant_ids:
+      - universal-combate
+      - universal-estado-persistente
+      - universal-causalidad
+    graded_relevance:
+      universal-combate: 3
+      universal-estado-persistente: 2
+      universal-causalidad: 1
+    system: generic
+    expected_layers:
+      - universal
+      - state
+
+  - id: system_vtm_knowledge
+    query: "Vampiro V20: una pista de la Mascarada que debe respetar las reglas específicas del sistema"
+    relevant_ids:
+      - universal-informacion-conocimiento
+      - universal-investigacion
+    graded_relevance:
+      universal-informacion-conocimiento: 3
+      universal-investigacion: 2
+    system: vtm_v20
+    expected_layers:
+      - system
+      - universal
+
+  - id: system_dnd_resolution
+    query: "D&D 5e: una investigación requiere resolver una acción con las reglas del sistema y conservar sus consecuencias"
+    relevant_ids:
+      - universal-investigacion
+      - universal-causalidad
+      - universal-estado-persistente
+    graded_relevance:
+      universal-investigacion: 3
+      universal-causalidad: 2
+      universal-estado-persistente: 1
+    system: dnd_5e
+    expected_layers:
+      - system
+      - universal
