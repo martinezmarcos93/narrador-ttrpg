@@ -205,3 +205,9 @@ Tests agregados:
 - cobertura de ejecución de entidades en tests/test_proposal_executor.py
 
 No se ejecutaron pruebas locales.
+
+### Barrido de métricas de retrieval — 2026-10-05
+
+RetrievalMetrics ahora registra latencia, media/máximo de relevancia, diversidad por capas, cobertura de procedencia y utilización del contexto, además de conteo de fragmentos, fuentes, capas y duplicados. Son métricas operativas/proxy; recall y precision reales requieren un conjunto de consultas con ground truth y no se inventan en runtime.
+
+No se ejecutaron pruebas locales.
