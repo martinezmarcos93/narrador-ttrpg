@@ -406,16 +406,20 @@ def finish_streaming(full_text: str):
 
         if mutations:
             try:
-                schema = _orchestrator.builder.load_system(
-                    state.get("system_slug", "generic")
-                ).get("character_sheet_schema", {})
-                allowed_fields = _narrator_agent.character_field_specs(schema)
-            except Exception:
-                allowed_fields = {}
-            with state_lock:
-                changelog = _narrator_agent.apply_state_mutations(
-                    state["character"], mutations, allowed_fields=allowed_fields
+                proposal_result = _orchestrator.validate_and_apply_proposal(
+                    {"character_changes": mutations},
+                    app_state=state,
                 )
+                changelog = list(proposal_result.get("changes", []))
+                if not proposal_result.get("applied"):
+                    logger.warning(
+                        "Propuesta de mutación rechazada: %s",
+                        proposal_result.get("validation", {}),
+                    )
+            except Exception as e:
+                changelog = []
+                logger.error(f"Error validando propuesta de estado: {e}", exc_info=True)
+
             if changelog:
                 if _active_turn_contract is not None:
                     _active_turn_contract.state_delta = {"character_changes": list(changelog)}
