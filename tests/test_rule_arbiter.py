@@ -169,3 +169,20 @@ def test_resultado_arbiter_incluye_trazabilidad_estructurada():
     assert r["dificultad"] == 18
     assert r["dificultad_label"] == "declarada"
     assert r["rule_source"].endswith("dnd_5e.yaml:resolution")
+
+
+def test_dnd_rechaza_dado_incompatible():
+    assert _arbiter().resolve("ataco", {}, "dnd_5e", rolls=[5], sides=10) is None
+
+
+def test_arbiter_rechaza_resultado_fuera_de_rango():
+    assert _arbiter().resolve("ataco", {}, "dnd_5e", rolls=[21], sides=20) is None
+
+
+def test_arbiter_expone_validacion_de_tirada():
+    r = _arbiter().resolve("ataco", {}, "dnd_5e", rolls=[12], sides=20)
+    assert r["roll_validation"] == {
+        "valid": True,
+        "sides_compatible": True,
+        "count": 1,
+    }
