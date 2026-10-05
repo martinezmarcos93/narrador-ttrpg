@@ -61,3 +61,14 @@ def test_turn_contract_serializes_retrieval_metrics():
     }
     payload = contract.to_dict()
     assert payload["retrieval_metrics"]["fragment_count"] == 3
+
+def test_turn_contract_serializes_causal_metrics():
+    contract = TurnContract(input_text="alarma", system_slug="generic")
+    contract.causal_metrics = {
+        "activations": 2,
+        "max_depth": 1,
+        "pending_remaining": 3,
+    }
+    payload = contract.to_dict()
+    assert payload["causal_metrics"]["activations"] == 2
+    assert payload["causal_metrics"]["max_depth"] == 1
