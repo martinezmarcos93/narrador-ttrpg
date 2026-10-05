@@ -91,3 +91,27 @@ def test_router_retrieval_metrics_reporta_capas_y_fuentes():
     assert metrics.sources == {"StateManager": 1}
     assert metrics.context_words > 0
     assert metrics.to_dict()["duplicate_count"] == 0
+
+
+def test_retrieval_metrics_include_quality_proxies(tmp_path):
+    from narrator.core.knowledge_router import RetrievalMetrics
+
+    metrics = RetrievalMetrics(
+        query="prueba",
+        fragment_count=2,
+        layers={"universal": 1, "campaign": 1},
+        sources={"brain": 2},
+        context_words=20,
+        latency_ms=1.5,
+        relevance_mean=0.7,
+        relevance_max=0.9,
+        diversity_ratio=1.0,
+        provenance_coverage=1.0,
+        context_utilization=0.8,
+    )
+    data = metrics.to_dict()
+    assert data["latency_ms"] == 1.5
+    assert data["relevance_max"] == 0.9
+    assert data["diversity_ratio"] == 1.0
+    assert data["provenance_coverage"] == 1.0
+    assert data["context_utilization"] == 0.8
