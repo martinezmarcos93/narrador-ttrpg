@@ -28,3 +28,16 @@ def test_active_fronts_are_sorted_by_priority(tmp_path):
     fronts = state.get_active_fronts()
     assert [item["nombre"] for item in fronts] == ["Alto", "Bajo"]
     assert fronts[0]["llenos"] == 2
+
+def test_campaign_faction_registry(tmp_path):
+    state = StateManager(str(tmp_path / "estado.yaml"))
+    state.add_faction(
+        "culto",
+        "Culto del Eclipse",
+        "Orden clandestina",
+        agenda="Abrir el portal",
+    )
+    faction = state.get_faction("culto")
+    assert faction["nombre"] == "Culto del Eclipse"
+    assert faction["agenda"] == "Abrir el portal"
+    assert state.get_active_factions()[0]["slug"] == "culto"
