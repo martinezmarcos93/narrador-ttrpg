@@ -398,6 +398,11 @@ class Orchestrator:
             contract.provenance.append(
                 f"causalidad: {causal_result.get('count', 0)} consecuencia(s) activada(s)"
             )
+            for activation in self.causality.last_activations:
+                if activation.provenance_id:
+                    contract.provenance.append(
+                        f"causal_provenance:{activation.provenance_id}"
+                    )
 
         contract.advance("rule_need")
         if app_state.get("resolucion_mecanica"):
