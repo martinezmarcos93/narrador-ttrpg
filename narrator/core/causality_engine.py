@@ -241,9 +241,16 @@ class CausalityEngine:
             current_next_turn = False
 
         self.last_activations = list(activations)
+        depth_limit_reached = bool(
+            activations
+            and len(activations) > 0
+            and activations[-1].depth >= self.max_cascade_depth - 1
+            and bool(self._find_matches(current_event, next_turn=current_next_turn))
+        )
         self.last_metrics = {
             "activations": len(activations),
             "max_depth": max((item.depth for item in activations), default=0),
+            "depth_limit_reached": depth_limit_reached,
             "reasons": {
                 reason: sum(1 for item in activations if item.reason == reason)
                 for reason in {item.reason for item in activations}
