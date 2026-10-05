@@ -115,6 +115,7 @@ class ProposalExecutor:
         state_snapshot = deepcopy(self.state.data)
         character_snapshot = deepcopy(character) if character is not None else None
         created_paths = []
+        state_file_existed = self.state.path.exists()
         try:
             entity_changes, created_paths = self._create_entities(proposal)
             changes = list(entity_changes)
