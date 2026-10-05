@@ -47,6 +47,10 @@ class CausalityEngine:
             return False
         return False
 
+    def _effects(self, item: dict) -> list[dict]:
+        effects = item.get("effects", [])
+        return [dict(effect) for effect in effects if isinstance(effect, dict)]
+
     def evaluate(self, event_text: str = "", *, next_turn: bool = False) -> list[CausalActivation]:
         pending = self.state.data.get("consecuencias_pendientes", [])
         activations = []
@@ -70,16 +74,13 @@ class CausalityEngine:
                 ))
 
         for activation in reversed(activations):
-            resolved = self.state.resolve_pending_consequence(
+            pending = self.state.data.get("consecuencias_pendientes", [])
+            item = pending[activation.index] if 0 <= activation.index < len(pending) else {}
+            self.state.apply_causal_activation(
                 activation.index,
                 outcome=f"Activada automáticamente ({activation.reason})",
+                effects=self._effects(item),
             )
-            if resolved:
-                self.state.record_event(
-                    f"Consecuencia activada: {activation.consequence}",
-                    actor="CausalityEngine",
-                    location=self.state.get_location() or "",
-                )
         return list(reversed(activations))
 
     def summary(self, activations: list[CausalActivation]) -> str:
