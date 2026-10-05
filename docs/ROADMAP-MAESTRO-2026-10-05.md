@@ -48,7 +48,7 @@ Precedencia: STATE > MANUAL > SYSTEM PACK > UNIVERSAL BRAIN > conocimiento gener
 - ADR y handoff del núcleo.
 
 ### 1.2 Rama actual
-feat/retrieval-evaluation. Está 99 commits por delante de main y 0 por detrás. El último commit pertenece a la pasada de consolidación de continuidad/causalidad del 2026-10-05. No mergear sin autorización expresa.
+feat/retrieval-evaluation. Está 101 commits por delante de main y 1 por detrás; main avanzó externamente y no se realizó rebase. El último commit pertenece a la pasada de consolidación de continuidad/causalidad del 2026-10-05. No mergear sin autorización expresa.
 
 ## 2. FASE A — Consolidación del núcleo
 
