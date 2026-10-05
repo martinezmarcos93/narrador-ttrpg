@@ -32,11 +32,11 @@ NARRATIVE_PROPOSAL_RULES = """PROPUESTAS ESTRUCTURADAS DE ESTADO (bloque técnic
 - Omití claves vacías.
 - facts contiene hechos persistentes como pares clave/valor.
 - events contiene eventos ya ocurridos, no intenciones futuras.
-- consequences contiene objetos con text y opcionalmente trigger/due.
+- consequences contiene objetos con text y opcionalmente trigger/due/effects. Los effects permitidos son fact, flag, npc_presence, scene_location, clock_delta, event, queue_consequence, world_fact, character_fact y player_fact.
 - character_changes contiene field + delta o value + reason opcional.
 - clock_changes contiene name + delta.
 - scene_changes puede contener locacion o turno_narrativo_delta.
-- No uses este bloque para repetir información puramente narrativa."""
+- queue_consequence debe declarar consequence y puede declarar trigger/due/effects para encadenar una consecuencia posterior. event emite un hecho explícito que puede activar otra consecuencia. world_fact es verdad objetiva; character_fact y player_fact conceden conocimiento explícito y no deben confundirse entre sí. No uses este bloque para repetir información puramente narrativa."""
 
 
 ENTITY_AUTO_SAVE_RULES = """AUTO-GUARDADO DE ENTIDADES Y ESTADO (instrucciones técnicas, NUNCA visibles para el jugador):
