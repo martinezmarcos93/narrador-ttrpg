@@ -18,6 +18,7 @@ except ImportError:
     _HAS_FRONTMATTER = False
 
 from narrator.core.embedder import Embedder
+from narrator.cerebro.recuperador import RecuperadorCerebro
 
 
 def _parse_file(path: Path) -> tuple[dict, str]:
@@ -33,10 +34,14 @@ def _parse_file(path: Path) -> tuple[dict, str]:
 
 
 class VaultRetriever:
-    def __init__(self, vault_path: str = "./vault"):
+    def __init__(self, vault_path: str = "./vault", brain_path: str = "./cerebro", brain_embedding_model: str = "bge-m3"):
         self.vault_path = Path(vault_path)
         self._embedder = Embedder()
         self._index: Optional[dict[str, list[float]]] = None
+        # Comparte infraestructura de embeddings, pero mantiene el índice
+        # y los documentos del cerebro separados del vault de campaña.
+        self.brain = RecuperadorCerebro(brain_path=brain_path, embedding_model=brain_embedding_model)
+
 
     def _all_md_files(self) -> list[Path]:
         if not self.vault_path.exists():
@@ -47,6 +52,19 @@ class VaultRetriever:
         if self._index is None:
             self._index = self._embedder.load_index(self.vault_path)
         return self._index
+
+    # ── Cerebro permanente ─────────────────────────────────────
+    def get_brain_context(self, query: str, max_words: int = 500, system: str | None = None, kind: str | None = None) -> str:
+        """Consulta conocimiento persistente del cerebro."""
+        try:
+            return self.brain.get_context(query, max_words=max_words, system=system, kind=kind)
+        except Exception as exc:
+            logger.warning("Cerebro no disponible: %s", exc)
+            return ""
+
+    def index_brain(self, on_progress=None) -> int:
+        """Construye/actualiza el índice persistente de neuronas."""
+        return self.brain.build_index(on_progress=on_progress)
 
     # ── Búsqueda global cross-entidad (Fase 18) ───────────────
     def search_all(self, query: str, tipo: "str | None" = None, max_results: int = 20) -> "list[dict]":
