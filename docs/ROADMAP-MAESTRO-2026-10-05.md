@@ -75,6 +75,8 @@ feat/retrieval-evaluation. Está 76 commits por delante de main y 0 por detrás.
 - HECHO: ProposalExecutor respeta un batch externo sin cerrar la transacción del llamador.
 - HECHO: escenarios de fallo en creación parcial de entidades y mutación de personaje.
 - HECHO: regresión de fallo dentro de `StateManager.apply_proposal()` con rollback de estado y entidades.
+- HECHO: persistencia de estado mediante escritura temporal + `fsync` + reemplazo atómico.
+- HECHO: regresión que garantiza que un fallo de reemplazo conserva el archivo anterior.
 - HECHO: contrato de turno conserva cambios de propuesta, errores de validación y provenance sin perder deltas causales.
 - PENDIENTE: fallos de persistencia de disco y recuperación tras escritura parcial.
 - PENDIENTE: verificar atómicamente fallos de persistencia después de la composición post-LLM.
@@ -136,6 +138,7 @@ Objetivo: input → interpretation → intent → rule_need → retrieval → re
 
 ## 5. FASE D — Causalidad y mundo dinámico
 - HECHO: CausalityEngine, cascadas acotadas, eventos, facts, relaciones, consecuencias, clocks, métricas y provenance.
+- HECHO: escenarios compuestos de investigación, combate, conflicto social y fronts/relojes.
 - PENDIENTE: ciclos, límites de profundidad, cadenas largas, múltiples consecuencias y cross-front.
 - HECHO: contratos de facciones/fronts.
 - PENDIENTE: reglas de avance, umbrales, interacción entre fronts y campaña real.
@@ -147,6 +150,7 @@ Objetivo: input → interpretation → intent → rule_need → retrieval → re
 - PENDIENTE: secretos de NPC/facción/localización, conocimiento parcial y descubrimiento gradual.
 - PARCIAL: KnowledgeVisibility está integrada en el contexto narrativo.
 - HECHO: KnowledgeRouter filtra documentos de campaña con `llm_visible=false` y visibilidad `secret/private/dm/hidden` (incluidas variantes en español).
+- HECHO: regresiones de secreto no visible y precedencia STATE > MANUAL > SYSTEM/CAMPAIGN > UNIVERSAL.
 - PENDIENTE: pruebas de fuga E2E e integración definitiva con retrieval y prompt final.
 
 ## 7. FASE F — System Packs
