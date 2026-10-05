@@ -99,7 +99,7 @@ class ProposalValidator:
                 "invalid_character_change", "error",
                 "Cada cambio de personaje debe declarar un field.",
             ))
-        allowed_effects = {"fact", "flag", "npc_presence", "scene_location", "clock_delta", "event", "queue_consequence", "world_fact", "character_fact", "player_fact"}
+        allowed_effects = {"fact", "flag", "npc_presence", "scene_location", "clock_delta", "event", "queue_consequence", "world_fact", "character_fact", "player_fact", "relation", "front_clock_delta"}
         for consequence in proposal.consequences:
             for effect in consequence.get("effects", []) or []:
                 if not isinstance(effect, dict) or effect.get("type") not in allowed_effects:
@@ -120,6 +120,8 @@ class ProposalValidator:
                     "world_fact": ("key", "value"),
                     "character_fact": ("character", "key", "value"),
                     "player_fact": ("key", "value"),
+                    "relation": ("source", "target", "relation"),
+                    "front_clock_delta": ("name", "delta"),
                 }[kind]
                 if any(key not in effect for key in required):
                     report.issues.append(ContinuityIssue(
