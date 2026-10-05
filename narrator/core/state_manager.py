@@ -40,6 +40,13 @@ class StateManager:
             "eventos": [],
             "consecuencias_pendientes": [],
             "hechos_conocidos": {},
+            # Conocimiento por perspectiva: nunca mezclar verdad objetiva con
+            # lo que sabe el personaje o el jugador.
+            "conocimiento": {
+                "mundo": {},
+                "personajes": {},
+                "jugador": {},
+            },
         }
 
     # ── Persistencia ──────────────────────────────────────────
@@ -170,6 +177,71 @@ class StateManager:
             dict(item) for item in self.data.get("consecuencias_pendientes", [])
             if item.get("estado", "pendiente") == "pendiente"
         ]
+
+    def _set_perspective_fact(self, perspective: str, key: str, value: Any, *, source: str = "", subject: str = "") -> None:
+        if not str(key).strip():
+            return
+        bucket = self.data.setdefault("conocimiento", {}).setdefault(perspective, {})
+        if perspective == "personajes":
+            bucket = bucket.setdefault(str(subject).strip() or "protagonista", {})
+        bucket[str(key).strip()] = {
+            "valor": value,
+            "fuente": source,
+            "sesion": self.get_session_number(),
+        }
+
+    def set_world_fact(self, key: str, value: Any, *, source: str = "") -> None:
+        """Registra verdad objetiva de campaña; no implica que nadie la conozca."""
+        self._set_perspective_fact("mundo", key, value, source=source)
+        self.save()
+
+    def set_character_fact(self, character: str, key: str, value: Any, *, source: str = "") -> None:
+        """Registra un hecho conocido por un personaje concreto."""
+        self._set_perspective_fact("personajes", key, value, source=source, subject=character)
+        self.save()
+
+    def set_player_fact(self, key: str, value: Any, *, source: str = "") -> None:
+        """Registra información explícitamente conocida por el jugador."""
+        self._set_perspective_fact("jugador", key, value, source=source)
+        self.save()
+
+    def get_world_fact(self, key: str, default: Any = None) -> Any:
+        entry = self.data.get("conocimiento", {}).get("mundo", {}).get(key)
+        return entry.get("valor", default) if isinstance(entry, dict) else default
+
+    def get_character_fact(self, character: str, key: str, default: Any = None) -> Any:
+        bucket = self.data.get("conocimiento", {}).get("personajes", {}).get(character, {})
+        entry = bucket.get(key)
+        return entry.get("valor", default) if isinstance(entry, dict) else default
+
+    def get_player_fact(self, key: str, default: Any = None) -> Any:
+        entry = self.data.get("conocimiento", {}).get("jugador", {}).get(key)
+        return entry.get("valor", default) if isinstance(entry, dict) else default
+
+    def get_knowledge_snapshot(self, *, character: str = "", include_player: bool = True) -> dict:
+        """Devuelve perspectivas separadas; el llamador decide qué puede llegar al prompt."""
+        knowledge = self.data.get("conocimiento", {})
+        character_bucket = knowledge.get("personajes", {}).get(character, {}) if character else {}
+        return {
+            "world": dict(knowledge.get("mundo", {})),
+            "character": dict(character_bucket),
+            "player": dict(knowledge.get("jugador", {})) if include_player else {},
+        }
+
+    def get_character_knowledge_text(self, *, character: str = "", include_player: bool = True) -> str:
+        """Renderiza solo conocimiento autorizado para la perspectiva narrativa."""
+        snap = self.get_knowledge_snapshot(character=character, include_player=include_player)
+        lines = []
+        for label, bucket in (("Conocimiento del personaje", snap["character"]),
+                              ("Información conocida por el jugador", snap["player"])):
+            if not bucket:
+                continue
+            values = ", ".join(
+                f"{key}={entry.get('valor') if isinstance(entry, dict) else entry}"
+                for key, entry in list(bucket.items())[-16:]
+            )
+            lines.append(f"{label}: {values}")
+        return "\n".join(lines)
 
     def set_known_fact(self, key: str, value: Any, *, source: str = "") -> None:
         """Persiste un hecho conocido sin mezclarlo con reglas del sistema."""
