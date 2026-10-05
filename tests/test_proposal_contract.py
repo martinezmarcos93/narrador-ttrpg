@@ -34,3 +34,15 @@ def test_proposal_contract_roundtrip():
     restored = NarrativeProposal.from_dict(proposal.to_dict())
     assert restored.events == ["El grupo entra"]
     assert restored.npc_presence == {"Guardia": True}
+
+
+def test_narrator_extracts_and_hides_structured_proposal():
+    from narrator.agents.narrator_agent import NarratorAgent
+
+    agent = NarratorAgent()
+    text = "La puerta se abre.\n```json-proposal\n{\"events\":[\"El grupo abrió la puerta\"],\"facts\":{\"puerta_abierta\":true}}\n```\n"
+    proposal = agent.extract_narrative_proposal(text)
+    assert proposal["facts"]["puerta_abierta"] is True
+    visible = agent.strip_system_tags(text)
+    assert "json-proposal" not in visible
+    assert "La puerta se abre." in visible
