@@ -132,10 +132,12 @@ class RecuperadorCerebro:
                 for neighbor in self._graph_neighbors(root):
                     if neighbor in selected_paths:
                         continue
-                    selected.append((0.35, neighbor))
+                    root_score = next((score for score, path_ in selected if path_ == root), 0.0)
+                    selected.append((max(0.35, root_score * 0.60), neighbor))
                     selected_paths.add(neighbor)
                     if len(selected) >= max_results + 2:
                         break
+            selected.sort(reverse=True)
 
         results = []
         for score, path in selected[:max_results]:
