@@ -48,9 +48,17 @@ def test_router_can_retrieve_campaign_and_state_without_second_rag():
 
 
 def test_router_incluye_estado_vivo_como_fuente_autoritativa():
-    router = KnowledgeRouter(object())
-    pack = _pack()
-    # El método de render no necesita acceso al retriever si solo se inyecta estado.
+    router = KnowledgeRouter(FakeRetriever())
+    pack = SystemPack(
+        slug="x",
+        sistema="X",
+        edition="1",
+        knowledge=KnowledgePolicy(
+            brain_system="x",
+            preferred_sources=("state",),
+            universal_fallback=False,
+        ),
+    )
     rendered = router.retrieve(
         "qué ocurre",
         pack,
