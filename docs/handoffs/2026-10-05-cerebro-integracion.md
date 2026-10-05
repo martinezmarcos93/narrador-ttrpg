@@ -171,3 +171,10 @@ Se implementó el primer ciclo real de propuestas:
 - Tests agregados para rechazo, aplicación y límites de propuestas.
 
 El sistema todavía no interpreta automáticamente la respuesta narrativa libre como una `NarrativeProposal`; la extracción estructurada sigue siendo el siguiente paso deliberado.
+
+
+### Integración de propuestas estructuradas
+
+Se añadió un protocolo opcional `json-proposal` al prompt del narrador. `NarratorAgent` lo extrae y elimina del texto visible. `app.py` lo envía al `Orchestrator.validate_and_apply_proposal()`. Si la propuesta falla validación, no se aplica. Si contiene `character_changes`, esas mutaciones pasan por el schema activo y no se aplican también por las etiquetas `[state: ...]`, evitando doble aplicación.
+
+Los tests de extracción, sanitización y ejecución segura quedaron agregados. No se ejecutaron localmente.
