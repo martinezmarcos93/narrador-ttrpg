@@ -402,10 +402,6 @@ def finish_streaming(full_text: str):
     if _narrator_agent:
         is_important = _narrator_agent.is_important_event(full_text)
         char_data = _narrator_agent.extract_character_json(full_text)
-        if char_data:
-            with state_lock:
-                state["character"].update(char_data)
-            needs_char_refresh = True
         with state_lock:
             state["tirada_sugerida"] = _narrator_agent.extract_dice_suggestion(full_text)
 
