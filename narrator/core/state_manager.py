@@ -32,6 +32,7 @@ class StateManager:
                 "turno_narrativo": 0,
             },
             "relojes": {},
+            "frentes": {},
             "flags": {},
             "escenas": {},
             "downtime": {"pendiente": [], "npcs_activos": []},
@@ -188,6 +189,13 @@ class StateManager:
                 else:
                     compact_flags.append(f"{name}={entry}")
             lines.append("Flags: " + ", ".join(compact_flags))
+        active_fronts = self.get_active_fronts()
+        if active_fronts:
+            lines.append("Frentes activos:\n" + "\n".join(
+                f"  - {item['nombre']}: {item.get('llenos', 0)}/{item.get('segmentos', 6)}"
+                + (f" | facción: {item.get('faccion')}" if item.get('faccion') else "")
+                for item in active_fronts[:8]
+            ))
         clocks = self.get_clocks_summary()
         if clocks:
             lines.append("Relojes:\n" + clocks)
@@ -690,21 +698,61 @@ class StateManager:
         return self.data["meta"].get("sesion_actual", 0)
 
     # ── Frentes (gestión programática) ───────────────────────
-    def add_front(self, name: str, description: str = "", max_stage: int = 6) -> None:
-        """Registra un frente como reloj si no existe todavía."""
-        if name not in self.data["relojes"]:
+    def add_front(
+        self,
+        name: str,
+        description: str = "",
+        max_stage: int = 6,
+        *,
+        faction: str = "",
+        goal: str = "",
+        status: str = "activo",
+        priority: int = 0,
+    ) -> None:
+        """Registra un frente formal y mantiene compatibilidad con relojes antiguos."""
+        name = str(name).strip()
+        if not name:
+            return
+        self.data.setdefault("frentes", {}).setdefault(name, {
+            "nombre": name,
+            "faccion": str(faction).strip(),
+            "objetivo": str(goal).strip(),
+            "estado": str(status).strip() or "activo",
+            "prioridad": int(priority),
+            "descripcion": str(description).strip(),
+            "reloj": name,
+        })
+        if name not in self.data.setdefault("relojes", {}):
             self.data["relojes"][name] = {
-                "segmentos": max_stage,
+                "segmentos": max(1, int(max_stage)),
                 "llenos": 0,
                 "descripcion": description,
             }
-            self.save()
+        self.save()
+
+    def get_front(self, name: str) -> dict:
+        return dict(self.data.get("frentes", {}).get(str(name).strip(), {}))
+
+    def get_active_fronts(self) -> list[dict]:
+        fronts = []
+        for name, item in self.data.get("frentes", {}).items():
+            if item.get("estado", "activo") in {"activo", "active", "en_marcha"}:
+                front = dict(item)
+                front["nombre"] = front.get("nombre") or name
+                clock = self.data.get("relojes", {}).get(front.get("reloj", name), {})
+                front["llenos"] = int(clock.get("llenos", 0))
+                front["segmentos"] = int(clock.get("segmentos", 6))
+                fronts.append(front)
+        return sorted(fronts, key=lambda x: (-int(x.get("prioridad", 0)), x["nombre"]))
 
     def advance_front_clock(self, name: str, ticks: int = 1) -> None:
         """Avanza el reloj de un frente registrado."""
-        clock = self.data["relojes"].get(name)
+        clock = self.data.setdefault("relojes", {}).get(name)
         if clock:
-            clock["llenos"] = min(clock["llenos"] + ticks, clock["segmentos"])
+            clock["llenos"] = min(
+                max(0, int(clock.get("llenos", 0)) + int(ticks)),
+                int(clock.get("segmentos", 6)),
+            )
             self.save()
 
     # ── Downtime entre sesiones ───────────────────────────────
