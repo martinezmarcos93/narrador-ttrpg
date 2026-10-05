@@ -52,6 +52,7 @@ class ContinuityValidator:
         self._check_facts(proposal.get("facts", {}), issues)
         self._check_events(proposal.get("events", []), issues)
         self._check_npcs(proposal.get("npc_presence", {}), issues)
+        self._check_clocks(proposal.get("clock_changes", []), issues)
         self._check_temporal(proposal.get("session"), issues)
 
         return ContinuityReport(not any(i.severity == "error" for i in issues), issues)
@@ -98,6 +99,50 @@ class ContinuityValidator:
                     "npc_not_present",
                     "warning",
                     f"No se puede retirar de la escena a '{name}' porque no figura presente.",
+                ))
+
+    def _check_clocks(self, changes: Any, issues: list[ContinuityIssue]) -> None:
+        if not isinstance(changes, list):
+            issues.append(ContinuityIssue(
+                "invalid_clock_changes", "error",
+                "clock_changes debe ser una lista.",
+            ))
+            return
+
+        clocks = self.state.data.get("relojes", {})
+        for item in changes:
+            if not isinstance(item, dict):
+                issues.append(ContinuityIssue(
+                    "invalid_clock_change", "error",
+                    "Cada cambio de reloj debe ser un objeto.",
+                ))
+                continue
+            name = str(item.get("name") or "").strip()
+            if not name:
+                continue
+            if name not in clocks:
+                issues.append(ContinuityIssue(
+                    "unknown_clock", "error",
+                    f"El reloj '{name}' no existe en el estado de campaña.",
+                ))
+                continue
+            try:
+                delta = int(item.get("delta", 0))
+            except (TypeError, ValueError):
+                issues.append(ContinuityIssue(
+                    "invalid_clock_delta", "error",
+                    f"El delta del reloj '{name}' debe ser entero.",
+                ))
+                continue
+
+            clock = clocks[name]
+            current = int(clock.get("llenos", 0))
+            maximum = int(clock.get("segmentos", 6))
+            target = current + delta
+            if target < 0 or target > maximum:
+                issues.append(ContinuityIssue(
+                    "clock_out_of_bounds", "error",
+                    f"El cambio del reloj '{name}' llevaría {current} a {target}; rango permitido 0..{maximum}.",
                 ))
 
     def _check_temporal(self, session: Any, issues: list[ContinuityIssue]) -> None:
