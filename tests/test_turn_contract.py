@@ -72,3 +72,27 @@ def test_turn_contract_serializes_causal_metrics():
     payload = contract.to_dict()
     assert payload["causal_metrics"]["activations"] == 2
     assert payload["causal_metrics"]["max_depth"] == 1
+
+
+def test_turn_contract_records_proposal_without_losing_existing_state_delta():
+    contract = TurnContract(input_text="abro la puerta", system_slug="generic")
+    contract.state_delta = {"causalidad": {"activations": 1}}
+    contract.record_proposal_result({
+        "applied": True,
+        "changes": ["fact:puerta_abierta=True"],
+        "validation": {"valid": True},
+    })
+    assert contract.state_delta["causalidad"]["activations"] == 1
+    assert contract.state_delta["proposal_changes"] == ["fact:puerta_abierta=True"]
+    assert "ProposalExecutor" in contract.provenance
+
+
+def test_turn_contract_records_rejected_proposal_as_error():
+    contract = TurnContract(input_text="intento", system_slug="generic")
+    contract.record_proposal_result({
+        "applied": False,
+        "changes": [],
+        "validation": {"valid": False},
+    })
+    assert "proposal_validation_failed" in contract.errors
+    assert "ProposalValidator" in contract.provenance
