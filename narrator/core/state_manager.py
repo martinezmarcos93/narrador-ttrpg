@@ -163,6 +163,11 @@ class StateManager:
                 logger.error(f"No pude hacer backup del estado corrupto: {be}")
             return False
 
+    @property
+    def batch_depth(self) -> int:
+        """Cantidad de fronteras de persistencia actualmente abiertas."""
+        return self._batch_depth
+
     def begin_batch(self) -> None:
         """Agrupa múltiples mutaciones en una única persistencia."""
         self._batch_depth += 1
