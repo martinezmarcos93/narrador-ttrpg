@@ -19,6 +19,7 @@ except ImportError:
 
 from narrator.core.embedder import Embedder
 from narrator.cerebro.recuperador import RecuperadorCerebro
+from narrator.core.context_contract import ContextFragment, render_context
 
 
 def _parse_file(path: Path) -> tuple[dict, str]:
@@ -52,6 +53,58 @@ class VaultRetriever:
         if self._index is None:
             self._index = self._embedder.load_index(self.vault_path)
         return self._index
+
+    # ── Contexto combinado y procedencia ─────────────────────
+    def get_context_fragments(
+        self,
+        query: str,
+        system: str | None = None,
+        max_brain: int = 4,
+        max_vault: int = 4,
+    ) -> list[ContextFragment]:
+        """Une cerebro + vault sin borrar la procedencia de cada fuente."""
+        fragments: list[ContextFragment] = []
+
+        for result in self.brain.search(
+            query,
+            max_results=max_brain,
+            system=system,
+            expand_graph=True,
+        ):
+            fragments.append(result["fragment"])
+
+        for result in self.search(query, max_results=max_vault):
+            meta, body = result["meta"], result["body"]
+            layer = str(meta.get("capa", meta.get("layer", ""))).lower()
+            if layer == "sistema":
+                layer = "system"
+            elif meta.get("origen") == "manual":
+                layer = "manual"
+            elif not layer:
+                layer = "campaign"
+            if layer not in {"universal", "system", "manual", "campaign", "state"}:
+                layer = "campaign"
+            fragments.append(ContextFragment(
+                text=body,
+                source=str(meta.get("fuente", meta.get("source", "vault"))),
+                layer=layer,
+                title=str(meta.get("nombre", Path(result["path"]).stem)),
+                score=float(result.get("score", 0.0)),
+                metadata=meta,
+            ))
+
+        return fragments
+
+    def get_combined_context(
+        self,
+        query: str,
+        max_words: int = 700,
+        system: str | None = None,
+    ) -> str:
+        return render_context(
+            self.get_context_fragments(query, system=system),
+            max_words=max_words,
+        )
 
     # ── Cerebro permanente ─────────────────────────────────────
     def get_brain_context(self, query: str, max_words: int = 500, system: str | None = None, kind: str | None = None) -> str:
