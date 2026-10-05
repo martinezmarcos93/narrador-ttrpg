@@ -472,9 +472,13 @@ def finish_streaming(full_text: str):
             for tipo, data in new_entities:
                 try:
                     if tipo == "npc":
-                        _narrator_service.apply_proposal({"npcs": [data]}, app_state=state)
+                        result = _narrator_service.apply_proposal({"npcs": [data]}, app_state=state)
+                        if _active_turn_contract is not None:
+                            _active_turn_contract.record_proposal_result(result)
                     else:
-                        _narrator_service.apply_proposal({"locations": [data]}, app_state=state)
+                        result = _narrator_service.apply_proposal({"locations": [data]}, app_state=state)
+                        if _active_turn_contract is not None:
+                            _active_turn_contract.record_proposal_result(result)
                 except Exception as e:
                     logger.error(
                         f"Error auto-guardando entidad '{data.get('nombre')}': {e}", exc_info=True
