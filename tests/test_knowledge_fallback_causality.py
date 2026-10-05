@@ -214,3 +214,19 @@ def test_reload_merges_new_nested_defaults(tmp_path):
     assert "jugador" in state.data["conocimiento"]
     assert "flags" in state.data
     assert state.data["conocimiento"]["mundo"]["secreto"] is True
+
+
+def test_legacy_known_facts_do_not_bypass_perspective_visibility(tmp_path):
+    state = StateManager(str(tmp_path / "estado.yaml"))
+    state.set_known_fact("identidad_secreta", "El Rey es un lich", source="legacy")
+    state.set_world_fact("identidad_real", "El Rey es un lich", source="truth")
+    state.set_character_fact("Alicia", "identidad_real", "El Rey es un lich", source="discovery")
+
+    neutral = state.get_turn_context_text()
+    assert "identidad_secreta" not in neutral
+    assert "El Rey es un lich" not in neutral
+
+    from narrator.core.knowledge_visibility import KnowledgeVisibility
+    view = KnowledgeVisibility(state).narrator_view(character="Alicia", include_player=False)
+    assert "identidad_real" in view
+    assert "identidad_secreta" not in view
