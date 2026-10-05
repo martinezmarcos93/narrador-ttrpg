@@ -160,6 +160,45 @@ class ProposalValidator:
                         f"{effect.get('type') if isinstance(effect, dict) else '<inválido>'}.",
                     ))
 
+        front_deltas: dict[str, int] = {}
+        clocks = self.continuity.state.data.get("relojes", {})
+        for consequence in proposal.consequences:
+            for effect in consequence.get("effects", []) or []:
+                if not isinstance(effect, dict) or effect.get("type") != "front_clock_delta":
+                    continue
+                name = str(effect.get("name") or "").strip()
+                if not name:
+                    report.issues.append(ContinuityIssue(
+                        "invalid_front_clock_delta", "error",
+                        "front_clock_delta requiere name.",
+                    ))
+                    continue
+                if name not in clocks:
+                    report.issues.append(ContinuityIssue(
+                        "unknown_front_clock", "error",
+                        f"El reloj del frente '{name}' no existe en el estado.",
+                    ))
+                    continue
+                try:
+                    delta = int(effect.get("delta", 0))
+                except (TypeError, ValueError):
+                    report.issues.append(ContinuityIssue(
+                        "invalid_front_clock_delta", "error",
+                        f"El delta del frente '{name}' debe ser entero.",
+                    ))
+                    continue
+                front_deltas[name] = front_deltas.get(name, 0) + delta
+
+        for name, delta in front_deltas.items():
+            clock = clocks[name]
+            current = int(clock.get("llenos", 0))
+            maximum = int(clock.get("segmentos", 6))
+            if current + delta < 0 or current + delta > maximum:
+                report.issues.append(ContinuityIssue(
+                    "front_clock_out_of_bounds", "error",
+                    f"Los efectos acumulados del frente '{name}' exceden su rango 0..{maximum}.",
+                ))
+
         if self.allowed_fronts:
             for consequence in proposal.consequences:
                 for effect in consequence.get("effects", []) or []:
