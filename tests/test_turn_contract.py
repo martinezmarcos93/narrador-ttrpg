@@ -28,3 +28,26 @@ def test_turn_contract_exposes_mechanical_result():
     assert contract.mechanical_band == "10+"
     payload = contract.narrative_input()
     assert payload["mechanical_resolution"]["banda"] == "10+"
+
+
+def test_turn_contract_has_identity_and_rejects_retroceso():
+    contract = TurnContract(input_text="hola", system_slug="generic")
+    assert contract.turn_id
+    assert contract.created_at
+    contract.advance("interpretation")
+    try:
+        contract.advance("input")
+    except ValueError as exc:
+        assert "Retroceso" in str(exc)
+    else:
+        raise AssertionError("expected backward transition to fail")
+
+
+def test_turn_contract_marks_completion():
+    contract = TurnContract(input_text="hola", system_slug="generic")
+    contract.advance("narrative_prompt")
+    contract.advance("llm")
+    contract.mark_llm_output("respuesta")
+    contract.mark_persisted()
+    assert contract.stage == "persist"
+    assert contract.completed_at
