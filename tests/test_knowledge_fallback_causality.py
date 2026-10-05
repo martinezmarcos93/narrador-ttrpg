@@ -236,3 +236,65 @@ def test_legacy_known_facts_do_not_bypass_perspective_visibility(tmp_path):
     view = KnowledgeVisibility(state).narrator_view(character="Alicia", include_player=False)
     assert "identidad_real" in view
     assert "identidad_secreta" not in view
+
+
+def test_vault_writer_safe_isolates_failures(tmp_path):
+    from narrator.core.vault_writer import VaultWriter
+
+    writer = VaultWriter(str(tmp_path))
+    calls = []
+
+    def failing_exchange(*args, **kwargs):
+        calls.append("exchange")
+        raise OSError("vault unavailable")
+
+    def successful_npcs(*args, **kwargs):
+        calls.append("npcs")
+
+    def successful_locations(*args, **kwargs):
+        calls.append("locations")
+
+    writer.log_exchange = failing_exchange
+    writer.log_event = lambda *args, **kwargs: calls.append("event")
+    writer.update_npc_notes = successful_npcs
+    writer.update_location_notes = successful_locations
+
+    result = writer.on_narrator_response_safe(
+        "jugador", "respuesta importante", session_number=1, is_important=True
+    )
+
+    assert result["ok"] is False
+    assert result["failures"][0]["operation"] == "log_exchange"
+    assert calls == ["exchange", "event", "npcs", "locations"]
+
+
+def test_front_clock_full_event_only_on_threshold_crossing():
+    from narrator.core.causality_engine import CausalityEngine
+    from narrator.core.state_manager import StateManager
+
+    state = StateManager(":memory:")
+    state.data["relojes"]["Culto"] = {"llenos": 3, "segmentos": 3}
+    engine = CausalityEngine(state)
+
+    first = engine._apply_secondary_effects(
+        [{"type": "front_clock_delta", "name": "Culto", "delta": 1}],
+        parent_id="test",
+    )
+    assert state.data["relojes"]["Culto"]["llenos"] == 3
+    assert "frente Culto lleno" not in first
+
+    state.data["relojes"]["Culto"]["llenos"] = 2
+    second = engine._apply_secondary_effects(
+        [{"type": "front_clock_delta", "name": "Culto", "delta": 1}],
+        parent_id="test",
+    )
+    assert state.data["relojes"]["Culto"]["llenos"] == 3
+    assert "frente Culto lleno" in second
+
+    state.data["relojes"]["Culto"]["llenos"] = 2
+    third = engine._apply_secondary_effects(
+        [{"type": "front_clock_delta", "name": "Culto", "delta": -5}],
+        parent_id="test",
+    )
+    assert state.data["relojes"]["Culto"]["llenos"] == 0
+    assert not any("frente Culto lleno" in item for item in third)
