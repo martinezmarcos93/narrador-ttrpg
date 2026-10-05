@@ -16,6 +16,7 @@ from narrator.core.scene_manager import SceneManager
 from narrator.core.state_manager import StateManager
 from narrator.core.turn_contract import TurnContract
 from narrator.core.proposal_executor import ProposalExecutor
+from narrator.core.causality_engine import CausalityEngine
 from narrator.core.vault_writer import VaultWriter
 from narrator.agents.narrator_agent import NarratorAgent
 from narrator.core.theory_engine import MasterMoveEngine, PacingToneAgent, WorldSimulationEngine, InvestigationEngine
@@ -69,6 +70,7 @@ class Orchestrator:
             narrator_agent=self.narrator_agent,
             vault_writer=self.vault_writer,
         )
+        self.causality = CausalityEngine(self.state)
 
     def _load_config(self, path: str) -> dict:
         try:
@@ -325,6 +327,15 @@ class Orchestrator:
             "applied": result.applied,
             "changes": result.changes,
             "validation": result.report.to_dict(),
+        }
+
+    def evaluate_causality(self, event_text: str = "", *, next_turn: bool = False) -> dict:
+        """Activa consecuencias pendientes cuando su trigger/due ya se cumple."""
+        activations = self.causality.evaluate(event_text, next_turn=next_turn)
+        return {
+            "activated": bool(activations),
+            "count": len(activations),
+            "summary": self.causality.summary(activations),
         }
 
     # ── Contrato formal de turno ──────────────────────────────
