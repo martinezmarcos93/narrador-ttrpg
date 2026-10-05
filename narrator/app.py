@@ -314,6 +314,7 @@ def dim_text(text, parent=None):
 # ─────────────────────────────────────────────
 _streaming_token = ""
 _is_streaming = False
+_active_turn_contract = None
 
 def append_to_chat(role: str, text: str):
     if role == "user":
@@ -350,7 +351,7 @@ def update_streaming_label(chunk: str):
     _ui(lambda d=display: dpg.set_value("streaming_label", d))
 
 def finish_streaming(full_text: str):
-    global _is_streaming, _streaming_token
+    global _is_streaming, _streaming_token, _active_turn_contract
     _is_streaming = False
     _streaming_token = ""
 
@@ -371,6 +372,12 @@ def finish_streaming(full_text: str):
 
         _ui(_ui_error)
         return
+
+    if _active_turn_contract is not None:
+        try:
+            _active_turn_contract.mark_llm_output(full_text)
+        except Exception as e:
+            logger.error(f"Error actualizando contrato de turno: {e}", exc_info=True)
 
     # Fase 11: extraer entidades/mutaciones del texto CRUDO (con etiquetas
     # técnicas) antes de limpiarlo — el jugador nunca debe ver las etiquetas.
@@ -602,13 +609,18 @@ def send_message(user_text: str = None):
     def run():
         # Construcción del contexto EN EL WORKER: lee todo el vault y puede
         # hacer un POST de embeddings a Ollama — antes congelaba la GUI.
+        global _active_turn_contract
         if _AGENT_MODE and _orchestrator:
             try:
-                system_content = _orchestrator.get_context_for_phase(state)
+                contract = _orchestrator.prepare_turn(state)
+                _active_turn_contract = contract
+                system_content = contract.narrative_prompt
             except Exception as e:
-                logger.error(f"Error en orquestador, usando modo legacy: {e}", exc_info=True)
+                logger.error(f"Error en contrato de turno, usando modo legacy: {e}", exc_info=True)
+                _active_turn_contract = None
                 system_content = _build_legacy_context()
         else:
+            _active_turn_contract = None
             system_content = _build_legacy_context()
 
         # Memoria episódica (capa 2): resúmenes de turnos fuera de la ventana.
@@ -628,6 +640,9 @@ def send_message(user_text: str = None):
             messages_to_send = ([{"role": "system", "content": system_content}]
                                 + _memory.get_working_messages(state["messages"]))
 
+        contract = _active_turn_contract
+        if contract is not None:
+            contract.advance("llm")
         LLMClient(model=state["model"]).stream_chat(messages_to_send, update_streaming_label, finish_streaming)
 
     threading.Thread(target=run, daemon=True).start()
