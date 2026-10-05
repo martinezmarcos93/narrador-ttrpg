@@ -189,7 +189,7 @@ class PromptBuilder:
             )
 
         if vault_context:
-            sections.append(f"CONTEXTO RELEVANTE DEL VAULT:\n{vault_context}")
+            sections.append(f"CONTEXTO RECUPERADO (con procedencia):\n{vault_context}")
 
         if character:
             char_str = json.dumps(character, ensure_ascii=False, indent=2)
