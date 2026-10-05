@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from collections import Counter
+from time import perf_counter
 from typing import TYPE_CHECKING
 
 from narrator.core.context_contract import ContextFragment
@@ -32,6 +33,12 @@ class RetrievalMetrics:
     sources: dict[str, int] = field(default_factory=dict)
     duplicate_count: int = 0
     context_words: int = 0
+    latency_ms: float = 0.0
+    relevance_mean: float = 0.0
+    relevance_max: float = 0.0
+    diversity_ratio: float = 0.0
+    provenance_coverage: float = 0.0
+    context_utilization: float = 0.0
 
     def to_dict(self) -> dict:
         return {
@@ -41,6 +48,12 @@ class RetrievalMetrics:
             "sources": dict(self.sources),
             "duplicate_count": self.duplicate_count,
             "context_words": self.context_words,
+            "latency_ms": self.latency_ms,
+            "relevance_mean": self.relevance_mean,
+            "relevance_max": self.relevance_max,
+            "diversity_ratio": self.diversity_ratio,
+            "provenance_coverage": self.provenance_coverage,
+            "context_utilization": self.context_utilization,
         }
 
 
@@ -134,6 +147,7 @@ class KnowledgeRouter:
         state_context: str = "",
         max_words: int = 700,
     ) -> tuple[str, RetrievalMetrics]:
+        started = perf_counter()
         fragments, duplicates = self.retrieve_fragments(
             query,
             pack,
@@ -141,13 +155,29 @@ class KnowledgeRouter:
             state_context=state_context,
         )
         rendered = self._render_unique(fragments, max_words)
+        scores = [float(fragment.score) for fragment in fragments]
+        layer_count = len(set(fragment.layer for fragment in fragments))
+        source_count = len(set(fragment.source for fragment in fragments))
+        source_words = sum(len(fragment.text.split()) for fragment in fragments)
+        rendered_words = len(rendered.split())
         metrics = RetrievalMetrics(
             query=query,
             fragment_count=len(fragments),
             layers=dict(Counter(fragment.layer for fragment in fragments)),
             sources=dict(Counter(fragment.source for fragment in fragments)),
             duplicate_count=duplicates,
-            context_words=len(rendered.split()),
+            context_words=rendered_words,
+            latency_ms=round((perf_counter() - started) * 1000, 3),
+            relevance_mean=round(sum(scores) / len(scores), 4) if scores else 0.0,
+            relevance_max=round(max(scores), 4) if scores else 0.0,
+            diversity_ratio=round(layer_count / len(fragments), 4) if fragments else 0.0,
+            provenance_coverage=round(
+                sum(1 for fragment in fragments if fragment.source and fragment.layer)
+                / len(fragments), 4
+            ) if fragments else 0.0,
+            context_utilization=round(
+                rendered_words / source_words, 4
+            ) if source_words else 0.0,
         )
         return rendered, metrics
 
