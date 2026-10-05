@@ -176,3 +176,38 @@ def test_proposal_validator_rejects_clock_overflow(tmp_path):
     report = ProposalValidator(ContinuityValidator(state)).validate(proposal)
     assert not report.valid
     assert any(issue.code == "clock_out_of_bounds" for issue in report.errors)
+
+
+def test_proposal_contract_rejects_wrong_container_types():
+    for payload in (
+        {"facts": []},
+        {"events": "evento"},
+        {"npc_presence": {"Guardia": "true"}},
+        {"npcs": ["no es objeto"]},
+        {"clock_changes": {"name": "alarma", "delta": 1}},
+    ):
+        try:
+            NarrativeProposal.from_dict(payload)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"expected ValueError for {payload!r}")
+
+
+def test_proposal_validator_passes_entities_to_continuity(tmp_path):
+    state = StateManager(str(tmp_path / "estado.yaml"))
+    proposal = NarrativeProposal.from_dict({
+        "npcs": [{"nombre": "El Vigía"}],
+        "npc_presence": {"El Vigía": True},
+        "consequences": [{
+            "text": "El Vigía da la alarma",
+            "trigger": "alarma",
+            "effects": [{
+                "type": "npc_presence",
+                "name": "El Vigía",
+                "present": True,
+            }],
+        }],
+    })
+    report = ProposalValidator(ContinuityValidator(state)).validate(proposal)
+    assert report.valid
