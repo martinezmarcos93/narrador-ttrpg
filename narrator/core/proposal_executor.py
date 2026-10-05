@@ -77,16 +77,28 @@ class ProposalExecutor:
             return [], []
         changes = []
         created_paths = []
-        for npc in proposal.npcs:
-            path = self.vault_writer.create_npc(npc)
-            if path:
-                created_paths.append(path)
-                changes.append(f"entity:npc+{npc.get('nombre')}")
-        for location in proposal.locations:
-            path = self.vault_writer.create_locacion(location)
-            if path:
-                created_paths.append(path)
-                changes.append(f"entity:locacion+{location.get('nombre')}")
+        rollback = getattr(self.vault_writer, "rollback_created_entities", None)
+
+        try:
+            for npc in proposal.npcs:
+                path = self.vault_writer.create_npc(npc)
+                if path:
+                    created_paths.append(path)
+                    changes.append(f"entity:npc+{npc.get('nombre')}")
+
+            for location in proposal.locations:
+                path = self.vault_writer.create_locacion(location)
+                if path:
+                    created_paths.append(path)
+                    changes.append(f"entity:locacion+{location.get('nombre')}")
+        except Exception:
+            if rollback and created_paths:
+                try:
+                    rollback(created_paths)
+                except Exception:
+                    pass
+            raise
+
         return changes, created_paths
 
     def _rollback_memory(
