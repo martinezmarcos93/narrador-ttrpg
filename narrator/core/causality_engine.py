@@ -27,6 +27,7 @@ class CausalityEngine:
     def __init__(self, state_manager, *, max_cascade_depth: int = _MAX_CASCADE_DEPTH):
         self.state = state_manager
         self.max_cascade_depth = max(1, int(max_cascade_depth))
+        self.last_activations: list[CausalActivation] = []
 
     @staticmethod
     def _trigger_matches(trigger: str, event_text: str) -> bool:
@@ -192,6 +193,7 @@ class CausalityEngine:
             current_event = " | ".join(emitted)
             current_next_turn = False
 
+        self.last_activations = list(activations)
         return activations
 
     def summary(self, activations: list[CausalActivation]) -> str:
