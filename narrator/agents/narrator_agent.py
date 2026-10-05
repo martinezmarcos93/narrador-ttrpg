@@ -70,6 +70,7 @@ class NarratorAgent:
         r"\[\[(NUEVO_NPC|NUEVA_LOCACION)\]\](.*?)\[\[/\1\]\]", re.DOTALL | re.IGNORECASE
     )
     _RE_STATE_TAG = re.compile(r"\[state:\s*([^\]]+)\]", re.IGNORECASE)
+    _RE_PROPOSAL_BLOCK = re.compile(r"```json-proposal\s*.*?\s*```", re.DOTALL | re.IGNORECASE)
     # Pares clave=valor separados por espacios (no coma): el valor puede
     # contener espacios (ej. "reason=herida de espada") — cada match se
     # extiende hasta justo antes de la siguiente "palabra=" o el final.
@@ -182,6 +183,7 @@ class NarratorAgent:
         líneas en blanco de más donde iba un bloque de entidad)."""
         text = self._RE_ENTITY_BLOCK.sub("", text)
         text = self._RE_STATE_TAG.sub("", text)
+        text = self._RE_PROPOSAL_BLOCK.sub("", text)
         text = re.sub(r"[ \t]{2,}", " ", text)
         text = re.sub(r"\n{3,}", "\n\n", text)
         return text.strip()
