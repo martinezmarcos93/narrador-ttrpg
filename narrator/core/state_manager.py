@@ -487,6 +487,22 @@ class StateManager:
                 present.remove(name)
                 changes.append(f"npc:-{name}")
 
+        for item in getattr(proposal, "relations", []) or []:
+            source = str(item.get("source") or "").strip()
+            target = str(item.get("target") or "").strip()
+            relation = str(item.get("relation") or "").strip()
+            if source and target and relation:
+                self.set_relation(
+                    source,
+                    target,
+                    relation,
+                    int(item.get("strength", 0)),
+                    source_type=str(item.get("source_type") or "npc"),
+                    target_type=str(item.get("target_type") or "npc"),
+                    reason=str(item.get("reason") or "narrative_proposal"),
+                )
+                changes.append(f"relation:{source}->{target}:{relation}")
+
         for item in proposal.consequences:
             consequence = str(item.get("text") or item.get("consequence") or "").strip()
             if consequence:
