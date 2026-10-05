@@ -347,6 +347,18 @@ class Orchestrator:
         except Exception:
             schema = {}
         self.proposal_executor.character_schema = schema
+        try:
+            pack = SystemPack.load(
+                system_slug,
+                getattr(self.builder, "systems_path", "data/systems"),
+            )
+            contract_errors = pack.validate_front_contract()
+            if contract_errors:
+                logger.warning("System Pack con contrato de frentes inválido: %s", contract_errors)
+            allowed_fronts = set(pack.fronts) | set(self.state.data.get("frentes", {}))
+            self.proposal_executor.configure_front_contract(allowed_fronts)
+        except Exception as exc:
+            logger.warning("No se pudo configurar contrato de frentes: %s", exc)
         result = self.proposal_executor.execute(proposal, character=character)
         return {
             "applied": result.applied,
