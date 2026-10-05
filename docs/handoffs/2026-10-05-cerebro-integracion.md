@@ -98,3 +98,46 @@ Tests específicos:
 - `tests/test_system_pack.py`
 
 No se ejecutaron localmente.
+
+
+## Contrato formal de turno — implementado
+
+Se añadió `narrator/core/turn_contract.py` con las etapas explícitas:
+
+`input → interpretation → intent → rule_need → retrieval → resolution → state_update → context_selection → narrative_prompt → llm → post_process → persist`.
+
+El contrato registra:
+- entrada y sistema activo;
+- interpretación e intención;
+- necesidad de resolución;
+- contexto recuperado y procedencia;
+- snapshot del estado mutable;
+- resolución mecánica calculada por Python;
+- delta de estado;
+- prompt narrativo;
+- salida del LLM.
+
+`Orchestrator.prepare_turn()` ejecuta las etapas Python hasta producir el prompt. No llama al LLM.
+
+`narrator/app.py` utiliza ahora `prepare_turn()` para el flujo agente. La respuesta del LLM se registra como salida del contrato después del streaming.
+
+Se corrigió además una inicialización inalcanzable: `KnowledgeRouter` estaba después de un `return` en `_load_config()`; ahora se inicializa en `Orchestrator.__init__()`.
+
+### Estado mutable como capa autoritativa
+
+Se añadió `StateManager.get_turn_context_text()` y el estado vivo entra al prompt como sección separada y autoritativa. Esto evita confundir una nota histórica recuperada del vault con el estado actual de la campaña.
+
+### Cobertura
+
+Nuevo test:
+- `tests/test_turn_contract.py`
+
+Los tests están escritos pero **no fueron ejecutados localmente**, de acuerdo con la restricción vigente de no realizar pruebas locales todavía.
+
+### Siguiente bloque recomendado
+
+1. Convertir las mutaciones de estado emitidas por el LLM en propuestas verificables por Python, evitando que el LLM sea autoridad de estado.
+2. Hacer que `RuleArbiter` produzca una estructura de resolución tipada más rica (acción, atributo, dificultad, dados, total, veredicto, banda, procedencia de regla).
+3. Persistir un `TurnContract` resumido en el log de sesión para trazabilidad/debug.
+4. Completar métricas de retrieval y procedencia.
+5. Recién después avanzar a Flask.
