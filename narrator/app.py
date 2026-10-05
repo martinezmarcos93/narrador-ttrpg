@@ -402,61 +402,51 @@ def finish_streaming(full_text: str):
     if _narrator_agent:
         is_important = _narrator_agent.is_important_event(full_text)
         char_data = _narrator_agent.extract_character_json(full_text)
-        if char_data and not narrative_proposal:
-            try:
-                result = _narrator_service.apply_character_snapshot(char_data, state)
-                if _active_turn_contract is not None:
-                    _active_turn_contract.record_proposal_result(result)
-                if result.get("applied") and result.get("changes"):
-                    needs_char_refresh = True
-                    is_important = True
-            except Exception as e:
-                logger.error(f"Error validando personaje extraido: {e}", exc_info=True)
-        with state_lock:
-            state["tirada_sugerida"] = _narrator_agent.extract_dice_suggestion(full_text)
 
-        if narrative_proposal:
+        # Toda salida estructurada del LLM converge en una única propuesta.
+        # Esto evita que narrative_proposal, [state:], JSON legacy y entidades
+        # se ejecuten como transacciones independientes dentro del mismo turno.
+        proposal = _narrator_service.compose_postprocessing_proposal(
+            narrative_proposal=narrative_proposal,
+            character_data=char_data if not narrative_proposal else None,
+            mutations=mutations,
+            new_entities=new_entities,
+            include_entities=bool(_vault_writer),
+        )
+        if proposal:
             try:
                 proposal_result = _narrator_service.apply_proposal(
-                    narrative_proposal,
+                    proposal,
                     app_state=state,
                 )
                 if not proposal_result.get("applied"):
                     logger.warning(
-                        "Propuesta narrativa rechazada: %s",
+                        "Propuesta post-LLM rechazada: %s",
                         proposal_result.get("validation", {}),
                     )
-                elif proposal_result.get("changes"):
+                else:
+                    changelog = list(proposal_result.get("changes", []))
                     if _active_turn_contract is not None:
                         _active_turn_contract.record_proposal_result(proposal_result)
-                    is_important = True
+                    if changelog:
+                        needs_char_refresh = bool(
+                            proposal.get("character_changes") or proposal.get("character")
+                        )
+                        is_important = True
+                        ts = datetime.now().strftime("%H:%M")
+                        with state_lock:
+                            state["session_log"].extend(
+                                f"[{ts}] Estado: {change}" for change in changelog
+                            )
             except Exception as e:
-                logger.error(f"Error ejecutando propuesta narrativa: {e}", exc_info=True)
-
-        if mutations:
-            try:
-                proposal_result = _narrator_service.apply_proposal(
-                    {"character_changes": mutations},
-                    app_state=state,
+                logger.error(
+                    "Error ejecutando propuesta post-LLM compuesta: %s",
+                    e,
+                    exc_info=True,
                 )
-                changelog = list(proposal_result.get("changes", []))
-                if not proposal_result.get("applied"):
-                    logger.warning(
-                        "Propuesta de mutación rechazada: %s",
-                        proposal_result.get("validation", {}),
-                    )
-            except Exception as e:
-                changelog = []
-                logger.error(f"Error validando propuesta de estado: {e}", exc_info=True)
 
-            if changelog:
-                if _active_turn_contract is not None:
-                    _active_turn_contract.record_proposal_result(proposal_result)
-                needs_char_refresh = True
-                is_important = True
-                ts = datetime.now().strftime("%H:%M")
-                with state_lock:
-                    state["session_log"].extend(f"[{ts}] Estado: {c}" for c in changelog)
+        with state_lock:
+            state["tirada_sugerida"] = _narrator_agent.extract_dice_suggestion(full_text)
 
         # Fase 13: solo señala (log), nunca bloquea el turno.
         last_user = next(
@@ -468,21 +458,6 @@ def finish_streaming(full_text: str):
                 f"Jugador: {last_user[:80]!r}"
             )
 
-        if new_entities and _vault_writer:
-            for tipo, data in new_entities:
-                try:
-                    if tipo == "npc":
-                        result = _narrator_service.apply_proposal({"npcs": [data]}, app_state=state)
-                        if _active_turn_contract is not None:
-                            _active_turn_contract.record_proposal_result(result)
-                    else:
-                        result = _narrator_service.apply_proposal({"locations": [data]}, app_state=state)
-                        if _active_turn_contract is not None:
-                            _active_turn_contract.record_proposal_result(result)
-                except Exception as e:
-                    logger.error(
-                        f"Error auto-guardando entidad '{data.get('nombre')}': {e}", exc_info=True
-                    )
     else:
         is_important = any(
             w in full_text.lower()
