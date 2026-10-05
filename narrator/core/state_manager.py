@@ -103,6 +103,23 @@ class StateManager:
         clocks = self.get_clocks_summary()
         if clocks:
             lines.append("Relojes:\n" + clocks)
+        pending = self.get_pending_consequences()
+        if pending:
+            lines.append("Consecuencias pendientes:\n" + "\n".join(
+                f"  - {item.get('consecuencia')} (trigger: {item.get('trigger') or 'no definido'})"
+                for item in pending[:8]
+            ))
+        events = self.data.get("eventos", [])
+        if events:
+            lines.append("Eventos recientes:\n" + "\n".join(
+                f"  - {item.get('evento')}" for item in events[-5:]
+            ))
+        facts = self.data.get("hechos_conocidos", {})
+        if facts:
+            lines.append("Hechos conocidos:\n" + ", ".join(
+                f"{key}={entry.get('valor') if isinstance(entry, dict) else entry}"
+                for key, entry in list(facts.items())[-12:]
+            ))
         combat = self.get_combat_status_text()
         if combat:
             lines.append("Combate: " + combat)
