@@ -75,3 +75,26 @@ Esto es deliberado: el cerebro universal aporta conceptos generales; el manual/P
 4. Recién después endurecer Flask/UI.
 
 Las pruebas nuevas están escritas pero no se han ejecutado en un entorno local durante esta iteración.
+
+
+## Knowledge Router — implementado
+
+Se añadió `narrator/core/knowledge_router.py`.
+
+El router:
+- lee `SystemPack.knowledge`;
+- decide qué fuentes consultar;
+- conserva la procedencia en `ContextFragment`;
+- aplica fallback universal cuando corresponde;
+- deduplica resultados antes del render;
+- reutiliza el índice/RAG existente, sin crear un segundo sistema de recuperación.
+
+El `Orchestrator` ahora instancia `KnowledgeRouter` y lo utiliza para construir el contexto narrativo.
+
+También se añadió `VaultRetriever.get_vault_fragments_by_layer()` para recuperar específicamente campaña/estado sin mezclar capas.
+
+Tests específicos:
+- `tests/test_knowledge_router.py`
+- `tests/test_system_pack.py`
+
+No se ejecutaron localmente.
