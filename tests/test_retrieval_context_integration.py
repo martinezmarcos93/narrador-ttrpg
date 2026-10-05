@@ -114,3 +114,49 @@ def test_router_can_place_state_above_manual():
         state_context="STATE-AUTHORITY",
     )
     assert rendered.index("STATE-AUTHORITY") < rendered.index("MANUAL-AUTHORITY")
+
+
+def test_router_excludes_explicitly_restricted_campaign_fragments():
+    class RestrictedRetriever(RetrieverStub):
+        def get_vault_fragments_by_layer(self, query, layer, limit):
+            return [
+                ContextFragment(
+                    text="secreto del director",
+                    source="dm",
+                    layer="campaign",
+                    title="secreto",
+                    score=1.0,
+                    metadata={"llm_visible": False},
+                ),
+                ContextFragment(
+                    text="dato publico de campaña",
+                    source="campaign",
+                    layer="campaign",
+                    title="publico",
+                    score=0.7,
+                    metadata={"llm_visible": True},
+                ),
+                ContextFragment(
+                    text="otra nota privada",
+                    source="dm",
+                    layer="campaign",
+                    title="privada",
+                    score=0.9,
+                    metadata={"visibility": "private"},
+                ),
+            ]
+
+    router = KnowledgeRouter(RestrictedRetriever())
+    pack = SystemPack(
+        slug="vampiro",
+        sistema="Vampiro",
+        edition="V20",
+        knowledge=KnowledgePolicy(
+            preferred_sources=("campaign",),
+            universal_fallback=False,
+        ),
+    )
+    rendered = router.retrieve("pista", pack)
+    assert "secreto del director" not in rendered
+    assert "otra nota privada" not in rendered
+    assert "dato publico de campaña" in rendered
