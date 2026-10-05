@@ -41,6 +41,7 @@ class TurnContract:
     intent: str = ""
     rule_need: str = ""
     retrieved_context: str = ""
+    retrieval_metrics: dict[str, Any] = field(default_factory=dict)
     state_snapshot: str = ""
     mechanical_resolution: dict[str, Any] | None = None
     state_delta: dict[str, Any] = field(default_factory=dict)
@@ -95,6 +96,7 @@ class TurnContract:
             "mechanical_resolution": self.mechanical_resolution,
             "state_snapshot": self.state_snapshot,
             "retrieved_context": self.retrieved_context,
+            "retrieval_metrics": self.retrieval_metrics,
             "prompt": self.narrative_prompt,
         }
 
@@ -119,6 +121,7 @@ class TurnContract:
             "intent": self.intent,
             "rule_need": self.rule_need,
             "mechanical_resolution": self.mechanical_resolution,
+            "retrieval_metrics": self.retrieval_metrics,
             "state_delta": self.state_delta,
             "provenance": list(self.provenance),
             "errors": list(self.errors),
