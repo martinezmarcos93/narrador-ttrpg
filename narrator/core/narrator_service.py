@@ -37,6 +37,19 @@ class NarratorService:
             app_state=app_state,
         )
 
+    def apply_proposal_with_fallback(self, proposal: dict, app_state: dict | None = None) -> dict:
+        """Aplica la propuesta o degrada explícitamente a narración-only."""
+        result = self.apply_proposal(proposal, app_state=app_state)
+        if result.get("applied"):
+            result["fallback"] = {"mode": "stateful", "executed": True}
+        else:
+            result["fallback"] = {
+                "mode": "narration_only",
+                "executed": False,
+                "reason": "invalid_or_rejected_proposal",
+            }
+        return result
+
     @staticmethod
     def build_character_changes(character_data: dict | None) -> list[dict]:
         """Convierte JSON legacy en cambios de propuesta sin ejecutar nada."""
