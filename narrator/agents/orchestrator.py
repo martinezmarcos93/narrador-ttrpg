@@ -17,6 +17,7 @@ from narrator.core.state_manager import StateManager
 from narrator.core.turn_contract import TurnContract
 from narrator.core.proposal_executor import ProposalExecutor
 from narrator.core.causality_engine import CausalityEngine
+from narrator.core.knowledge_visibility import KnowledgeVisibility
 from narrator.core.vault_writer import VaultWriter
 from narrator.agents.narrator_agent import NarratorAgent
 from narrator.core.theory_engine import MasterMoveEngine, PacingToneAgent, WorldSimulationEngine, InvestigationEngine
@@ -71,6 +72,7 @@ class Orchestrator:
             vault_writer=self.vault_writer,
         )
         self.causality = CausalityEngine(self.state)
+        self.knowledge_visibility = KnowledgeVisibility(self.state)
 
     def _load_config(self, path: str) -> dict:
         try:
@@ -209,6 +211,22 @@ class Orchestrator:
                     names.append(nombre)
         return names
 
+    def _get_narrative_state_context(self, app_state: dict) -> str:
+        """Contexto de estado visible para el narrador sin filtrar secretos del mundo."""
+        character = app_state.get("character") or {}
+        character_name = (
+            character.get("nombre")
+            or character.get("name")
+            or character.get("personaje")
+            or ""
+        )
+        base = self.state.get_turn_context_text()
+        knowledge = self.knowledge_visibility.narrator_view(
+            character=str(character_name),
+            include_player=True,
+        )
+        return base + (f"\n{knowledge}" if knowledge else "")
+
     def build_narrator_context(self, app_state: dict) -> str:
         system_slug = self.get_active_system(app_state)
         last_user_msg = self._get_last_user_message(app_state)
@@ -228,7 +246,7 @@ class Orchestrator:
             brain_query,
             system_pack,
             manual_text=manual_text,
-            state_context=self.state.get_turn_context_text(),
+            state_context=self._get_narrative_state_context(app_state),
             max_words=700,
         )
         self._last_retrieval_metrics = retrieval_metrics.to_dict()
@@ -291,7 +309,7 @@ class Orchestrator:
             scenes_info=scenes_info,
             forced_event=forced_event,
             combat_status=self.state.get_combat_status_text(),
-            state_context=self.state.get_turn_context_text(),
+            state_context=self._get_narrative_state_context(app_state),
         )
 
     def build_char_creation_context(self, app_state: dict) -> str:
