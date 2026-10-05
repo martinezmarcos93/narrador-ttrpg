@@ -14,6 +14,7 @@ from narrator.core.prompt_builder import PromptBuilder
 from narrator.core.retriever import VaultRetriever
 from narrator.core.scene_manager import SceneManager
 from narrator.core.state_manager import StateManager
+from narrator.core.turn_contract import TurnContract
 from narrator.core.theory_engine import MasterMoveEngine, PacingToneAgent, WorldSimulationEngine, InvestigationEngine
 
 _THEORY_ENGINE_PATH = Path(__file__).parent.parent / "core" / "theory_engine"
@@ -55,6 +56,8 @@ class Orchestrator:
         # Fronts reactivos (C3): frente cuyo reloj se llenó en vivo y debe
         # interrumpir la escena en el próximo turno del narrador.
         self._pending_interruption: str = ""
+        self.knowledge_router = KnowledgeRouter(self.retriever)
+        self._last_retrieved_context = ""
 
     def _load_config(self, path: str) -> dict:
         try:
@@ -62,8 +65,6 @@ class Orchestrator:
                 return yaml.safe_load(f) or {}
         except Exception as e:
             return {}
-
-        self.knowledge_router = KnowledgeRouter(self.retriever)
 
     # ── Theory engine ─────────────────────────────────────────
     def get_world_status_text(self) -> str:
@@ -217,6 +218,7 @@ class Orchestrator:
             max_words=700,
         )
         brain_ctx = ""
+        self._last_retrieved_context = vault_ctx
 
         # Recall por mención: complementa el contexto híbrido, pero ya no lo
         # reemplaza. Así el cerebro y los manuales siguen presentes aunque
@@ -274,6 +276,7 @@ class Orchestrator:
             scenes_info=scenes_info,
             forced_event=forced_event,
             combat_status=self.state.get_combat_status_text(),
+            state_context=self.state.get_turn_context_text(),
         )
 
     def build_char_creation_context(self, app_state: dict) -> str:
@@ -289,6 +292,70 @@ class Orchestrator:
             manual_excerpt=manual_text,
             brain_context=brain_ctx,
         )
+
+
+    # ── Contrato formal de turno ──────────────────────────────
+    @staticmethod
+    def _infer_intent(text: str) -> tuple[str, str]:
+        """Clasificación determinista mínima; no pretende reemplazar al LLM."""
+        t = (text or "").strip().lower()
+        if not t:
+            return "unknown", ""
+        if any(k in t for k in ("quiero", "intento", "voy a", "ataco", "investigo", "busco", "hablo", "pregunto", "huyo", "entro", "salgo")):
+            return "player_action", "acción declarada por el jugador"
+        if any(k in t for k in ("qué pasó", "que paso", "recordame", "recuérdame", "recuerdame")):
+            return "information_request", "consulta sobre ficción/estado"
+        return "dialogue_or_description", "interacción narrativa sin señal mecánica explícita"
+
+    def prepare_turn(self, app_state: dict) -> TurnContract:
+        """Ejecuta las etapas Python del contrato hasta dejar listo el prompt.
+
+        No llama al LLM. La respuesta generativa queda fuera de este método.
+        """
+        system_slug = self.get_active_system(app_state)
+        input_text = self._get_last_user_message(app_state)
+        contract = TurnContract(
+            input_text=input_text,
+            system_slug=system_slug,
+            character_snapshot=dict(app_state.get("character") or {}),
+        )
+        contract.advance("interpretation")
+        contract.interpretation = input_text.strip()
+        contract.advance("intent")
+        contract.intent, intent_reason = self._infer_intent(input_text)
+        contract.provenance.append(f"interpretación: {intent_reason}")
+
+        contract.advance("rule_need")
+        if app_state.get("resolucion_mecanica"):
+            contract.rule_need = "resolver y narrar una tirada ya ejecutada"
+        elif app_state.get("pending_roll"):
+            contract.rule_need = "hay una tirada pendiente de resolución"
+        elif contract.intent == "player_action":
+            contract.rule_need = "determinar si la acción requiere resolución mecánica"
+        else:
+            contract.rule_need = "sin resolución mecánica explícita"
+
+        contract.advance("retrieval")
+        prompt = self.build_narrator_context(app_state)
+        contract.retrieved_context = self._last_retrieved_context
+        contract.state_snapshot = self.state.get_turn_context_text()
+        if contract.retrieved_context:
+            contract.record_source("KnowledgeRouter")
+        contract.record_source("StateManager")
+
+        contract.advance("resolution")
+        if app_state.get("resolucion_mecanica"):
+            contract.mechanical_resolution = {
+                "detalle": app_state.get("resolucion_mecanica", ""),
+                "banda": app_state.get("tirada_banda", ""),
+            }
+
+        contract.advance("state_update")
+        contract.state_delta = dict(app_state.get("turn_state_delta") or {})
+        contract.advance("context_selection")
+        contract.advance("narrative_prompt")
+        contract.narrative_prompt = prompt
+        return contract
 
     # ── Dispatch principal ────────────────────────────────────
     def get_context_for_phase(self, app_state: dict) -> str:
