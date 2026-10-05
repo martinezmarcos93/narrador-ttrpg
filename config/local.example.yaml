@@ -1,0 +1,5 @@
+# Configuración propia de esta máquina. Copiar a config/local.yaml
+# (ignorado por git) y completar.
+cerebro:
+  # Carpeta donde están los manuales (PDF) y notas que barre el cerebro.
+  biblioteca: "/ruta/a/tu/biblioteca/de/rol"

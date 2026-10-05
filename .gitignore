@@ -2,6 +2,13 @@
 vault/
 !vault_template/
 
+# Cerebro: neuronas barridas de los manuales (texto con copyright; se
+# regenera con `python -m narrator.cerebro.barredor`)
+/cerebro/
+
+# Configuración propia de cada máquina
+config/local.yaml
+
 # Estado de campaña (datos de partida en curso)
 estado_campana.yaml
 
