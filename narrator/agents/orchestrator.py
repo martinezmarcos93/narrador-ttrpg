@@ -58,6 +58,7 @@ class Orchestrator:
         self._pending_interruption: str = ""
         self.knowledge_router = KnowledgeRouter(self.retriever)
         self._last_retrieved_context = ""
+        self._last_retrieval_metrics: dict = {}
 
     def _load_config(self, path: str) -> dict:
         try:
@@ -211,13 +212,14 @@ class Orchestrator:
             system_slug,
             getattr(self.builder, "systems_path", "data/systems"),
         )
-        vault_ctx = self.knowledge_router.retrieve(
+        vault_ctx, retrieval_metrics = self.knowledge_router.retrieve_with_metrics(
             brain_query,
             system_pack,
             manual_text=manual_text,
             state_context=self.state.get_turn_context_text(),
             max_words=700,
         )
+        self._last_retrieval_metrics = retrieval_metrics.to_dict()
         brain_ctx = ""
         self._last_retrieved_context = vault_ctx
 
@@ -339,6 +341,7 @@ class Orchestrator:
         contract.advance("retrieval")
         prompt = self.build_narrator_context(app_state)
         contract.retrieved_context = self._last_retrieved_context
+        contract.retrieval_metrics = dict(self._last_retrieval_metrics)
         contract.state_snapshot = self.state.get_turn_context_text()
         if contract.retrieved_context:
             contract.record_source("KnowledgeRouter")
