@@ -124,3 +124,71 @@ def test_causal_chain_updates_world_relation_and_front_clock(tmp_path):
     assert state.get_world_fact("portal_inestable") is True
     assert state.get_relations("Alicia")[0]["strength"] == -70
     assert state.data["relojes"]["Amenaza"]["llenos"] == 2
+
+
+def test_compound_turn_applies_character_entity_scene_and_consequence_atomically(tmp_path):
+    state = StateManager(str(tmp_path / "estado.yaml"))
+    character = {"hp": 12}
+    agent = type(
+        "AgentStub",
+        (),
+        {
+            "character_field_specs": staticmethod(
+                lambda schema: {"hp": {"key": "hp", "type": "int", "min": 0, "max": 20}}
+            ),
+            "apply_state_mutations": staticmethod(
+                lambda character, mutations, allowed_fields=None: [
+                    character.__setitem__(
+                        item["field"],
+                        max(0, min(20, character.get(item["field"], 0) + item.get("delta", 0))),
+                    )
+                    for item in mutations
+                ],
+            ),
+        },
+    )()
+    from narrator.core.vault_writer import VaultWriter
+    vault = VaultWriter(str(tmp_path / "vault"))
+    result = ProposalExecutor(
+        state,
+        narrator_agent=agent,
+        character_schema={"base_sections": [{"fields": [{"key": "hp", "type": "int", "min": 0, "max": 20}]}]},
+        vault_writer=vault,
+    ).execute(
+        {
+            "character_changes": [{"field": "hp", "delta": -4}],
+            "npcs": [{"nombre": "El Testigo"}],
+            "locations": [{"nombre": "Sala Sellada"}],
+            "scene_changes": {"locacion": "Sala Sellada"},
+            "consequences": [{"text": "El testigo huirá.", "trigger": "siguiente turno"}],
+        },
+        character=character,
+    )
+    assert result.applied
+    assert character["hp"] == 8
+    assert state.get_location() == "Sala Sellada"
+    assert (tmp_path / "vault" / "NPCs" / "El_Testigo.md").exists()
+    assert state.get_pending_consequences()
+
+
+def test_compound_turn_rejects_conflict_before_partial_execution(tmp_path):
+    state = StateManager(str(tmp_path / "estado.yaml"))
+    state.set_known_fact("puerta", "cerrada")
+    character = {"hp": 12}
+    from narrator.core.vault_writer import VaultWriter
+    vault = VaultWriter(str(tmp_path / "vault"))
+    result = ProposalExecutor(
+        state,
+        vault_writer=vault,
+    ).execute(
+        {
+            "facts": {"puerta": "abierta"},
+            "character_changes": [{"field": "hp", "delta": -5}],
+            "npcs": [{"nombre": "No Debe Existir"}],
+        },
+        character=character,
+    )
+    assert not result.applied
+    assert character["hp"] == 12
+    assert not (tmp_path / "vault" / "NPCs" / "No_Debe_Existir.md").exists()
+    assert state.get_known_fact("puerta") == "cerrada"
