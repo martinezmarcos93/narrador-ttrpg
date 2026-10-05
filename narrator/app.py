@@ -388,6 +388,10 @@ def finish_streaming(full_text: str):
         new_entities = _narrator_agent.extract_new_entities(full_text)
         mutations = _narrator_agent.extract_state_mutations(full_text)
         narrative_proposal = _narrator_agent.extract_narrative_proposal(full_text)
+        if narrative_proposal and narrative_proposal.get("character_changes"):
+            # El bloque estructurado es la fuente única para esos cambios;
+            # evita aplicar dos veces una misma mutación declarada también con [state:].
+            mutations = []
         full_text = _narrator_agent.strip_system_tags(full_text)
 
     # Procesamiento sin DPG — hilo worker
