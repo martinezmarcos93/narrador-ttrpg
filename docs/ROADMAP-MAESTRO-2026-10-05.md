@@ -75,7 +75,8 @@ feat/retrieval-evaluation. Está 16 commits por delante de main y 0 por detrás.
 
 ### A3. Continuidad
 - HECHO: conflictos de facts, eventos duplicados y regresión temporal.
-- PENDIENTE: continuidad de NPCs/localizaciones, relaciones, clocks/fronts y consecuencias.
+- HECHO: validación de clocks inexistentes, deltas no enteros y límites 0..segmentos.
+- PENDIENTE: continuidad de NPCs/localizaciones, relaciones, clocks/fronts y consecuencias complejas.
 - PENDIENTE: entidades inexistentes y cambios incompatibles.
 
 ## 3. FASE B — Cerebro + biblioteca documental
