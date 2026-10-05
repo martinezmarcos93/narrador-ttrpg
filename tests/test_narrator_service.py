@@ -117,3 +117,16 @@ def test_service_uses_legacy_character_json_only_when_no_structured_character_ch
         {"field": "hp", "value": 7, "reason": "json legacy"},
         {"field": "fuerza", "value": 3, "reason": "json legacy"},
     ]
+
+
+def test_service_world_advances_delegate_to_orchestrator():
+    from narrator.core.narrator_service import NarratorService
+
+    service = NarratorService.__new__(NarratorService)
+
+    class StubOrchestrator:
+        def apply_world_advances(self, advances):
+            return [item["nombre"] for item in advances]
+
+    service.orchestrator = StubOrchestrator()
+    assert service.apply_world_advances([{"nombre": "Culto", "ticks": 2}]) == ["Culto"]
