@@ -326,3 +326,47 @@ Flask continúa diferido. No se agregó lógica de juego a la futura capa HTTP.
 ### Ajuste final de rollback
 
 El rollback también contempla el caso en que el archivo de estado todavía no existía: si la propuesta falla antes de la primera persistencia, no deja un estado nuevo artificial. Además, el executor tolera implementaciones de VaultWriter que no expongan rollback, manteniendo compatibilidad con adaptadores/fakes existentes.
+
+
+## Pasada de reducción de pendientes — persistencia, contratos y escenarios — 2026-10-05
+
+Se cerró el bloque de persistencia batch:
+- StateManager.begin_batch() / end_batch() permiten agrupar escrituras.
+- save() queda diferido durante un batch.
+- CausalityEngine.evaluate() ejecuta la cascada dentro de un batch y persiste una sola vez al finalizar.
+- Los batches son anidables.
+
+Se formalizó el contrato de System Pack para facciones/frentes:
+- factions y fronts son estructuras declarativas opcionales.
+- Los frentes pueden referenciar una facción declarada.
+- validate_front_contract() detecta referencias incompatibles.
+- front_definition() permite consultar la definición declarativa.
+
+Se conectó ese contrato con las propuestas:
+- el Orchestrator configura los frentes permitidos combinando System Pack + frentes de campaña;
+- front_clock_delta contra un frente no declarado se rechaza cuando existe contrato activo.
+
+Se amplió el estado de campaña con un registro de facciones: slug, nombre, descripción, agenda y estado, con consulta de facciones activas.
+
+Se completó la telemetría de turno:
+- TurnContract.causal_metrics;
+- serialización de métricas;
+- persistencia en StateManager.record_turn();
+- prepare_turn() incorpora las métricas de causalidad al state_delta.
+
+Se añadieron escenarios sintéticos deterministas que cubren: contexto por capas + cascada causal + continuidad; aislamiento de secretos entre mundo/personaje/jugador; rechazo de conflictos de continuidad antes de mutar estado.
+
+No se ejecutaron pruebas locales.
+
+### Pendientes que permanecen
+
+El núcleo determinista ya tiene cubiertos retrieval, separación de conocimiento, resolución, continuidad, propuestas, causalidad, provenance, relaciones, facciones/frentes y trazabilidad de turno.
+
+Quedan principalmente tareas de integración y endurecimiento de nivel superior:
+- ampliar el conjunto de escenarios con retrieval real sobre el índice de cerebro;
+- medir precision/recall con ground truth;
+- optimización posterior del índice/modelo local;
+- integrar de forma definitiva el flujo completo de respuesta LLM -> propuesta -> executor en todas las rutas de UI;
+- Flask como capa final;
+- pruebas locales y validación de extremo a extremo;
+- integración posterior de configuración/entidades de campaña reales.
