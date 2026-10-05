@@ -61,9 +61,23 @@ class VaultRetriever:
         system: str | None = None,
         max_brain: int = 4,
         max_vault: int = 4,
+        manual_text: str = "",
     ) -> list[ContextFragment]:
         """Une cerebro + vault sin borrar la procedencia de cada fuente."""
         fragments: list[ContextFragment] = []
+
+        # Un manual adjunto por el usuario es una fuente de máxima
+        # especificidad. Nunca se descarta simplemente porque el vault
+        # también tenga resultados.
+        if manual_text and manual_text.strip():
+            fragments.append(ContextFragment(
+                text=manual_text.strip(),
+                source="manual adjunto",
+                layer="manual",
+                title="Manual cargado en la sesión",
+                score=1.0,
+                metadata={"origen": "manual", "session_attached": True},
+            ))
 
         for result in self.brain.search(
             query,
