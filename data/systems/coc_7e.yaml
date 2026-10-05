@@ -144,6 +144,17 @@ character_sheet_schema:
           - {key: medicina,       label: Medicina (%),       type: int}
           - {key: primeros_auxilios, label: Primeros Auxilios (%), type: int}
 
+lorebook: []
+
+# --- Política de conocimiento ---
+knowledge:
+  brain_system: "coc_7e"
+  preferred_sources:
+    - manual
+    - system
+    - universal
+  universal_fallback: true
+
 # --- Resolución mecánica (Rule Arbiter) ---
 resolution:
   mecanica: "percentil"

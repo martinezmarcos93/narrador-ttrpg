@@ -1,0 +1,107 @@
+# ============================================================
+# Cerebro — catálogo de fuentes que barre `narrator.cerebro.barredor`
+# ============================================================
+# `archivo` es relativo a la biblioteca local de manuales (ver
+# config/local.example.yaml). Acá solo se versionan las rutas: el texto
+# de los manuales nunca entra al repo (el vault `cerebro/` está ignorado).
+#
+# Campos por fuente:
+#   id                identificador y nombre de carpeta dentro del vault
+#   sistema           slug del juego (sistemas/<sistema>/<id>/)
+#   capa              sistema (por defecto) | universal
+#   titulo            nombre del libro, tal como se cita
+#   idioma            es | en
+#   origen            manual (por defecto) | nota_propia
+#   titulos_por_letra auto (por defecto) | true | false — abrir secciones
+#                     también por tamaño de letra, además del índice del PDF
+#   patron_entrada    regex; cada párrafo que calza abre una neurona propia
+#                     (el grupo 1 es el título). Para listas sin títulos
+#                     tipográficos: Dones, hechizos, méritos.
+
+# Secciones que no aportan conocimiento de juego.
+excluir_titulos:
+  - Créditos
+  - Índice
+  - Índice de Contenidos
+  - Contenidos
+  - Agradecimientos
+  - Cover
+  - Title Page
+  - Credits
+  - Contents
+  - Table of Contents
+  - Index
+  - Kickstarter Backers
+
+# Títulos demasiado comunes para enlazarlos por mención ("ver también").
+titulos_genericos:
+  - Sistema
+  - Introducción
+  - Resumen
+  - Ejemplo
+  - Ejemplos
+  - Descripción
+  - Notas
+  - Otros
+  - General
+  - System
+  - Introduction
+  - Summary
+  - Example
+  - Overview
+
+fuentes:
+  # ── Vampiro: La Mascarada ──────────────────────────────────
+  - id: v20-basico
+    sistema: vtm_v20
+    titulo: "Vampiro: La Mascarada — 20º Aniversario"
+    archivo: "00-White Wolf/1 Mundo de Tinieblas/1 Vampiro Mascarada/Vampiro 20 aniversario.pdf"
+    idioma: es
+
+  # ── Hombre Lobo: El Apocalipsis ────────────────────────────
+  - id: w20-basico
+    sistema: wta_w20
+    titulo: "Werewolf: The Apocalypse — 20th Anniversary Edition"
+    archivo: "00-White Wolf/1 Mundo de Tinieblas/2 Hombre Lobo Apocalipsis/20 Aniversario/Werewolf_The_Apocalypse_20th_Anniversary_Edition.pdf"
+    idioma: en
+    # Dones: "• Sense Prey (Level One) — This Gift lets..."
+    patron_entrada: '^•\s*(.{3,60}?)\s*\((?:Level|Rank) \w+\)\s*[—–-]'
+  - id: w20-razas-cambiantes
+    sistema: wta_w20
+    titulo: "Hombre Lobo 20º Aniversario — Razas Cambiantes"
+    archivo: "00-White Wolf/1 Mundo de Tinieblas/2 Hombre Lobo Apocalipsis/20 Aniversario/H20 - Razas Cambiantes (2017).pdf"
+    idioma: es
+  - id: w20-libro-del-wyrm
+    sistema: wta_w20
+    titulo: "Hombre Lobo 20º Aniversario — El Libro del Wyrm"
+    archivo: "00-White Wolf/1 Mundo de Tinieblas/2 Hombre Lobo Apocalipsis/20 Aniversario/El Libro del Wyrm.pdf"
+    idioma: es
+  - id: w20-umbra
+    sistema: wta_w20
+    titulo: "W20 Umbra — The Velvet Shadow"
+    archivo: "00-White Wolf/1 Mundo de Tinieblas/2 Hombre Lobo Apocalipsis/20 Aniversario/W20 Umbra - The Velvet Shadow.pdf"
+    idioma: en
+
+  # ── La Llamada de Cthulhu 7ª ───────────────────────────────
+  - id: coc7-guardian
+    sistema: coc_7e
+    titulo: "La Llamada de Cthulhu 7ª edición — Manual del Guardián"
+    archivo: "01-Chtulhu/septima/La Llamada de Cthulhu (7ª edición) - Manual del Guardián {OCR, marcadores, índice hipervinculado}.pdf"
+    idioma: es
+  - id: coc7-resumen-reglas
+    sistema: coc_7e
+    titulo: "La Llamada de Cthulhu 7ª — Resumen de reglas"
+    archivo: "01-Chtulhu/CoC/01-Resumen de reglas.pdf"
+    idioma: es
+  - id: coc7-notas-creacion
+    sistema: coc_7e
+    titulo: "Cthulhu 7ª — Creación de personaje (notas de mesa)"
+    archivo: "01-Chtulhu/CoC/Creacion de personaje.txt"
+    idioma: es
+    origen: nota_propia
+  - id: coc7-notas
+    sistema: coc_7e
+    titulo: "Cthulhu 7ª — Notas de mesa"
+    archivo: "01-Chtulhu/CoC/Notas COC.txt"
+    idioma: es
+    origen: nota_propia

@@ -151,3 +151,38 @@ def test_sin_rolls_devuelve_none():
 def test_slug_desconocido_cae_a_generic():
     r = _arbiter().resolve("acción", {}, "sistema_inexistente", rolls=[18], sides=20)
     assert r is not None and r["banda"] == "10+"
+
+
+def test_resultado_arbiter_incluye_trazabilidad_estructurada():
+    r = _arbiter().resolve(
+        "trepo el muro, CD 18",
+        {"atributos": {"destreza": 14}},
+        "dnd_5e",
+        rolls=[15],
+        sides=20,
+    )
+    assert r["system_slug"] == "dnd_5e"
+    assert r["mecanica"] == "d20_vs_dc"
+    assert r["atributo"] == "destreza"
+    assert r["rolls"] == [15]
+    assert r["sides"] == 20
+    assert r["dificultad"] == 18
+    assert r["dificultad_label"] == "declarada"
+    assert r["rule_source"].endswith("dnd_5e.yaml:resolution")
+
+
+def test_dnd_rechaza_dado_incompatible():
+    assert _arbiter().resolve("ataco", {}, "dnd_5e", rolls=[5], sides=10) is None
+
+
+def test_arbiter_rechaza_resultado_fuera_de_rango():
+    assert _arbiter().resolve("ataco", {}, "dnd_5e", rolls=[21], sides=20) is None
+
+
+def test_arbiter_expone_validacion_de_tirada():
+    r = _arbiter().resolve("ataco", {}, "dnd_5e", rolls=[12], sides=20)
+    assert r["roll_validation"] == {
+        "valid": True,
+        "sides_compatible": True,
+        "count": 1,
+    }

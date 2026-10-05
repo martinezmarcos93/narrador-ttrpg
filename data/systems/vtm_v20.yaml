@@ -193,6 +193,15 @@ character_sheet_schema:
           - {key: auspex,         label: Auspex,             type: int, min: 0, max: 5}
           - {key: vicisitud,      label: Vicisitud,          type: int, min: 0, max: 5}
 
+# --- Recuperación de conocimiento ---
+knowledge:
+  brain_system: "vtm_v20"
+  preferred_sources:
+    - manual
+    - system
+    - universal
+  universal_fallback: true
+
 # --- Resolución mecánica (Rule Arbiter) ---
 resolution:
   mecanica: "pool_d10"

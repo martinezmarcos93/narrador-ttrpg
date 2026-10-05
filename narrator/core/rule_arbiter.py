@@ -24,6 +24,12 @@ _BANDA_EXITO = "10+"
 _BANDA_PARCIAL = "7-9"
 _BANDA_FALLO = "6-"
 
+_MECHANIC_SIDES = {
+    "d20_vs_dc": {20},
+    "pool_d10": {10},
+    "percentil": {100},
+}
+
 _RE_DIFICULTAD_EXPLICITA = re.compile(r"\b(?:cd|dc|dificultad)\s*:?\s*(\d{1,3})\b", re.IGNORECASE)
 
 
@@ -62,20 +68,52 @@ class RuleArbiter:
         heurística previa (banda por ratio), nunca se corta el flujo.
         """
         try:
-            if not rolls:
+            if not rolls or not isinstance(sides, int) or sides <= 0:
+                return None
+            if any(not isinstance(roll, int) or roll < 1 or roll > sides for roll in rolls):
+                logger.warning("RuleArbiter: tirada fuera de rango rechazada")
                 return None
             system = self.builder.load_system(system_slug) or {}
             res = system.get("resolution") or {}
             if not res:
                 return None
             mecanica = res.get("mecanica", "ratio")
+            expected_sides = _MECHANIC_SIDES.get(mecanica)
+            if expected_sides and sides not in expected_sides:
+                logger.warning(
+                    "RuleArbiter: dado incompatible con mecánica %s: d%s",
+                    mecanica,
+                    sides,
+                )
+                return None
             if mecanica == "d20_vs_dc":
-                return self._d20_vs_dc(action_text, character or {}, res, rolls, sides)
-            if mecanica == "pool_d10":
-                return self._pool_d10(action_text, character or {}, res, rolls)
-            if mecanica == "percentil":
-                return self._percentil(action_text, character or {}, res, rolls, sides)
-            return self._ratio(res, rolls, sides)
+                result = self._d20_vs_dc(action_text, character or {}, res, rolls, sides)
+            elif mecanica == "pool_d10":
+                result = self._pool_d10(action_text, character or {}, res, rolls)
+            elif mecanica == "percentil":
+                result = self._percentil(action_text, character or {}, res, rolls, sides)
+            else:
+                result = self._ratio(res, rolls, sides)
+
+            if result is None:
+                return None
+
+            accion = self._elegir_accion(action_text, res)
+            result.update({
+                "system_slug": system_slug,
+                "mecanica": mecanica,
+                "accion": accion.get("etiqueta", "Acción"),
+                "atributo": accion.get("atributo", ""),
+                "rolls": list(rolls),
+                "sides": sides,
+                "rule_source": f"data/systems/{system_slug}.yaml:resolution",
+                "roll_validation": {"valid": True, "sides_compatible": True, "count": len(rolls)},
+            })
+            if mecanica != "ratio":
+                dificultad, dificultad_label = self._elegir_dificultad(action_text, res)
+                result["dificultad"] = dificultad
+                result["dificultad_label"] = dificultad_label
+            return result
         except Exception as e:
             logger.error(f"RuleArbiter.resolve: {e}", exc_info=True)
             return None

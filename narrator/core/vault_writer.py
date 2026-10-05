@@ -96,6 +96,21 @@ class VaultWriter:
         self._npc_cache[nombre.lower()] = path
         return path
 
+    def rollback_created_entities(self, paths: list[Path]) -> None:
+        """Elimina únicamente archivos de entidad creados por una transacción."""
+        for raw_path in paths:
+            path = Path(raw_path)
+            if not path.exists():
+                continue
+            if path.parent == self.vault / "NPCs":
+                self._npc_cache.pop(path.stem.replace("_", " ").lower(), None)
+            elif path.parent == self.vault / "Locaciones":
+                self._loc_cache.pop(path.stem.replace("_", " ").lower(), None)
+            try:
+                path.unlink()
+            except OSError as exc:
+                logger.warning("No se pudo revertir entidad creada %s: %s", path, exc)
+
     def create_locacion(self, data: dict) -> "Path | None":
         """Ídem create_npc, para Locaciones."""
         nombre = (data.get("nombre") or "").strip()

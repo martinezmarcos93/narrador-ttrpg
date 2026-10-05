@@ -166,6 +166,17 @@ character_sheet_schema:
           - {key: invocaciones,   label: Invocaciones,       type: list}
           - {key: espacios_hechizo, label: Espacios (regen), type: string}
 
+lorebook: []
+
+# --- Política de conocimiento ---
+knowledge:
+  brain_system: "dnd_5e"
+  preferred_sources:
+    - manual
+    - system
+    - universal
+  universal_fallback: true
+
 # --- Resolución mecánica (Rule Arbiter) ---
 resolution:
   mecanica: "d20_vs_dc"

@@ -162,6 +162,17 @@ character_sheet_schema:
           - {key: instinto,       label: Instinto Bárbaro,   type: string}
           - {key: furias_dia,     label: Furias por día,     type: int}
 
+lorebook: []
+
+# --- Política de conocimiento ---
+knowledge:
+  brain_system: "pathfinder_2e"
+  preferred_sources:
+    - manual
+    - system
+    - universal
+  universal_fallback: true
+
 # --- Resolución mecánica (Rule Arbiter) ---
 resolution:
   mecanica: "d20_vs_dc"

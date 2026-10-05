@@ -18,6 +18,8 @@ except ImportError:
     _HAS_FRONTMATTER = False
 
 from narrator.core.embedder import Embedder
+from narrator.cerebro.recuperador import RecuperadorCerebro
+from narrator.core.context_contract import ContextFragment, render_context
 
 
 def _parse_file(path: Path) -> tuple[dict, str]:
@@ -33,10 +35,14 @@ def _parse_file(path: Path) -> tuple[dict, str]:
 
 
 class VaultRetriever:
-    def __init__(self, vault_path: str = "./vault"):
+    def __init__(self, vault_path: str = "./vault", brain_path: str = "./cerebro", brain_embedding_model: str = "bge-m3"):
         self.vault_path = Path(vault_path)
         self._embedder = Embedder()
         self._index: Optional[dict[str, list[float]]] = None
+        # Comparte infraestructura de embeddings, pero mantiene el índice
+        # y los documentos del cerebro separados del vault de campaña.
+        self.brain = RecuperadorCerebro(brain_path=brain_path, embedding_model=brain_embedding_model)
+
 
     def _all_md_files(self) -> list[Path]:
         if not self.vault_path.exists():
@@ -47,6 +53,116 @@ class VaultRetriever:
         if self._index is None:
             self._index = self._embedder.load_index(self.vault_path)
         return self._index
+
+    # ── Contexto combinado y procedencia ─────────────────────
+    def get_context_fragments(
+        self,
+        query: str,
+        system: str | None = None,
+        max_brain: int = 4,
+        max_vault: int = 4,
+        manual_text: str = "",
+    ) -> list[ContextFragment]:
+        """Une cerebro + vault sin borrar la procedencia de cada fuente."""
+        fragments: list[ContextFragment] = []
+
+        # Un manual adjunto por el usuario es una fuente de máxima
+        # especificidad. Nunca se descarta simplemente porque el vault
+        # también tenga resultados.
+        if manual_text and manual_text.strip():
+            fragments.append(ContextFragment(
+                text=manual_text.strip(),
+                source="manual adjunto",
+                layer="manual",
+                title="Manual cargado en la sesión",
+                score=1.0,
+                metadata={"origen": "manual", "session_attached": True},
+            ))
+
+        for result in self.brain.search(
+            query,
+            max_results=max_brain,
+            system=system,
+            expand_graph=True,
+        ):
+            fragments.append(result["fragment"])
+
+        for result in self.search(query, max_results=max_vault):
+            meta, body = result["meta"], result["body"]
+            layer = str(meta.get("capa", meta.get("layer", ""))).lower()
+            if layer == "sistema":
+                layer = "system"
+            elif meta.get("origen") == "manual":
+                layer = "manual"
+            elif not layer:
+                layer = "campaign"
+            if layer not in {"universal", "system", "manual", "campaign", "state"}:
+                layer = "campaign"
+            fragments.append(ContextFragment(
+                text=body,
+                source=str(meta.get("fuente", meta.get("source", "vault"))),
+                layer=layer,
+                title=str(meta.get("nombre", Path(result["path"]).stem)),
+                score=float(result.get("score", 0.0)),
+                metadata=meta,
+            ))
+
+        return fragments
+
+    def get_combined_context(
+        self,
+        query: str,
+        max_words: int = 700,
+        system: str | None = None,
+    ) -> str:
+        return render_context(
+            self.get_context_fragments(query, system=system),
+            max_words=max_words,
+        )
+
+    def get_vault_fragments_by_layer(
+        self,
+        query: str,
+        layer: str,
+        max_results: int = 4,
+    ) -> list[ContextFragment]:
+        """Recupera solo una capa del vault de campaña, conservando procedencia."""
+        fragments: list[ContextFragment] = []
+        for result in self.search(query, max_results=max_results * 2):
+            meta, body = result["meta"], result["body"]
+            item_layer = str(meta.get("capa", meta.get("layer", ""))).lower()
+            if item_layer == "sistema":
+                item_layer = "system"
+            elif meta.get("origen") == "manual":
+                item_layer = "manual"
+            elif not item_layer:
+                item_layer = "campaign"
+            if item_layer != layer:
+                continue
+            fragments.append(ContextFragment(
+                text=body,
+                source=str(meta.get("fuente", meta.get("source", "vault"))),
+                layer=item_layer,
+                title=str(meta.get("nombre", Path(result["path"]).stem)),
+                score=float(result.get("score", 0.0)),
+                metadata=meta,
+            ))
+            if len(fragments) >= max_results:
+                break
+        return fragments
+
+    # ── Cerebro permanente ─────────────────────────────────────
+    def get_brain_context(self, query: str, max_words: int = 500, system: str | None = None, kind: str | None = None) -> str:
+        """Consulta conocimiento persistente del cerebro."""
+        try:
+            return self.brain.get_context(query, max_words=max_words, system=system, kind=kind)
+        except Exception as exc:
+            logger.warning("Cerebro no disponible: %s", exc)
+            return ""
+
+    def index_brain(self, on_progress=None) -> int:
+        """Construye/actualiza el índice persistente de neuronas."""
+        return self.brain.build_index(on_progress=on_progress)
 
     # ── Búsqueda global cross-entidad (Fase 18) ───────────────
     def search_all(self, query: str, tipo: "str | None" = None, max_results: int = 20) -> "list[dict]":

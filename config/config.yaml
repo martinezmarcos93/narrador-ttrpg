@@ -39,3 +39,9 @@ log:
 # mistral:7b    ~4GB RAM  → buena calidad narrativa
 # llama3.1:8b   ~5GB RAM  → mejor calidad
 # gemma3:12b    ~8GB RAM  → excelente calidad
+
+# Cerebro: vault de neuronas (reglas y ambientación barridas de los manuales).
+# La carpeta de manuales es propia de cada máquina: ver config/local.example.yaml
+cerebro:
+  path: "cerebro"
+  embedding_model: "bge-m3"

@@ -47,6 +47,14 @@ class NarratorAgent:
             return None
         return n, sides
 
+    def extract_narrative_proposal(self, text: str) -> dict | None:
+        """Extrae exclusivamente el bloque técnico json-proposal."""
+        match = re.search(r"```json-proposal\s*(.*?)\s*```", text, re.DOTALL | re.IGNORECASE)
+        if not match:
+            return None
+        data = json_repair.try_parse(match.group(1))
+        return data if isinstance(data, dict) else None
+
     def extract_character_json(self, text: str) -> dict | None:
         match = re.search(r"```json\s*(.*?)\s*```", text, re.DOTALL)
         if not match:
@@ -62,6 +70,7 @@ class NarratorAgent:
         r"\[\[(NUEVO_NPC|NUEVA_LOCACION)\]\](.*?)\[\[/\1\]\]", re.DOTALL | re.IGNORECASE
     )
     _RE_STATE_TAG = re.compile(r"\[state:\s*([^\]]+)\]", re.IGNORECASE)
+    _RE_PROPOSAL_BLOCK = re.compile(r"```json-proposal\s*.*?\s*```", re.DOTALL | re.IGNORECASE)
     # Pares clave=valor separados por espacios (no coma): el valor puede
     # contener espacios (ej. "reason=herida de espada") — cada match se
     # extiende hasta justo antes de la siguiente "palabra=" o el final.
@@ -98,30 +107,69 @@ class NarratorAgent:
                 mutations.append(inner)
         return mutations
 
-    def apply_state_mutations(self, character: dict, mutations: "list[dict]") -> "list[str]":
-        """Aplica mutaciones a `character` IN-PLACE. Devuelve una entrada de
-        log legible por cada cambio aplicado — salvaguarda de trazabilidad:
-        nunca se pisa un campo sin dejar constancia del antes/después."""
+    @staticmethod
+    def character_field_specs(schema: dict | None) -> dict[str, dict]:
+        """Extrae campos permitidos del schema, incluidos bloques condicionales."""
+        specs = {}
+        if not isinstance(schema, dict):
+            return specs
+        for section in schema.get("base_sections", []) or []:
+            for field in section.get("fields", []) or []:
+                if field.get("key"):
+                    specs[field["key"]] = field
+        for section_group in (schema.get("conditional_sections", {}) or {}).values():
+            for section in section_group or []:
+                for field in section.get("fields", []) or []:
+                    if field.get("key"):
+                        specs[field["key"]] = field
+        return specs
+
+    def apply_state_mutations(
+        self,
+        character: dict,
+        mutations: "list[dict]",
+        allowed_fields: "dict[str, dict] | None" = None,
+    ) -> "list[str]":
+        """Aplica propuestas del LLM solo sobre campos declarados por el schema.
+
+        El LLM puede proponer un cambio narrativo, pero Python decide si el
+        campo existe y normaliza límites numéricos declarados por el sistema.
+        """
+        specs = allowed_fields or {}
         changelog = []
         for mut in mutations:
-            field = mut.get("field")
-            if not field:
+            field = (mut.get("field") or "").strip()
+            if not field or (specs and field not in specs):
                 continue
             before = character.get(field)
+            spec = specs.get(field, {})
             if "delta" in mut:
                 try:
                     delta = int(mut["delta"])
+                    current = int(before) if before is not None else 0
+                    after = current + delta
                 except (TypeError, ValueError):
                     continue
-                try:
-                    current = int(before) if before is not None else 0
-                except (TypeError, ValueError):
-                    current = 0
-                after = current + delta
             elif "value" in mut:
                 after = mut["value"]
+                if spec.get("type") == "int":
+                    try:
+                        after = int(after)
+                    except (TypeError, ValueError):
+                        continue
             else:
                 continue
+
+            if spec.get("type") == "int":
+                try:
+                    after = int(after)
+                except (TypeError, ValueError):
+                    continue
+                if spec.get("min") is not None:
+                    after = max(int(spec["min"]), after)
+                if spec.get("max") is not None:
+                    after = min(int(spec["max"]), after)
+
             character[field] = after
             reason = mut.get("reason", "")
             reason_str = f" ({reason})" if reason else ""
@@ -135,6 +183,7 @@ class NarratorAgent:
         líneas en blanco de más donde iba un bloque de entidad)."""
         text = self._RE_ENTITY_BLOCK.sub("", text)
         text = self._RE_STATE_TAG.sub("", text)
+        text = self._RE_PROPOSAL_BLOCK.sub("", text)
         text = re.sub(r"[ \t]{2,}", " ", text)
         text = re.sub(r"\n{3,}", "\n\n", text)
         return text.strip()

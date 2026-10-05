@@ -6,6 +6,7 @@ Mantiene el contexto total dentro de un budget de palabras para modelos pequeño
 import json
 from narrator.logger import logger
 from narrator.core.resolution_schema import ResolutionSchemaError, validate_resolution
+from narrator.core.system_pack import SystemPack
 import yaml
 from pathlib import Path
 
@@ -23,6 +24,20 @@ DICE_RESOLUTION_RULES = """RESOLUCIÓN DE TIRADAS:
 - Éxito total: la acción sale, narrá con riqueza cinématica.
 - Éxito parcial (PbtA 7-9): ofrecé una elección difícil.
 - Fallo: complicación interesante, la historia avanza igual."""
+
+NARRATIVE_PROPOSAL_RULES = """PROPUESTAS ESTRUCTURADAS DE ESTADO (bloque técnico opcional):
+- Solo emití este bloque si durante este turno ocurrió un cambio persistente que el sistema deba recordar.
+- No inventes hechos, consecuencias, NPCs, locaciones o cambios mecánicos que no estén respaldados por la ficción o por la resolución del sistema.
+- El bloque debe usar exactamente el formato `json-proposal` y solo estas claves: facts, events, npc_presence, npcs, locations, consequences, character_changes, scene_changes, clock_changes.
+- Omití claves vacías.
+- facts contiene hechos persistentes como pares clave/valor.
+- events contiene eventos ya ocurridos, no intenciones futuras.
+- consequences contiene objetos con text y opcionalmente trigger/due/effects. Los effects permitidos son fact, flag, npc_presence, scene_location, clock_delta, event, queue_consequence, world_fact, character_fact y player_fact.
+- character_changes contiene field + delta o value + reason opcional.
+- clock_changes contiene name + delta.
+- scene_changes puede contener locacion o turno_narrativo_delta.
+- queue_consequence debe declarar consequence y puede declarar trigger/due/effects para encadenar una consecuencia posterior. event emite un hecho explícito que puede activar otra consecuencia. world_fact es verdad objetiva; character_fact y player_fact conceden conocimiento explícito y no deben confundirse entre sí. relation modifica una arista social existente o crea una nueva entre entidades; front_clock_delta mueve un reloj causal de frente. No uses este bloque para repetir información puramente narrativa."""
+
 
 ENTITY_AUTO_SAVE_RULES = """AUTO-GUARDADO DE ENTIDADES Y ESTADO (instrucciones técnicas, NUNCA visibles para el jugador):
 - Si en la narración aparece un NPC o Locación NUEVO que no está en el contexto, declaralo al final de tu respuesta:
@@ -52,6 +67,18 @@ class PromptBuilder:
             path = self.systems_path / "generic.yaml"
         with open(path, encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
+
+        # Contrato ejecutable: todos los sistemas deben declarar cómo se
+        # enruta su conocimiento. El contenido histórico sigue siendo un
+        # dict para mantener compatibilidad con el resto del código.
+        try:
+            SystemPack.from_dict(
+                data,
+                expected_slug=None if path.name == "generic.yaml" else slug,
+            )
+        except ValueError as exc:
+            logger.error(f"System Pack inválido '{slug}': {exc}")
+            raise
 
         # Validación del bloque resolution (Fase 10): se registra el error
         # apenas se carga el sistema, sin frenar el turno en curso — el
@@ -87,6 +114,7 @@ class PromptBuilder:
         self,
         system_slug: str,
         vault_context: str = "",
+        brain_context: str = "",
         character: dict = None,
         last_session: str = "",
         scene_location: str = "",
@@ -101,12 +129,13 @@ class PromptBuilder:
         scenes_info: str = "",
         forced_event: str = "",
         combat_status: str = "",
+        state_context: str = "",
     ) -> str:
         sys = self.load_system(system_slug)
         base_prompt = sys.get("llm_system_prompt", "Eres un narrador de juego de rol.")
         voc = sys.get("vocabulario", {})
 
-        sections = [base_prompt, NARRATIVE_PRINCIPLES, DICE_RESOLUTION_RULES, ENTITY_AUTO_SAVE_RULES]
+        sections = [base_prompt, NARRATIVE_PRINCIPLES, DICE_RESOLUTION_RULES, ENTITY_AUTO_SAVE_RULES, NARRATIVE_PROPOSAL_RULES]
 
         if mechanical_resolution:
             # Veredicto del Rule Arbiter: la matemática ya está resuelta en
@@ -128,6 +157,12 @@ class PromptBuilder:
                 voc_lines.append(f"- Mecánica moral: {voc['mecanica_moral']}")
             if voc_lines:
                 sections.append("VOCABULARIO DEL SISTEMA:\n" + "\n".join(voc_lines))
+
+        if state_context:
+            sections.append(
+                "ESTADO MUTABLE DE LA CAMPAÑA (fuente autoritativa; no lo inventes ni lo contradigas):\n"
+                + state_context
+            )
 
         if scene_location:
             sections.append(f"LOCACIÓN ACTUAL: {scene_location}")
@@ -181,8 +216,14 @@ class PromptBuilder:
             move_text = f"{master_move.get('name', '')}: {master_move.get('instruction', '')}"
             sections.append(f"MOVIMIENTO DEL MÁSTER SUGERIDO:\n{move_text}")
 
+        if brain_context:
+            sections.append(
+                "CEREBRO ROLISTICO — conocimiento general y conexiones relevantes "
+                "(no sustituye reglas específicas del manual):\n" + brain_context
+            )
+
         if vault_context:
-            sections.append(f"CONTEXTO RELEVANTE DEL VAULT:\n{vault_context}")
+            sections.append(f"CONTEXTO RECUPERADO (con procedencia):\n{vault_context}")
 
         if character:
             char_str = json.dumps(character, ensure_ascii=False, indent=2)
@@ -195,6 +236,7 @@ class PromptBuilder:
         self,
         system_slug: str,
         manual_excerpt: str = "",
+        brain_context: str = "",
     ) -> str:
         sys = self.load_system(system_slug)
         base_prompt = sys.get("llm_system_prompt", "Eres un narrador de juego de rol.")
@@ -230,8 +272,14 @@ class PromptBuilder:
                 )
             sections.append("\n".join(schema_lines))
 
+        if brain_context:
+            sections.append(
+                "CEREBRO ROLISTICO — conceptos generales para orientar la creación "
+                "sin reemplazar las reglas específicas del manual:\n" + brain_context
+            )
+
         if manual_excerpt:
-            sections.append(f"EXTRACTO DEL MANUAL (referencia):\n{manual_excerpt[:2000]}")
+            sections.append(f"EXTRACTO DEL MANUAL (referencia específica):\n{manual_excerpt[:2000]}")
 
         return "\n\n".join(sections)
 
