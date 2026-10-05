@@ -321,3 +321,8 @@ Flask continúa diferido. No se agregó lógica de juego a la futura capa HTTP.
 2. Añadir contrato explícito de facciones y frentes para evitar que el LLM improvise identificadores incompatibles.
 3. Integrar métricas causales en TurnContract.state_delta y en el registro técnico del turno.
 4. Construir un pequeño conjunto de escenarios sintéticos para medir retrieval + causalidad + continuidad sin depender todavía de pruebas locales completas.
+
+
+### Ajuste final de rollback
+
+El rollback también contempla el caso en que el archivo de estado todavía no existía: si la propuesta falla antes de la primera persistencia, no deja un estado nuevo artificial. Además, el executor tolera implementaciones de VaultWriter que no expongan rollback, manteniendo compatibilidad con adaptadores/fakes existentes.
