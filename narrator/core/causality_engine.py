@@ -1,14 +1,17 @@
-"""Motor determinista de causalidad para consecuencias pendientes.
+"""Motor determinista de causalidad encadenada.
 
-No interpreta narrativa libre ni genera contenido. Solo decide cuándo una
-consecuencia ya plantada está habilitada por un trigger explícito o por su
-fecha lógica.
+No interpreta narrativa libre ni genera contenido. Evalúa triggers/due explícitos,
+aplica efectos declarativos y puede propagar eventos a consecuencias posteriores.
+La profundidad de cascada está acotada para impedir ciclos infinitos.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+
+
+_NEXT_TURN = {"siguiente turno", "next turn", "proximo turno", "próximo turno"}
+_MAX_CASCADE_DEPTH = 8
 
 
 @dataclass
@@ -16,19 +19,19 @@ class CausalActivation:
     index: int
     consequence: str
     reason: str
+    depth: int = 0
 
 
 class CausalityEngine:
-    def __init__(self, state_manager):
+    def __init__(self, state_manager, *, max_cascade_depth: int = _MAX_CASCADE_DEPTH):
         self.state = state_manager
+        self.max_cascade_depth = max(1, int(max_cascade_depth))
 
     @staticmethod
     def _trigger_matches(trigger: str, event_text: str) -> bool:
         trigger = str(trigger or "").strip().lower()
         event_text = str(event_text or "").strip().lower()
-        if not trigger:
-            return False
-        if trigger in {"siguiente turno", "next turn", "proximo turno", "próximo turno"}:
+        if not trigger or trigger in _NEXT_TURN:
             return False
         return trigger in event_text
 
@@ -39,54 +42,110 @@ class CausalityEngine:
         current_session = self.state.get_session_number()
         current_turn = int(self.state.data.get("escena_actual", {}).get("turno_narrativo", 0))
         try:
-            if due.startswith("sesion:") or due.startswith("session:"):
+            if due.startswith(("sesion:", "session:")):
                 return current_session >= int(due.split(":", 1)[1])
-            if due.startswith("turno:") or due.startswith("turn:"):
+            if due.startswith(("turno:", "turn:")):
                 return current_turn >= int(due.split(":", 1)[1])
         except (TypeError, ValueError):
             return False
         return False
 
-    def _effects(self, item: dict) -> list[dict]:
-        effects = item.get("effects", [])
-        return [dict(effect) for effect in effects if isinstance(effect, dict)]
+    @staticmethod
+    def _effects(item: dict) -> list[dict]:
+        return [dict(effect) for effect in item.get("effects", []) if isinstance(effect, dict)]
 
-    def evaluate(self, event_text: str = "", *, next_turn: bool = False) -> list[CausalActivation]:
-        pending = self.state.data.get("consecuencias_pendientes", [])
-        activations = []
-        for index, item in enumerate(pending):
+    def _apply_secondary_effects(self, effects: list[dict]) -> list[str]:
+        """Aplica efectos que generan nuevos eventos o consecuencias."""
+        emitted_events = []
+        pending = self.state.data.setdefault("consecuencias_pendientes", [])
+        for effect in effects:
+            kind = str(effect.get("type") or "").strip().lower()
+            if kind == "event":
+                event = str(effect.get("text") or "").strip()
+                if event:
+                    self.state.record_event(
+                        event,
+                        actor="CausalityEngine",
+                        location=self.state.get_location() or "",
+                    )
+                    emitted_events.append(event)
+            elif kind == "queue_consequence":
+                consequence = str(effect.get("consequence") or effect.get("text") or "").strip()
+                if not consequence:
+                    continue
+                pending.append({
+                    "consecuencia": consequence,
+                    "trigger": str(effect.get("trigger") or ""),
+                    "due": str(effect.get("due") or ""),
+                    "effects": [dict(x) for x in effect.get("effects", []) if isinstance(x, dict)],
+                    "estado": "pendiente",
+                    "sesion_creacion": self.state.get_session_number(),
+                    "causal_parent": str(effect.get("parent") or ""),
+                })
+                emitted_events.append(consequence)
+        if any(str(e.get("type") or "").strip().lower() == "queue_consequence" for e in effects):
+            del pending[:-200]
+            self.state.save()
+        return emitted_events
+
+    def _find_matches(self, event_text: str, *, next_turn: bool) -> list[tuple[int, dict, str]]:
+        matches = []
+        for index, item in enumerate(self.state.data.get("consecuencias_pendientes", [])):
             if item.get("estado", "pendiente") != "pendiente":
                 continue
-            trigger = item.get("trigger", "")
-            due = item.get("due", "")
-            matched = self._trigger_matches(trigger, event_text)
-            if next_turn and str(trigger).strip().lower() in {
-                "siguiente turno", "next turn", "proximo turno", "próximo turno"
-            }:
-                matched = True
-            if self._due_matches(due):
-                matched = True
-            if matched:
-                activations.append(CausalActivation(
-                    index=index,
-                    consequence=str(item.get("consecuencia", "")),
-                    reason="trigger" if self._trigger_matches(trigger, event_text) else "due",
-                ))
+            trigger = str(item.get("trigger") or "")
+            due = str(item.get("due") or "")
+            if next_turn and trigger.strip().lower() in _NEXT_TURN:
+                matches.append((index, item, "next_turn"))
+            elif self._trigger_matches(trigger, event_text):
+                matches.append((index, item, "trigger"))
+            elif self._due_matches(due):
+                matches.append((index, item, "due"))
+        return matches
 
-        for activation in reversed(activations):
-            pending = self.state.data.get("consecuencias_pendientes", [])
-            item = pending[activation.index] if 0 <= activation.index < len(pending) else {}
-            self.state.apply_causal_activation(
-                activation.index,
-                outcome=f"Activada automáticamente ({activation.reason})",
-                effects=self._effects(item),
-            )
-        return list(reversed(activations))
+    def evaluate(self, event_text: str = "", *, next_turn: bool = False) -> list[CausalActivation]:
+        """Evalúa una cascada completa hasta agotarla o alcanzar el límite."""
+        activations: list[CausalActivation] = []
+        current_event = str(event_text or "")
+        current_next_turn = bool(next_turn)
+
+        for depth in range(self.max_cascade_depth):
+            matches = self._find_matches(current_event, next_turn=current_next_turn)
+            if not matches:
+                break
+
+            emitted: list[str] = []
+            for index, item, reason in reversed(matches):
+                pending = self.state.data.get("consecuencias_pendientes", [])
+                if not (0 <= index < len(pending)) or pending[index].get("estado", "pendiente") != "pendiente":
+                    continue
+                effects = self._effects(pending[index])
+                activation = CausalActivation(
+                    index=index,
+                    consequence=str(pending[index].get("consecuencia", "")),
+                    reason=reason,
+                    depth=depth,
+                )
+                self.state.apply_causal_activation(
+                    index,
+                    outcome=f"Activada automáticamente ({reason}, profundidad {depth})",
+                    effects=effects,
+                )
+                emitted.extend(self._apply_secondary_effects(effects))
+                activations.append(activation)
+
+            # Una activación solo puede re-disparar por un evento explícito.
+            # 'siguiente turno' no se propaga dentro de la misma cascada.
+            current_event = " | ".join(emitted)
+            current_next_turn = False
+
+        return activations
 
     def summary(self, activations: list[CausalActivation]) -> str:
         if not activations:
             return ""
-        return "
-".join(
-            f"- {item.consequence}" for item in activations if item.consequence
+        return "\n".join(
+            f"- {item.consequence} (profundidad {item.depth}, motivo: {item.reason})"
+            for item in activations
+            if item.consequence
         )
