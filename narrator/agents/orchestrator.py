@@ -15,7 +15,6 @@ from narrator.core.retriever import VaultRetriever
 from narrator.core.scene_manager import SceneManager
 from narrator.core.state_manager import StateManager
 from narrator.core.turn_contract import TurnContract
-from narrator.core.continuity_validator import ContinuityValidator
 from narrator.core.proposal_executor import ProposalExecutor
 from narrator.core.theory_engine import MasterMoveEngine, PacingToneAgent, WorldSimulationEngine, InvestigationEngine
 
