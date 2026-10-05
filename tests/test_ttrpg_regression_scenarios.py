@@ -216,6 +216,7 @@ def test_combat_turn_updates_character_and_initiative_without_narrative_authorit
 
 def test_social_conflict_proposal_persists_relation_and_event(tmp_path):
     state = StateManager(str(tmp_path / "estado.yaml"))
+    state.data["escena_actual"]["npcs_presentes"] = ["Alicia", "Bruno"]
     result = ProposalExecutor(state).execute(
         {
             "relations": [{
