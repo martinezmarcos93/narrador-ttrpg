@@ -51,3 +51,13 @@ def test_turn_contract_marks_completion():
     contract.mark_persisted()
     assert contract.stage == "persist"
     assert contract.completed_at
+
+
+def test_turn_contract_serializes_retrieval_metrics():
+    contract = TurnContract(input_text="busco una pista", system_slug="generic")
+    contract.retrieval_metrics = {
+        "fragment_count": 3,
+        "layers": {"state": 1, "universal": 2},
+    }
+    payload = contract.to_dict()
+    assert payload["retrieval_metrics"]["fragment_count"] == 3
