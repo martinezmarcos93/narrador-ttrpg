@@ -141,14 +141,19 @@ class StateManager:
         try:
             with open(self.path, encoding="utf-8") as f:
                 loaded = yaml.safe_load(f) or {}
-            # Deep merge sobre el default para no perder claves nuevas
+            # Merge recursivo: un estado antiguo puede carecer de subclaves
+            # nuevas sin destruir los defaults anidados.
             merged = self._default()
-            for key, val in loaded.items():
-                if isinstance(val, dict) and key in merged:
-                    merged[key].update(val)
-                else:
-                    merged[key] = val
-            self.data = merged
+
+            def merge_dict(base: dict, incoming: dict) -> dict:
+                for key, val in incoming.items():
+                    if isinstance(val, dict) and isinstance(base.get(key), dict):
+                        merge_dict(base[key], val)
+                    else:
+                        base[key] = val
+                return base
+
+            self.data = merge_dict(merged, loaded)
             return True
         except Exception as e:
             # Estado corrupto: backup antes de que el próximo save() lo pise.
