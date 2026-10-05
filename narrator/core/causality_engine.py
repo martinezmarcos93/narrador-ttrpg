@@ -83,6 +83,37 @@ class CausalityEngine:
                 key = str(effect.get("key") or "").strip()
                 if key:
                     self.state.set_player_fact(key, effect.get("value"), source="causality_engine")
+            elif kind == "relation":
+                source = str(effect.get("source") or "").strip()
+                target = str(effect.get("target") or "").strip()
+                relation = str(effect.get("relation") or "").strip()
+                if source and target and relation:
+                    self.state.set_relation(
+                        source,
+                        target,
+                        relation,
+                        int(effect.get("strength", 0)),
+                        source_type=str(effect.get("source_type") or "npc"),
+                        target_type=str(effect.get("target_type") or "npc"),
+                        reason=str(effect.get("reason") or "causalidad"),
+                    )
+            elif kind == "front_clock_delta":
+                name = str(effect.get("name") or "").strip()
+                if name:
+                    try:
+                        delta = int(effect.get("delta", 0))
+                    except (TypeError, ValueError):
+                        delta = 0
+                    clock = self.state.data.get("relojes", {}).get(name)
+                    if clock is not None:
+                        before = int(clock.get("llenos", 0))
+                        clock["llenos"] = min(
+                            max(0, before + delta),
+                            int(clock.get("segmentos", 6)),
+                        )
+                        emitted_events.append(
+                            f"reloj {name}: {before}->{clock['llenos']}"
+                        )
             elif kind == "queue_consequence":
                 consequence = str(effect.get("consequence") or effect.get("text") or "").strip()
                 if not consequence:
