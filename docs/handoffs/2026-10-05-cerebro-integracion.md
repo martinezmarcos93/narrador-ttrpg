@@ -156,3 +156,18 @@ Se avanzó sin depender de manuales:
 - Propuestas narrativas: contrato estructural separado de la aplicación de mutaciones; el LLM todavía no tiene permiso para mutar directamente el estado.
 
 No se ejecutaron pruebas locales. Los tests correspondientes quedaron escritos para validación posterior.
+
+
+### Barrido siguiente — ejecución segura de propuestas
+
+Se implementó el primer ciclo real de propuestas:
+- `NarrativeProposal`: contrato cerrado para hechos, eventos, NPCs, consecuencias, cambios de personaje, escena y relojes.
+- `ProposalValidator`: valida forma y continuidad antes de aplicar.
+- `ProposalExecutor`: único ejecutor Python; una propuesta inválida no muta estado.
+- `StateManager.apply_proposal()`: aplica cambios de campaña y persiste.
+- Cambios de personaje procedentes de etiquetas `[state: ...]` ahora pasan por `ProposalExecutor` y el schema activo antes de mutar.
+- `Orchestrator.validate_and_apply_proposal()`: punto de entrada único para futuras propuestas estructuradas del LLM.
+- Se exige schema válido para aceptar cambios de campos de personaje.
+- Tests agregados para rechazo, aplicación y límites de propuestas.
+
+El sistema todavía no interpreta automáticamente la respuesta narrativa libre como una `NarrativeProposal`; la extracción estructurada sigue siendo el siguiente paso deliberado.
