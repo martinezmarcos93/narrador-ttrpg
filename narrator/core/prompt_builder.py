@@ -87,6 +87,7 @@ class PromptBuilder:
         self,
         system_slug: str,
         vault_context: str = "",
+        brain_context: str = "",
         character: dict = None,
         last_session: str = "",
         scene_location: str = "",
@@ -181,6 +182,12 @@ class PromptBuilder:
             move_text = f"{master_move.get('name', '')}: {master_move.get('instruction', '')}"
             sections.append(f"MOVIMIENTO DEL MÁSTER SUGERIDO:\n{move_text}")
 
+        if brain_context:
+            sections.append(
+                "CEREBRO ROLISTICO — conocimiento general y conexiones relevantes "
+                "(no sustituye reglas específicas del manual):\n" + brain_context
+            )
+
         if vault_context:
             sections.append(f"CONTEXTO RELEVANTE DEL VAULT:\n{vault_context}")
 
@@ -195,6 +202,7 @@ class PromptBuilder:
         self,
         system_slug: str,
         manual_excerpt: str = "",
+        brain_context: str = "",
     ) -> str:
         sys = self.load_system(system_slug)
         base_prompt = sys.get("llm_system_prompt", "Eres un narrador de juego de rol.")
@@ -230,8 +238,14 @@ class PromptBuilder:
                 )
             sections.append("\n".join(schema_lines))
 
+        if brain_context:
+            sections.append(
+                "CEREBRO ROLISTICO — conceptos generales para orientar la creación "
+                "sin reemplazar las reglas específicas del manual:\n" + brain_context
+            )
+
         if manual_excerpt:
-            sections.append(f"EXTRACTO DEL MANUAL (referencia):\n{manual_excerpt[:2000]}")
+            sections.append(f"EXTRACTO DEL MANUAL (referencia específica):\n{manual_excerpt[:2000]}")
 
         return "\n\n".join(sections)
 
