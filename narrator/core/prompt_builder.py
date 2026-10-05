@@ -115,6 +115,7 @@ class PromptBuilder:
         scenes_info: str = "",
         forced_event: str = "",
         combat_status: str = "",
+        state_context: str = "",
     ) -> str:
         sys = self.load_system(system_slug)
         base_prompt = sys.get("llm_system_prompt", "Eres un narrador de juego de rol.")
@@ -142,6 +143,12 @@ class PromptBuilder:
                 voc_lines.append(f"- Mecánica moral: {voc['mecanica_moral']}")
             if voc_lines:
                 sections.append("VOCABULARIO DEL SISTEMA:\n" + "\n".join(voc_lines))
+
+        if state_context:
+            sections.append(
+                "ESTADO MUTABLE DE LA CAMPAÑA (fuente autoritativa; no lo inventes ni lo contradigas):\n"
+                + state_context
+            )
 
         if scene_location:
             sections.append(f"LOCACIÓN ACTUAL: {scene_location}")
