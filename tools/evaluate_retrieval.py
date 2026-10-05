@@ -22,6 +22,15 @@ def run(
     k: int = 5,
 ) -> dict:
     orchestrator = Orchestrator(config_path=config_path)
+    brain = orchestrator.retriever.brain
+    if not brain.available:
+        raise RuntimeError(
+            "El índice del cerebro no está disponible. Construí el índice antes del benchmark."
+        )
+    if not brain.index.embedder.is_available():
+        raise RuntimeError(
+            "El modelo de embeddings configurado no está disponible en Ollama."
+        )
     cases = load_cases(ground_truth_path)
     systems_path = orchestrator.builder.systems_path
     evaluation = benchmark_router(
