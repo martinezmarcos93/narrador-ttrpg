@@ -406,7 +406,16 @@ def finish_streaming(full_text: str):
 
         if mutations:
             with state_lock:
-                changelog = _narrator_agent.apply_state_mutations(state["character"], mutations)
+                try:
+                schema = _orchestrator.builder.load_system(
+                    state.get("system_slug", "generic")
+                ).get("character_sheet_schema", {})
+                allowed_fields = _narrator_agent.character_field_specs(schema)
+            except Exception:
+                allowed_fields = {}
+            changelog = _narrator_agent.apply_state_mutations(
+                state["character"], mutations, allowed_fields=allowed_fields
+            )
             if changelog:
                 needs_char_refresh = True
                 is_important = True
