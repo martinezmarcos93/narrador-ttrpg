@@ -8,6 +8,7 @@ comparten infraestructura, no datos ni memoria.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Callable
 
@@ -97,17 +98,20 @@ class IndiceCerebro:
             tags = meta.get("tags", [])
             if not isinstance(tags, list):
                 tags = [tags] if tags else []
+            links = re.findall(r"\[\[([^|\]]+)(?:\|[^\]]+)?\]\]", body)
             self._metadata[key] = {
                 "id": meta.get("id", path.stem),
                 "title": meta.get("title", meta.get("titulo", path.stem)),
                 "source": meta.get("source", meta.get("fuente", "")),
                 "system": meta.get("system", meta.get("sistema", "")),
                 "kind": meta.get("kind", meta.get("tipo", "knowledge")),
+                "layer": meta.get("layer", meta.get("capa", "universal")),
                 "tags": tags,
                 "contains": meta.get("contains", meta.get("contiene", [])),
                 "also": meta.get("also", meta.get("ver_tambien", [])),
                 "previous": meta.get("previous", meta.get("anterior", "")),
                 "next": meta.get("next", meta.get("siguiente", "")),
+                "links": links,
                 "path": key,
             }
 
