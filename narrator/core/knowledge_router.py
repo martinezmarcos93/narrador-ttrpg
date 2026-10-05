@@ -243,6 +243,9 @@ class KnowledgeRouter:
         """Recupera exclusivamente campaña visible para el LLM."""
         return self._campaign_fragments(query, limit)
 
+    def retrieve_visible_campaign_fragments(self, query: str, limit: int = 4) -> list[ContextFragment]:
+        return self._campaign_fragments(query, limit)
+
     def _state_fragments(self, query: str, limit: int) -> list[ContextFragment]:
         return self.retriever.get_vault_fragments_by_layer(query, "state", limit)
 
