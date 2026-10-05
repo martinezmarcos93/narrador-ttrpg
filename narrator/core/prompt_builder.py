@@ -28,7 +28,7 @@ DICE_RESOLUTION_RULES = """RESOLUCIÓN DE TIRADAS:
 NARRATIVE_PROPOSAL_RULES = """PROPUESTAS ESTRUCTURADAS DE ESTADO (bloque técnico opcional):
 - Solo emití este bloque si durante este turno ocurrió un cambio persistente que el sistema deba recordar.
 - No inventes hechos, consecuencias, NPCs, locaciones o cambios mecánicos que no estén respaldados por la ficción o por la resolución del sistema.
-- El bloque debe usar exactamente el formato \`json-proposal\` y solo estas claves: facts, events, npc_presence, consequences, character_changes, scene_changes, clock_changes.
+- El bloque debe usar exactamente el formato `json-proposal` y solo estas claves: facts, events, npc_presence, consequences, character_changes, scene_changes, clock_changes.
 - Omití claves vacías.
 - facts contiene hechos persistentes como pares clave/valor.
 - events contiene eventos ya ocurridos, no intenciones futuras.
