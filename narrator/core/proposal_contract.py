@@ -128,6 +128,25 @@ class ProposalValidator:
                         "invalid_causal_effect", "error",
                         f"Efecto causal '{kind}' incompleto.",
                     ))
+                    continue
+                if kind == "relation":
+                    try:
+                        strength = int(effect.get("strength", 0))
+                    except (TypeError, ValueError):
+                        strength = 0
+                    if not -100 <= strength <= 100:
+                        report.issues.append(ContinuityIssue(
+                            "invalid_relation_strength", "error",
+                            "La fuerza de una relación debe estar entre -100 y 100.",
+                        ))
+                if kind == "front_clock_delta":
+                    try:
+                        int(effect.get("delta", 0))
+                    except (TypeError, ValueError):
+                        report.issues.append(ContinuityIssue(
+                            "invalid_front_clock_delta", "error",
+                            "El delta de un frente debe ser entero.",
+                        ))
 
         for item in proposal.clock_changes:
             if "name" not in item or "delta" not in item:
