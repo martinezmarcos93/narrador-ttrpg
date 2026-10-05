@@ -340,3 +340,41 @@ class VaultWriter:
 
         self.update_npc_notes(narrator_text, session_number)
         self.update_location_notes(narrator_text, session_number)
+
+    def on_narrator_response_safe(
+        self,
+        player_text: str,
+        narrator_text: str,
+        session_number: int = 1,
+        is_important: bool = False,
+    ) -> dict:
+        """Versión aislada para workers: el vault nunca puede romper el turno.
+
+        Cada salida es independiente. Si una escritura falla, se registra y se
+        continúa con las demás; no se modifica el estado estructurado de campaña.
+        """
+        operations = (
+            ("log_exchange", lambda: self.log_exchange(player_text, narrator_text)),
+            (
+                "log_event",
+                lambda: self.log_event(
+                    re.split(r'[.!?\n]', narrator_text.strip())[0][:200]
+                ) if is_important else None,
+            ),
+            (
+                "update_npc_notes",
+                lambda: self.update_npc_notes(narrator_text, session_number),
+            ),
+            (
+                "update_location_notes",
+                lambda: self.update_location_notes(narrator_text, session_number),
+            ),
+        )
+        failures = []
+        for name, operation in operations:
+            try:
+                operation()
+            except Exception as exc:
+                failures.append({"operation": name, "error": str(exc)})
+                logger.error("VaultWriter: fallo en %s: %s", name, exc, exc_info=True)
+        return {"ok": not failures, "failures": failures}
