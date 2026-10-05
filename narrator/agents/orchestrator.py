@@ -361,6 +361,10 @@ class Orchestrator:
             "activated": bool(activations),
             "count": len(activations),
             "summary": self.causality.summary(activations),
+            "metrics": dict(self.causality.last_metrics),
+            "provenance_ids": [
+                item.provenance_id for item in activations if item.provenance_id
+            ],
         }
 
     # ── Contrato formal de turno ──────────────────────────────
