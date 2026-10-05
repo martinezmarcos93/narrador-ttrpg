@@ -63,8 +63,9 @@ class Orchestrator:
         except Exception as e:
             return {}
 
-    # ── Theory engine ─────────────────────────────────────────
         self.knowledge_router = KnowledgeRouter(self.retriever)
+
+    # ── Theory engine ─────────────────────────────────────────
     def get_world_status_text(self) -> str:
         """Resumen del WorldSimulationEngine para el system prompt."""
         status = self.world_sim.get_world_status()
