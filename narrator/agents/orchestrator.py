@@ -5,6 +5,8 @@ Es Python puro: no hace llamadas al LLM, solo decide QUÉ contexto armar y QUIÉ
 
 import yaml
 from narrator.logger import logger
+from narrator.core.system_pack import SystemPack
+from narrator.core.knowledge_router import KnowledgeRouter
 from pathlib import Path
 from narrator import resolve_path
 from narrator.core import mention_detector
@@ -62,6 +64,7 @@ class Orchestrator:
             return {}
 
     # ── Theory engine ─────────────────────────────────────────
+        self.knowledge_router = KnowledgeRouter(self.retriever)
     def get_world_status_text(self) -> str:
         """Resumen del WorldSimulationEngine para el system prompt."""
         status = self.world_sim.get_world_status()
@@ -202,11 +205,15 @@ class Orchestrator:
         # al prompt conservando su procedencia y autoridad relativa.
         brain_query = last_user_msg or "escena, personaje, conflicto, investigación y consecuencias"
         manual_text = app_state.get("manual_text", "")
-        vault_ctx = self.retriever.get_combined_context(
+        system_pack = SystemPack.load(
+            system_slug,
+            getattr(self.builder, "systems_path", "data/systems"),
+        )
+        vault_ctx = self.knowledge_router.retrieve(
             brain_query,
-            max_words=700,
-            system=system_slug,
+            system_pack,
             manual_text=manual_text,
+            max_words=700,
         )
         brain_ctx = ""
 
