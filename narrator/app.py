@@ -430,6 +430,22 @@ def finish_streaming(full_text: str):
             except Exception as e:
                 logger.error(f"Error ejecutando propuesta narrativa: {e}", exc_info=True)
 
+        if _orchestrator:
+            try:
+                causal_result = _orchestrator.evaluate_causality(
+                    full_text,
+                    next_turn=True,
+                )
+                if causal_result.get("activated"):
+                    is_important = True
+                    if _active_turn_contract is not None:
+                        _active_turn_contract.state_delta = {
+                            **(_active_turn_contract.state_delta or {}),
+                            "causal_activations": causal_result["summary"],
+                        }
+            except Exception as e:
+                logger.error(f"Error evaluando causalidad: {e}", exc_info=True)
+
         if mutations:
             try:
                 proposal_result = _orchestrator.validate_and_apply_proposal(
