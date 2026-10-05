@@ -109,3 +109,15 @@ def test_causality_can_change_relation_and_front_clock(tmp_path):
     assert state.data["relojes"]["frente_culto"]["llenos"] == 2
     assert state.get_relations("Culto")[0]["relation"] == "amenaza"
     assert result[0].provenance_id
+
+
+
+def test_causality_exposes_metrics(tmp_path):
+    state = StateManager(str(tmp_path / "estado.yaml"))
+    state.add_pending_consequence("Refuerzos llegan", trigger="alarma")
+    engine = CausalityEngine(state)
+    result = engine.evaluate("alarma")
+    assert len(result) == 1
+    assert engine.last_metrics["activations"] == 1
+    assert engine.last_metrics["max_depth"] == 0
+    assert engine.last_metrics["provenance_ids"] == [result[0].provenance_id]
