@@ -71,6 +71,39 @@ class StateManager:
         with open(self.path, "w", encoding="utf-8") as f:
             yaml.dump(self.data, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
 
+    def get_turn_context_text(self) -> str:
+        """Resumen determinista del estado mutable que puede afectar este turno.
+
+        Esta capa tiene precedencia sobre conocimiento recuperado: representa
+        el estado vivo de la campaña, no una fuente de lore.
+        """
+        meta = self.data.get("meta", {})
+        escena = self.data.get("escena_actual", {})
+        flags = self.data.get("flags", {})
+        lines = [
+            f"Sistema: {meta.get('sistema', 'generic')}",
+            f"Campaña: {meta.get('campana', 'Sin nombre')}",
+            f"Sesión: {meta.get('sesion_actual', 0)}",
+            f"Locación: {escena.get('locacion') or 'No definida'}",
+            f"NPCs presentes: {', '.join(escena.get('npcs_presentes', [])) or 'ninguno'}",
+            f"Turno narrativo: {escena.get('turno_narrativo', 0)}",
+        ]
+        if flags:
+            compact_flags = []
+            for name, entry in list(flags.items())[:12]:
+                if isinstance(entry, dict):
+                    compact_flags.append(f"{name}={entry.get('valor')}")
+                else:
+                    compact_flags.append(f"{name}={entry}")
+            lines.append("Flags: " + ", ".join(compact_flags))
+        clocks = self.get_clocks_summary()
+        if clocks:
+            lines.append("Relojes:\n" + clocks)
+        combat = self.get_combat_status_text()
+        if combat:
+            lines.append("Combate: " + combat)
+        return "\n".join(lines)
+
     # ── Escena actual ─────────────────────────────────────────
     def set_location(self, loc: str):
         self.data["escena_actual"]["locacion"] = loc
