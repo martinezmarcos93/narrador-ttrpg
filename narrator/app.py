@@ -405,17 +405,17 @@ def finish_streaming(full_text: str):
             state["tirada_sugerida"] = _narrator_agent.extract_dice_suggestion(full_text)
 
         if mutations:
-            with state_lock:
-                try:
+            try:
                 schema = _orchestrator.builder.load_system(
                     state.get("system_slug", "generic")
                 ).get("character_sheet_schema", {})
                 allowed_fields = _narrator_agent.character_field_specs(schema)
             except Exception:
                 allowed_fields = {}
-            changelog = _narrator_agent.apply_state_mutations(
-                state["character"], mutations, allowed_fields=allowed_fields
-            )
+            with state_lock:
+                changelog = _narrator_agent.apply_state_mutations(
+                    state["character"], mutations, allowed_fields=allowed_fields
+                )
             if changelog:
                 if _active_turn_contract is not None:
                     _active_turn_contract.state_delta = {"character_changes": list(changelog)}
@@ -470,6 +470,15 @@ def finish_streaming(full_text: str):
             kwargs={"session_number": session_n, "is_important": is_important},
             daemon=True,
         ).start()
+
+    # Cierre determinista del contrato: persistimos solo el resumen técnico.
+    if _active_turn_contract is not None and _orchestrator is not None:
+        try:
+            _active_turn_contract.mark_persisted()
+            _orchestrator.state.record_turn(_active_turn_contract.to_dict())
+        except Exception as e:
+            logger.error(f"Error persistiendo contrato de turno: {e}", exc_info=True)
+            _active_turn_contract.record_error(str(e))
 
     # Memoria episódica: si se acumuló un lote de turnos fuera de la
     # ventana, resumirlo en background (no bloquea el turno).
