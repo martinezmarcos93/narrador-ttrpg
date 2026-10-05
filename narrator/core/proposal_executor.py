@@ -31,13 +31,19 @@ class ProposalExecutor:
         narrator_agent=None,
         character_schema=None,
         vault_writer=None,
+        allowed_fronts=None,
     ):
         self.state = state_manager
         self.narrator_agent = narrator_agent
         self.character_schema = character_schema or {}
         self.vault_writer = vault_writer
         self.continuity = ContinuityValidator(state_manager)
-        self.validator = ProposalValidator(self.continuity)
+        self.allowed_fronts = set(allowed_fronts or [])
+        self.validator = ProposalValidator(self.continuity, allowed_fronts=self.allowed_fronts)
+
+    def configure_front_contract(self, allowed_fronts) -> None:
+        self.allowed_fronts = set(allowed_fronts or [])
+        self.validator.allowed_fronts = self.allowed_fronts
 
     def _validate_character_changes(self, proposal: NarrativeProposal, report) -> None:
         if not proposal.character_changes:
