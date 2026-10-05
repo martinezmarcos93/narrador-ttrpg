@@ -73,9 +73,10 @@ feat/retrieval-evaluation. Está 41 commits por delante de main y 0 por detrás.
 - HECHO: escenario básico de rollback de batch.
 - HECHO: frontera pública de batch expuesta mediante `batch_depth`.
 - HECHO: ProposalExecutor respeta un batch externo sin cerrar la transacción del llamador.
-- HECHO: escenario de ejecución anidada.
+- HECHO: escenarios de fallo en creación parcial de entidades y mutación de personaje.
+- HECHO: regresión de fallo dentro de `StateManager.apply_proposal()` con rollback de estado y entidades.
 - HECHO: contrato de turno conserva cambios de propuesta, errores de validación y provenance sin perder deltas causales.
-- PENDIENTE: escenarios de fallos en todas las etapas y rollback transaccional compuesto.
+- PENDIENTE: fallos de persistencia de disco y recuperación tras escritura parcial.
 
 ### A3. Continuidad
 - HECHO: conflictos de facts, eventos duplicados y regresión temporal.
@@ -123,8 +124,10 @@ Objetivo: input → interpretation → intent → rule_need → retrieval → re
 - HECHO: Turn Contract y RuleArbiter.
 - PENDIENTE: clasificador formal de intención y detección de acciones mecánicas, lore, investigación y social.
 - PENDIENTE: primitivas mecánicas adicionales por System Pack.
-- PARCIAL: RuleArbiter y TurnContract están integrados en el flujo de UI; falta auditar todos los caminos alternativos.
-- PARCIAL: propuestas pasan por ProposalValidator/Executor; falta validación transversal de afirmaciones narrativas contra estado.
+- HECHO: RuleArbiter y TurnContract están integrados en el flujo principal de UI.
+- HECHO: cardinalidad de dados incompatible con una mecánica de tirada única se rechaza.
+- HECHO: salidas estructuradas de personaje y entidades pasan por NarratorService/ProposalExecutor en lugar de mutar directamente el estado.
+- PARCIAL: queda auditar caminos legacy y duplicación entre bloques técnicos.
 - PENDIENTE: fallback narrativo determinista ante propuesta inválida.
 - HECHO: resultado de propuesta y persistencia del contrato atraviesan NarratorService.
 
@@ -139,7 +142,9 @@ Objetivo: input → interpretation → intent → rule_need → retrieval → re
 ## 6. FASE E — Visibilidad y conocimiento
 - HECHO: world/character/player knowledge y KnowledgeVisibility.
 - PENDIENTE: secretos de NPC/facción/localización, conocimiento parcial y descubrimiento gradual.
+- PARCIAL: KnowledgeVisibility está integrada en el contexto narrativo.
 - PENDIENTE: pruebas de fuga e integración definitiva con retrieval y prompt final.
+- PENDIENTE: filtro formal de documentos de campaña marcados como no visibles.
 
 ## 7. FASE F — System Packs
 Prioridad: Vampiro V20 → Hombre Lobo → Cthulhu → D&D → otros → Pathfinder.
