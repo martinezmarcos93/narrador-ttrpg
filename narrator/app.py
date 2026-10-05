@@ -29,21 +29,20 @@ _memory = MemoryManager()
 # ── Backend de agentes ────────────────────────────────────
 # Carga con fallback: si el package no está listo, usa modo legacy.
 try:
-    from narrator.agents.orchestrator import Orchestrator
     from narrator.agents.extractor_agent import ExtractorAgent
-    from narrator.agents.narrator_agent import NarratorAgent
     from narrator.agents.world_agent import WorldAgent
-    from narrator.core.prompt_builder import PromptBuilder
-    from narrator.core.rule_arbiter import RuleArbiter
+    from narrator.core.narrator_service import NarratorService
     from narrator.core.vault_writer import VaultWriter
 
     _CONFIG_PATH = str(PROJECT_ROOT / "config" / "config.yaml")
-    _orchestrator = Orchestrator(config_path=_CONFIG_PATH)
-    _narrator_agent = NarratorAgent()
-    _rule_arbiter = RuleArbiter(builder=_orchestrator.builder)
+    _narrator_service = NarratorService(config_path=_CONFIG_PATH)
+    _orchestrator = _narrator_service.orchestrator
+    _narrator_agent = _narrator_service.narrator_agent
+    _rule_arbiter = _narrator_service.rule_arbiter
     _vault_writer: "VaultWriter | None" = None
     _AGENT_MODE = True
 except Exception as _agent_err:
+    _narrator_service = None
     _orchestrator = None
     _narrator_agent = None
     _rule_arbiter = None
