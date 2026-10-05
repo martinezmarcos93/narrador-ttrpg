@@ -216,24 +216,43 @@ class StateManager:
 
     # ── Aplicación atómica de propuestas ────────────────────────
     def apply_proposal(self, proposal) -> dict:
-        """Aplica una propuesta ya validada y devuelve un changelog.
+        """Aplica una propuesta ya validada y persiste una sola vez.
 
-        Este método no interpreta texto libre: recibe un NarrativeProposal.
+        Este método no interpreta texto libre ni llama a métodos que vuelvan
+        a guardar el archivo. Todas las mutaciones quedan en memoria y se
+        serializan al final del lote.
         """
         changes = []
+
         for key, value in proposal.facts.items():
             before = self.get_known_fact(key, None)
-            self.set_known_fact(key, value, source="narrative_proposal")
+            self.data.setdefault("hechos_conocidos", {})[str(key).strip()] = {
+                "valor": value,
+                "fuente": "narrative_proposal",
+                "sesion": self.get_session_number(),
+            }
             changes.append(f"fact:{key} {before!r} -> {value!r}")
 
         for event in proposal.events:
-            self.record_event(event, location=self.get_location() or "")
-            changes.append(f"event:{event}")
+            text = str(event).strip()
+            if not text:
+                continue
+            self.data.setdefault("eventos", []).append({
+                "sesion": self.get_session_number(),
+                "turno": self.data.get("escena_actual", {}).get("turno_narrativo", 0),
+                "evento": text,
+                "actor": "",
+                "locacion": self.get_location() or "",
+                "timestamp": datetime.now().isoformat(),
+            })
+            changes.append(f"event:{text}")
+        del self.data["eventos"][:-200]
 
         escena = self.data.setdefault("escena_actual", {})
         present = escena.setdefault("npcs_presentes", [])
         for name, desired in proposal.npc_presence.items():
-            if desired and name not in present:
+            name = str(name).strip()
+            if desired and name and name not in present:
                 present.append(name)
                 changes.append(f"npc:+{name}")
             elif not desired and name in present:
@@ -243,43 +262,43 @@ class StateManager:
         for item in proposal.consequences:
             consequence = str(item.get("text") or item.get("consequence") or "").strip()
             if consequence:
-                self.add_pending_consequence(
-                    consequence,
-                    trigger=str(item.get("trigger") or ""),
-                    due=str(item.get("due") or ""),
-                )
+                self.data.setdefault("consecuencias_pendientes", []).append({
+                    "consecuencia": consequence,
+                    "trigger": str(item.get("trigger") or ""),
+                    "due": str(item.get("due") or ""),
+                    "estado": "pendiente",
+                    "sesion_creacion": self.get_session_number(),
+                })
                 changes.append(f"consequence:+{consequence}")
+        del self.data["consecuencias_pendientes"][:-200]
 
         for item in proposal.clock_changes:
             name = str(item.get("name") or "").strip()
-            if not name:
+            if not name or name not in self.data.get("relojes", {}):
                 continue
             try:
                 delta = int(item.get("delta", 0))
             except (TypeError, ValueError):
                 continue
-            if name not in self.data.get("relojes", {}):
-                continue
-            before = self.data["relojes"][name].get("llenos", 0)
-            self.advance_clock(name, delta)
-            after = self.data["relojes"][name].get("llenos", 0)
-            changes.append(f"clock:{name} {before} -> {after}")
+            clock = self.data["relojes"][name]
+            before = clock.get("llenos", 0)
+            clock["llenos"] = min(max(0, before + delta), clock.get("segmentos", 6))
+            changes.append(f"clock:{name} {before} -> {clock['llenos']}")
 
-        if proposal.scene_changes:
-            for key, value in proposal.scene_changes.items():
-                if key == "locacion":
-                    before = escena.get("locacion")
-                    self.set_location(str(value) if value is not None else "")
-                    changes.append(f"scene:locacion {before!r} -> {value!r}")
-                elif key == "turno_narrativo_delta":
-                    try:
-                        delta = int(value)
-                    except (TypeError, ValueError):
-                        delta = 0
-                    escena["turno_narrativo"] = max(
-                        0, escena.get("turno_narrativo", 0) + delta
-                    )
-                    changes.append(f"scene:turno_narrativo delta={delta}")
+        for key, value in proposal.scene_changes.items():
+            if key == "locacion":
+                before = escena.get("locacion")
+                escena["locacion"] = str(value) if value is not None else ""
+                changes.append(f"scene:locacion {before!r} -> {escena['locacion']!r}")
+            elif key == "turno_narrativo_delta":
+                try:
+                    delta = int(value)
+                except (TypeError, ValueError):
+                    delta = 0
+                escena["turno_narrativo"] = max(
+                    0, int(escena.get("turno_narrativo", 0)) + delta
+                )
+                changes.append(f"scene:turno_narrativo delta={delta}")
 
         self.save()
         return {"applied": True, "changes": changes}
