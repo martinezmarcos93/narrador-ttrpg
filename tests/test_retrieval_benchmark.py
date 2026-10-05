@@ -1,6 +1,6 @@
 from narrator.core.context_contract import ContextFragment
 from narrator.core.retrieval_benchmark import benchmark_router, load_cases
-from narrator.core.knowledge_router import KnowledgeRouter
+from narrator.core.retrieval_evaluator import RetrievalCase
 
 
 class FakeRouter:
@@ -70,11 +70,8 @@ def test_benchmark_router_extracts_ids_and_layers(tmp_path):
     systems = tmp_path / "systems"
     _write_system(systems)
 
-    cases = load_cases(
-        tmp_path / "ground.yaml"
-    ) if (tmp_path / "ground.yaml").exists() else (
-        __import__("narrator.core.retrieval_evaluator", fromlist=["RetrievalCase"])
-        .RetrievalCase(
+    cases = (
+        RetrievalCase(
             "q1",
             "pistas",
             ("universal-investigacion",),
