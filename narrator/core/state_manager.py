@@ -281,12 +281,9 @@ class StateManager:
             lines.append("Eventos recientes:\n" + "\n".join(
                 f"  - {item.get('evento')}" for item in events[-5:]
             ))
-        facts = self.data.get("hechos_conocidos", {})
-        if facts:
-            lines.append("Hechos conocidos:\n" + ", ".join(
-                f"{key}={entry.get('valor') if isinstance(entry, dict) else entry}"
-                for key, entry in list(facts.items())[-12:]
-            ))
+        # Legacy hechos_conocidos are intentionally excluded from this
+        # perspective-neutral state context; KnowledgeVisibility decides what
+        # the narrator may actually know.
         combat = self.get_combat_status_text()
         if combat:
             lines.append("Combate: " + combat)
