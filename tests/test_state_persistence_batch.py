@@ -86,3 +86,36 @@ def test_atomic_save_preserves_previous_file_when_replace_fails(tmp_path, monkey
     leftovers = list(tmp_path.glob(".estado.yaml.*.tmp"))
     assert leftovers == []
     assert yaml.safe_load(path.read_text(encoding="utf-8"))["hechos_conocidos"]["original"]["valor"] is True
+
+
+def test_atomic_save_removes_temp_after_yaml_serialization_failure(tmp_path):
+    state = StateManager(str(tmp_path / "estado.yaml"))
+    state.set_known_fact("original", True)
+    original = state.path.read_text(encoding="utf-8")
+
+    class Broken:
+        def __repr__(self):
+            raise RuntimeError("serialization failure")
+
+    state.data["hechos_conocidos"]["broken"] = {"valor": Broken()}
+
+    try:
+        state.save()
+    except RuntimeError:
+        pass
+    else:
+        raise AssertionError("se esperaba fallo de serialización")
+
+    assert state.path.read_text(encoding="utf-8") == original
+    assert list(tmp_path.glob(".estado.yaml.*.tmp")) == []
+
+
+def test_corrupt_state_is_quarantined_on_load(tmp_path):
+    path = tmp_path / "estado.yaml"
+    path.write_text("::: yaml roto [", encoding="utf-8")
+    state = StateManager(str(path))
+
+    assert state.load() is False
+    backups = list(tmp_path.glob("estado.corrupto-*.yaml"))
+    assert len(backups) == 1
+    assert not path.exists()
