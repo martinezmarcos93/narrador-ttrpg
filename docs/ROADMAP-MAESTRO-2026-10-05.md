@@ -48,7 +48,7 @@ Precedencia: STATE > MANUAL > SYSTEM PACK > UNIVERSAL BRAIN > conocimiento gener
 - ADR y handoff del núcleo.
 
 ### 1.2 Rama actual
-feat/retrieval-evaluation. Está 41 commits por delante de main y 0 por detrás. El último commit pertenece a la pasada de consolidación de continuidad/causalidad del 2026-10-05. No mergear sin autorización expresa.
+feat/retrieval-evaluation. Está 76 commits por delante de main y 0 por detrás. El último commit pertenece a la pasada de consolidación de continuidad/causalidad del 2026-10-05. No mergear sin autorización expresa.
 
 ## 2. FASE A — Consolidación del núcleo
 
@@ -77,6 +77,7 @@ feat/retrieval-evaluation. Está 41 commits por delante de main y 0 por detrás.
 - HECHO: regresión de fallo dentro de `StateManager.apply_proposal()` con rollback de estado y entidades.
 - HECHO: contrato de turno conserva cambios de propuesta, errores de validación y provenance sin perder deltas causales.
 - PENDIENTE: fallos de persistencia de disco y recuperación tras escritura parcial.
+- PENDIENTE: verificar atómicamente fallos de persistencia después de la composición post-LLM.
 
 ### A3. Continuidad
 - HECHO: conflictos de facts, eventos duplicados y regresión temporal.
@@ -127,7 +128,9 @@ Objetivo: input → interpretation → intent → rule_need → retrieval → re
 - HECHO: RuleArbiter y TurnContract están integrados en el flujo principal de UI.
 - HECHO: cardinalidad de dados incompatible con una mecánica de tirada única se rechaza.
 - HECHO: salidas estructuradas de personaje y entidades pasan por NarratorService/ProposalExecutor en lugar de mutar directamente el estado.
-- PARCIAL: queda auditar caminos legacy y duplicación entre bloques técnicos.
+- HECHO: postprocesado LLM convergido en una única propuesta compuesta por turno.
+- HECHO: JSON legacy, [state:], propuesta narrativa y entidades se deduplican antes de ejecutar.
+- PARCIAL: queda auditar otros caminos legacy fuera del postprocesado principal.
 - PENDIENTE: fallback narrativo determinista ante propuesta inválida.
 - HECHO: resultado de propuesta y persistencia del contrato atraviesan NarratorService.
 
@@ -143,8 +146,8 @@ Objetivo: input → interpretation → intent → rule_need → retrieval → re
 - HECHO: world/character/player knowledge y KnowledgeVisibility.
 - PENDIENTE: secretos de NPC/facción/localización, conocimiento parcial y descubrimiento gradual.
 - PARCIAL: KnowledgeVisibility está integrada en el contexto narrativo.
-- PENDIENTE: pruebas de fuga e integración definitiva con retrieval y prompt final.
-- PENDIENTE: filtro formal de documentos de campaña marcados como no visibles.
+- HECHO: KnowledgeRouter filtra documentos de campaña con `llm_visible=false` y visibilidad `secret/private/dm/hidden` (incluidas variantes en español).
+- PENDIENTE: pruebas de fuga E2E e integración definitiva con retrieval y prompt final.
 
 ## 7. FASE F — System Packs
 Prioridad: Vampiro V20 → Hombre Lobo → Cthulhu → D&D → otros → Pathfinder.
