@@ -285,3 +285,39 @@ Se añadieron tests para el grafo social, filtrado del subgrafo, provenance y pr
 ### Siguiente endurecimiento
 
 Queda como siguiente bloque la atomicidad real de `ProposalExecutor`: evitar estados parciales cuando participan simultáneamente estado de campaña, ficha de personaje y escritura en vault. También conviene añadir un contrato explícito de relaciones/facciones a los System Packs y métricas de profundidad/ramificación de las cascadas causales.
+
+
+## Barrido de atomicidad, frentes formales y métricas causales — 2026-10-05
+
+Se endureció ProposalExecutor para tratar cada propuesta como una operación transaccional compensatoria:
+- captura snapshot profundo del estado de campaña;
+- captura snapshot de la ficha del personaje cuando participa;
+- registra exclusivamente las entidades creadas durante la operación;
+- ante una excepción, restaura estado y personaje;
+- elimina únicamente archivos de NPC/locación creados por esa ejecución;
+- devuelve rolled_back=True, error técnico y una incidencia proposal_execution_failed.
+
+VaultWriter.rollback_created_entities() nunca elimina entidades preexistentes; solo recibe las rutas que el propio executor obtuvo como resultado de creación en la transacción.
+
+El modelo de frentes se formalizó sobre la estructura existente de relojes. StateManager mantiene frentes con nombre, facción, objetivo, estado, prioridad, descripción y referencia al reloj operativo. Los relojes existentes continúan siendo compatibles. get_active_fronts() ordena los frentes por prioridad y expone progreso llenos/segmentos para el contexto del turno.
+
+ProposalValidator endureció efectos causales: fuerza de relaciones entre -100 y 100; front_clock_delta.delta debe ser entero.
+
+CausalityEngine ahora expone métricas deterministas de cada cascada: cantidad de activaciones, profundidad máxima, distribución por motivo, provenance IDs y consecuencias pendientes restantes. Orchestrator.evaluate_causality() devuelve estas métricas junto con el resumen y la trazabilidad.
+
+Tests agregados para rollback transaccional, frentes formales, métricas causales y límites de efectos. No se ejecutaron localmente.
+
+### Estado de arquitectura
+
+La frontera queda: LLM -> propuesta estructurada -> validación -> executor Python -> estado/vault/ficha.
+
+La causalidad queda: estado pendiente -> activación determinista -> efectos declarativos -> provenance -> posibles eventos/causas posteriores.
+
+Flask continúa diferido. No se agregó lógica de juego a la futura capa HTTP.
+
+### Próximo bloque recomendado
+
+1. Reducir escrituras redundantes durante cascadas causales mediante una sesión/batch de persistencia del StateManager.
+2. Añadir contrato explícito de facciones y frentes para evitar que el LLM improvise identificadores incompatibles.
+3. Integrar métricas causales en TurnContract.state_delta y en el registro técnico del turno.
+4. Construir un pequeño conjunto de escenarios sintéticos para medir retrieval + causalidad + continuidad sin depender todavía de pruebas locales completas.
