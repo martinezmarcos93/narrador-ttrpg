@@ -60,9 +60,9 @@ feat/retrieval-evaluation. Está 41 commits por delante de main y 0 por detrás.
 - HECHO: Knowledge Router.
 - HECHO: Service Boundary inicial.
 - HECHO: NarratorService reutiliza el NarratorAgent del Orchestrator.
-- PARCIAL: UI usa NarratorService para detección de sistema, eventos y preparación de turno.
-- PENDIENTE: terminar migración de UI a NarratorService.
-- PENDIENTE: eliminar accesos innecesarios de UI a componentes internos.
+- HECHO: UI usa NarratorService para detección de sistema, eventos, preparación de turno, propuestas y persistencia del contrato.
+- PARCIAL: quedan accesos internos de UI necesarios para compatibilidad/estado visual y deben aislarse en una pasada posterior.
+- PENDIENTE: formalizar interfaces públicas Core/Service/UI.
 - PENDIENTE: formalizar interfaces públicas Core/Service/UI.
 
 ### A2. Estado y transacciones
@@ -70,11 +70,11 @@ feat/retrieval-evaluation. Está 41 commits por delante de main y 0 por detrás.
 - HECHO: rollback de entidades externas y creación parcial.
 - HECHO: API pública rollback_batch().
 - HECHO: ProposalExecutor utiliza la frontera pública de rollback.
-- PENDIENTE: eliminar dependencia de campos privados del StateManager desde ProposalExecutor.
 - HECHO: escenario básico de rollback de batch.
 - HECHO: frontera pública de batch expuesta mediante `batch_depth`.
 - HECHO: ProposalExecutor respeta un batch externo sin cerrar la transacción del llamador.
 - HECHO: escenario de ejecución anidada.
+- HECHO: contrato de turno conserva cambios de propuesta, errores de validación y provenance sin perder deltas causales.
 - PENDIENTE: escenarios de fallos en todas las etapas y rollback transaccional compuesto.
 
 ### A3. Continuidad
@@ -123,9 +123,10 @@ Objetivo: input → interpretation → intent → rule_need → retrieval → re
 - HECHO: Turn Contract y RuleArbiter.
 - PENDIENTE: clasificador formal de intención y detección de acciones mecánicas, lore, investigación y social.
 - PENDIENTE: primitivas mecánicas adicionales por System Pack.
-- PENDIENTE: garantía transversal de que ningún camino permita al LLM resolver mecánicas.
-- PENDIENTE: validación de afirmaciones contra estado.
+- PARCIAL: RuleArbiter y TurnContract están integrados en el flujo de UI; falta auditar todos los caminos alternativos.
+- PARCIAL: propuestas pasan por ProposalValidator/Executor; falta validación transversal de afirmaciones narrativas contra estado.
 - PENDIENTE: fallback narrativo determinista ante propuesta inválida.
+- HECHO: resultado de propuesta y persistencia del contrato atraviesan NarratorService.
 
 ## 5. FASE D — Causalidad y mundo dinámico
 - HECHO: CausalityEngine, cascadas acotadas, eventos, facts, relaciones, consecuencias, clocks, métricas y provenance.
