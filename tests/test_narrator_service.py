@@ -67,3 +67,19 @@ def test_service_persists_completed_turn_without_ui_dependency():
     assert contract.persisted is True
     assert result["stage"] == "persist"
     assert service.orchestrator.state.payload == {"stage": "persist"}
+
+
+def test_service_character_snapshot_is_validated_as_proposal():
+    service = NarratorService.__new__(NarratorService)
+
+    class _Orchestrator:
+        def validate_and_apply_proposal(self, proposal, app_state=None):
+            self.proposal = proposal
+            self.state = app_state
+            return {"applied": True, "changes": ["character:hp"], "validation": {"valid": True}}
+
+    service.orchestrator = _Orchestrator()
+    result = service.apply_character_snapshot({"hp": 7}, {"character": {"hp": 10}})
+    assert result["applied"] is True
+    assert service.orchestrator.proposal["character_changes"][0]["field"] == "hp"
+    assert service.orchestrator.proposal["character_changes"][0]["value"] == 7
