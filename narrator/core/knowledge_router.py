@@ -48,10 +48,21 @@ class KnowledgeRouter:
         pack: SystemPack,
         *,
         manual_text: str = "",
+        state_context: str = "",
         max_words: int = 700,
     ) -> str:
         fragments: list[ContextFragment] = []
         routes = self.routes(pack, manual_available=bool(manual_text.strip()))
+
+        if state_context.strip():
+            fragments.append(ContextFragment(
+                text=state_context.strip(),
+                source="StateManager",
+                layer="state",
+                title="Estado mutable de la campaña",
+                score=1.0,
+                metadata={"authoritative": True},
+            ))
 
         for route in routes:
             if route.source == "manual":
@@ -102,10 +113,11 @@ class KnowledgeRouter:
         ]
 
     def _universal_fragments(self, query: str, pack: SystemPack, limit: int) -> list[ContextFragment]:
+        # El conocimiento universal no debe quedar sesgado por el slug del sistema.
         results = self.retriever.brain.search(
-            pack.knowledge_query(query),
+            query,
             max_results=limit,
-            system=pack.knowledge.brain_system,
+            system=None,
             expand_graph=True,
         )
         return [
