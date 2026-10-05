@@ -46,3 +46,32 @@ def test_executor_validates_character_fields_before_mutation(tmp_path):
     }, character=character)
     assert result.applied
     assert character["hp"] == 0
+
+
+class _FakeVaultWriter:
+    def __init__(self):
+        self.created = []
+
+    def create_npc(self, data):
+        self.created.append(("npc", data["nombre"]))
+        return object()
+
+    def create_locacion(self, data):
+        self.created.append(("locacion", data["nombre"]))
+        return object()
+
+
+def test_executor_creates_structured_entities(tmp_path):
+    state = StateManager(str(tmp_path / "estado.yaml"))
+    writer = _FakeVaultWriter()
+    executor = ProposalExecutor(state, vault_writer=writer)
+    result = executor.execute({
+        "npcs": [{"nombre": "El Vigía", "rol": "guardián"}],
+        "locations": [{"nombre": "Cripta del Norte"}],
+        "npc_presence": {"El Vigía": True},
+        "scene_changes": {"locacion": "Cripta del Norte"},
+    })
+    assert result.applied
+    assert ("npc", "El Vigía") in writer.created
+    assert ("locacion", "Cripta del Norte") in writer.created
+    assert "El Vigía" in state.data["escena_actual"]["npcs_presentes"]
