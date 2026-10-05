@@ -415,15 +415,17 @@ def finish_streaming(full_text: str):
         )
         if proposal:
             try:
-                proposal_result = _narrator_service.apply_proposal(
+                proposal_result = _narrator_service.apply_proposal_with_fallback(
                     proposal,
                     app_state=state,
                 )
                 if not proposal_result.get("applied"):
                     logger.warning(
-                        "Propuesta post-LLM rechazada: %s",
+                        "Propuesta post-LLM rechazada; fallback narración-only: %s",
                         proposal_result.get("validation", {}),
                     )
+                    if _active_turn_contract is not None:
+                        _active_turn_contract.record_proposal_result(proposal_result)
                 else:
                     changelog = list(proposal_result.get("changes", []))
                     if _active_turn_contract is not None:
