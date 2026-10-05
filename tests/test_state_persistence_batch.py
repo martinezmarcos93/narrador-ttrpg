@@ -42,3 +42,14 @@ def test_batch_persistence_supports_nested_batches(tmp_path):
     assert state.disk_writes == 0
     state.end_batch()
     assert state.disk_writes == 1
+
+
+def test_rollback_batch_discards_pending_persistence(tmp_path):
+    state = CountingState(str(tmp_path / "estado.yaml"))
+    state.disk_writes = 0
+    state.begin_batch()
+    state.set_known_fact("temporal", True)
+    state.rollback_batch()
+    assert state.disk_writes == 0
+    assert not state.path.exists()
+    assert state.get_known_fact("temporal") is True
