@@ -124,7 +124,7 @@ class ProposalExecutor:
             # El rollback de memoria ya ocurrió; como último recurso evitamos
             # dejar un batch abierto, sin depender de campos privados.
             try:
-                while getattr(self.state, "_batch_depth", 0) > 0:
+                while self.state.batch_depth > 0:
                     self.state.rollback_batch()
             except Exception:
                 pass
@@ -155,6 +155,7 @@ class ProposalExecutor:
         created_paths = []
         state_file_existed = self.state.path.exists()
 
+        initial_batch_depth = self.state.batch_depth
         self.state.begin_batch()
         try:
             entity_changes, created_paths = self._create_entities(proposal)
@@ -177,7 +178,8 @@ class ProposalExecutor:
                 )
                 changes.extend(f"character:{item}" for item in char_changes)
 
-            self.state.end_batch()
+            if self.state.batch_depth > initial_batch_depth:
+                self.state.end_batch()
             return ProposalExecution(True, report, changes)
 
         except Exception as exc:
