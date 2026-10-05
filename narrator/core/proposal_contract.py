@@ -20,6 +20,7 @@ ALLOWED_KEYS = {
     "character_changes",
     "scene_changes",
     "clock_changes",
+    "relations",
 }
 
 
@@ -34,6 +35,7 @@ class NarrativeProposal:
     character_changes: list[dict[str, Any]] = field(default_factory=list)
     scene_changes: dict[str, Any] = field(default_factory=dict)
     clock_changes: list[dict[str, Any]] = field(default_factory=list)
+    relations: list[dict[str, Any]] = field(default_factory=list)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "NarrativeProposal":
@@ -68,6 +70,7 @@ class NarrativeProposal:
         character_changes = optional_list("character_changes")
         scene_changes = optional_map("scene_changes")
         clock_changes = optional_list("clock_changes")
+        relations = optional_list("relations")
 
         if any(not isinstance(item, str) for item in events):
             raise ValueError("'events' solo admite cadenas.")
@@ -82,6 +85,7 @@ class NarrativeProposal:
             "consequences": consequences,
             "character_changes": character_changes,
             "clock_changes": clock_changes,
+            "relations": relations,
         }.items():
             if any(not isinstance(item, dict) for item in items):
                 raise ValueError(f"'{key}' solo admite objetos.")
@@ -96,6 +100,7 @@ class NarrativeProposal:
             character_changes=[dict(x) for x in character_changes],
             scene_changes=scene_changes,
             clock_changes=[dict(x) for x in clock_changes],
+            relations=[dict(x) for x in relations],
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -109,6 +114,7 @@ class NarrativeProposal:
             "character_changes": [dict(x) for x in self.character_changes],
             "scene_changes": dict(self.scene_changes),
             "clock_changes": [dict(x) for x in self.clock_changes],
+            "relations": [dict(x) for x in self.relations],
         }
 
 
@@ -129,6 +135,7 @@ class ProposalValidator:
             "consequences": proposal.consequences,
             "scene_changes": proposal.scene_changes,
             "clock_changes": proposal.clock_changes,
+            "relations": proposal.relations,
         }
         report = self.continuity.validate(continuity_payload)
         from narrator.core.continuity_validator import ContinuityIssue
