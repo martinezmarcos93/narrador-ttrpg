@@ -24,10 +24,17 @@ class Orchestrator:
         # Rutas del config ancladas a la raíz del proyecto (no al CWD)
         systems_path = str(resolve_path(self.config.get("systems_path", "data/systems")))
         vault_path = str(resolve_path(self.config.get("vault", {}).get("path", "vault")))
+        brain_cfg = self.config.get("cerebro", {}) or {}
+        brain_path = str(resolve_path(brain_cfg.get("path", "cerebro")))
+        brain_embedding_model = brain_cfg.get("embedding_model", "bge-m3")
         state_path = str(resolve_path(self.config.get("estado", {}).get("path", "estado_campana.yaml")))
 
         self.builder = PromptBuilder(systems_path=systems_path)
-        self.retriever = VaultRetriever(vault_path=vault_path)
+        self.retriever = VaultRetriever(
+            vault_path=vault_path,
+            brain_path=brain_path,
+            brain_embedding_model=brain_embedding_model,
+        )
         self.state = StateManager(state_path=state_path)
         self.state.load()
         self.scenes = SceneManager(retriever=self.retriever, state=self.state)
@@ -191,6 +198,16 @@ class Orchestrator:
         # complemento liviano cuando no hay búsqueda semántica disponible.
         lorebook_entries = self.builder.load_system(system_slug).get("lorebook", [])
 
+        # Cerebro permanente: aporta conceptos roleros y conexiones de grafo.
+        # Se consulta aparte del vault de campaña para conservar la distinción
+        # entre conocimiento universal y material específico de la crónica.
+        brain_query = last_user_msg or "escena, personaje, conflicto, investigación y consecuencias"
+        brain_ctx = self.retriever.get_brain_context(
+            brain_query,
+            max_words=450,
+            system=system_slug,
+        )
+
         vault_ctx = ""
         if not self.retriever.vault_is_empty():
             if last_user_msg:
@@ -245,6 +262,7 @@ class Orchestrator:
         return self.builder.build_narrator_prompt(
             system_slug=system_slug,
             vault_context=vault_ctx,
+            brain_context=brain_ctx,
             character=app_state.get("character") or None,
             last_session=self.state.get_last_session_summary(),
             scene_location=self.state.get_location() or "",
@@ -264,9 +282,15 @@ class Orchestrator:
     def build_char_creation_context(self, app_state: dict) -> str:
         system_slug = self.get_active_system(app_state)
         manual_text = app_state.get("manual_text", "")
+        brain_ctx = self.retriever.get_brain_context(
+            f"creación de personaje {system_slug} atributos habilidades arquetipos ventajas desventajas",
+            max_words=500,
+            system=system_slug,
+        )
         return self.builder.build_char_creation_prompt(
             system_slug=system_slug,
             manual_excerpt=manual_text,
+            brain_context=brain_ctx,
         )
 
     # ── Dispatch principal ────────────────────────────────────
