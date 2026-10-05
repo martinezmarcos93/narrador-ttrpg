@@ -303,6 +303,81 @@ class StateManager:
         self.save()
         return {"applied": True, "changes": changes}
 
+    def apply_causal_activation(self, index: int, *, outcome: str = "", effects=None) -> dict:
+        """Resuelve una consecuencia y aplica únicamente efectos declarativos permitidos."""
+        pending = self.data.setdefault("consecuencias_pendientes", [])
+        if index < 0 or index >= len(pending):
+            return {"applied": False, "changes": []}
+        entry = pending[index]
+        if entry.get("estado", "pendiente") != "pendiente":
+            return {"applied": False, "changes": []}
+
+        changes = []
+        entry["estado"] = "resuelta"
+        if outcome:
+            entry["resultado"] = outcome
+        changes.append(f"consequence:resolved:{entry.get('consecuencia', '')}")
+
+        escena = self.data.setdefault("escena_actual", {})
+        for effect in effects or []:
+            if not isinstance(effect, dict):
+                continue
+            kind = str(effect.get("type") or "").strip().lower()
+            if kind == "fact" and str(effect.get("key") or "").strip():
+                key = str(effect["key"]).strip()
+                self.data.setdefault("hechos_conocidos", {})[key] = {
+                    "valor": effect.get("value"),
+                    "fuente": "causality_engine",
+                    "sesion": self.get_session_number(),
+                }
+                changes.append(f"causal:fact:{key}")
+            elif kind == "flag" and str(effect.get("name") or "").strip():
+                name = str(effect["name"]).strip()
+                self.data.setdefault("flags", {})[name] = {
+                    "valor": effect.get("value"),
+                    "descripcion": str(effect.get("description") or ""),
+                    "sesion": self.get_session_number(),
+                }
+                changes.append(f"causal:flag:{name}")
+            elif kind == "npc_presence" and str(effect.get("name") or "").strip():
+                name = str(effect["name"]).strip()
+                present = escena.setdefault("npcs_presentes", [])
+                desired = bool(effect.get("present"))
+                if desired and name not in present:
+                    present.append(name)
+                elif not desired and name in present:
+                    present.remove(name)
+                changes.append(f"causal:npc_presence:{name}={desired}")
+            elif kind == "scene_location":
+                value = str(effect.get("value") or "").strip()
+                if value:
+                    escena["locacion"] = value
+                    changes.append(f"causal:scene_location:{value}")
+            elif kind == "clock_delta" and str(effect.get("name") or "").strip():
+                name = str(effect["name"]).strip()
+                clock = self.data.setdefault("relojes", {}).get(name)
+                if clock is None:
+                    continue
+                try:
+                    delta = int(effect.get("delta", 0))
+                except (TypeError, ValueError):
+                    continue
+                before = int(clock.get("llenos", 0))
+                clock["llenos"] = min(max(0, before + delta), int(clock.get("segmentos", 6)))
+                changes.append(f"causal:clock:{name} {before}->{clock['llenos']}")
+
+        self.data.setdefault("eventos", []).append({
+            "sesion": self.get_session_number(),
+            "turno": escena.get("turno_narrativo", 0),
+            "evento": f"Consecuencia activada: {entry.get('consecuencia', '')}",
+            "actor": "CausalityEngine",
+            "locacion": self.get_location() or "",
+            "timestamp": datetime.now().isoformat(),
+        })
+        del self.data["eventos"][:-200]
+        self.save()
+        return {"applied": True, "changes": changes}
+
     # ── Escena actual ─────────────────────────────────────────
     def set_location(self, loc: str):
         self.data["escena_actual"]["locacion"] = loc
