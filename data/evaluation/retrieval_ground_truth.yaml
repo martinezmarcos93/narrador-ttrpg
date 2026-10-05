@@ -1,0 +1,30 @@
+# Ground truth inicial, deliberadamente pequeño.
+# Los IDs son neuronas conceptuales, no texto copiado de manuales.
+cases:
+  - id: universal_investigacion
+    query: "los jugadores investigan una pista y necesitan tratar un fallo"
+    relevant_ids:
+      - universal-investigacion
+      - universal-fallo-y-avance
+    system: generic
+    expected_layers:
+      - universal
+
+  - id: universal_continuidad
+    query: "una consecuencia de una escena anterior debe seguir siendo válida"
+    relevant_ids:
+      - universal-consecuencias
+      - universal-estado-persistente
+      - universal-continuidad-temporal
+    system: generic
+    expected_layers:
+      - universal
+
+  - id: universal_conflicto_social
+    query: "un NPC negocia pero tiene objetivos, límites y una relación previa"
+    relevant_ids:
+      - universal-conflicto-social
+      - universal-npc
+    system: generic
+    expected_layers:
+      - universal
