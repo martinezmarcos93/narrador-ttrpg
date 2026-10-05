@@ -411,7 +411,7 @@ def finish_streaming(full_text: str):
 
         if narrative_proposal:
             try:
-                proposal_result = _orchestrator.validate_and_apply_proposal(
+                proposal_result = _narrator_service.apply_proposal(
                     narrative_proposal,
                     app_state=state,
                 )
@@ -422,16 +422,14 @@ def finish_streaming(full_text: str):
                     )
                 elif proposal_result.get("changes"):
                     if _active_turn_contract is not None:
-                        _active_turn_contract.state_delta = {
-                            "proposal_changes": list(proposal_result["changes"])
-                        }
+                        _active_turn_contract.record_proposal_result(proposal_result)
                     is_important = True
             except Exception as e:
                 logger.error(f"Error ejecutando propuesta narrativa: {e}", exc_info=True)
 
         if mutations:
             try:
-                proposal_result = _orchestrator.validate_and_apply_proposal(
+                proposal_result = _narrator_service.apply_proposal(
                     {"character_changes": mutations},
                     app_state=state,
                 )
@@ -447,7 +445,7 @@ def finish_streaming(full_text: str):
 
             if changelog:
                 if _active_turn_contract is not None:
-                    _active_turn_contract.state_delta = {"character_changes": list(changelog)}
+                    _active_turn_contract.record_proposal_result(proposal_result)
                 needs_char_refresh = True
                 is_important = True
                 ts = datetime.now().strftime("%H:%M")
@@ -503,8 +501,7 @@ def finish_streaming(full_text: str):
     # Cierre determinista del contrato: persistimos solo el resumen técnico.
     if _active_turn_contract is not None and _orchestrator is not None:
         try:
-            _active_turn_contract.mark_persisted()
-            _orchestrator.state.record_turn(_active_turn_contract.to_dict())
+            _narrator_service.persist_turn(_active_turn_contract)
         except Exception as e:
             logger.error(f"Error persistiendo contrato de turno: {e}", exc_info=True)
             _active_turn_contract.record_error(str(e))
