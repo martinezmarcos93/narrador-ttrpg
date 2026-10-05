@@ -215,6 +215,7 @@ class Orchestrator:
             brain_query,
             system_pack,
             manual_text=manual_text,
+            state_context=self.state.get_turn_context_text(),
             max_words=700,
         )
         brain_ctx = ""
