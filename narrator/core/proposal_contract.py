@@ -71,8 +71,9 @@ class NarrativeProposal:
 class ProposalValidator:
     """Valida forma y continuidad; no aplica ninguna mutación."""
 
-    def __init__(self, continuity_validator):
+    def __init__(self, continuity_validator, *, allowed_fronts=None):
         self.continuity = continuity_validator
+        self.allowed_fronts = set(allowed_fronts or [])
 
     def validate(self, proposal: NarrativeProposal):
         continuity_payload = {
@@ -147,6 +148,19 @@ class ProposalValidator:
                             "invalid_front_clock_delta", "error",
                             "El delta de un frente debe ser entero.",
                         ))
+
+        if self.allowed_fronts:
+            for consequence in proposal.consequences:
+                for effect in consequence.get("effects", []) or []:
+                    if not isinstance(effect, dict):
+                        continue
+                    if effect.get("type") == "front_clock_delta":
+                        name = str(effect.get("name") or "").strip()
+                        if name and name not in self.allowed_fronts:
+                            report.issues.append(ContinuityIssue(
+                                "unknown_front", "error",
+                                f"Frente no declarado por el contrato activo: {name}.",
+                            ))
 
         for item in proposal.clock_changes:
             if "name" not in item or "delta" not in item:
