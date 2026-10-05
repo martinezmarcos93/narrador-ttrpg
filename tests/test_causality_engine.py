@@ -121,3 +121,23 @@ def test_causality_exposes_metrics(tmp_path):
     assert engine.last_metrics["activations"] == 1
     assert engine.last_metrics["max_depth"] == 0
     assert engine.last_metrics["provenance_ids"] == [result[0].provenance_id]
+
+
+def test_causality_executes_state_and_scene_primitives(tmp_path):
+    state = StateManager(str(tmp_path / "estado.yaml"))
+    state.data["escena_actual"]["npcs_presentes"] = ["Guardia"]
+    state.add_pending_consequence("La escena cambia", trigger="señal")
+    state.data["consecuencias_pendientes"][0]["effects"] = [
+        {"type": "fact", "key": "puerta_abierta", "value": True},
+        {"type": "flag", "name": "alarma", "value": True},
+        {"type": "npc_presence", "name": "Guardia", "present": False},
+        {"type": "scene_location", "value": "Patio"},
+    ]
+
+    result = CausalityEngine(state).evaluate("señal")
+
+    assert len(result) == 1
+    assert state.get_known_fact("puerta_abierta") is True
+    assert state.get_flag("alarma") is True
+    assert state.data["escena_actual"]["npcs_presentes"] == []
+    assert state.get_location() == "Patio"
