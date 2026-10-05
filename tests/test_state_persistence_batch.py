@@ -53,3 +53,36 @@ def test_rollback_batch_discards_pending_persistence(tmp_path):
     assert state.disk_writes == 0
     assert not state.path.exists()
     assert state.get_known_fact("temporal") is True
+
+
+def test_atomic_save_preserves_previous_file_when_replace_fails(tmp_path, monkeypatch):
+    import os
+    import yaml
+
+    path = tmp_path / "estado.yaml"
+    state = StateManager(str(path))
+    state.set_known_fact("original", True)
+    original = path.read_text(encoding="utf-8")
+
+    state.set_known_fact("nuevo", True)
+
+    real_replace = os.replace
+
+    def failing_replace(source, destination):
+        if destination == path:
+            raise OSError("fallo deliberado de replace")
+        return real_replace(source, destination)
+
+    monkeypatch.setattr(os, "replace", failing_replace)
+
+    try:
+        state.save()
+    except OSError:
+        pass
+    else:
+        raise AssertionError("se esperaba fallo de persistencia")
+
+    assert path.read_text(encoding="utf-8") == original
+    leftovers = list(tmp_path.glob(".estado.yaml.*.tmp"))
+    assert leftovers == []
+    assert yaml.safe_load(path.read_text(encoding="utf-8"))["hechos_conocidos"]["original"]["valor"] is True
