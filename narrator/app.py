@@ -462,9 +462,9 @@ def finish_streaming(full_text: str):
             for tipo, data in new_entities:
                 try:
                     if tipo == "npc":
-                        _vault_writer.create_npc(data)
+                        _narrator_service.apply_proposal({"npcs": [data]}, app_state=state)
                     else:
-                        _vault_writer.create_locacion(data)
+                        _narrator_service.apply_proposal({"locations": [data]}, app_state=state)
                 except Exception as e:
                     logger.error(
                         f"Error auto-guardando entidad '{data.get('nombre')}': {e}", exc_info=True
