@@ -86,3 +86,26 @@ def test_causality_depth_limit_prevents_infinite_cycle(tmp_path):
     result = CausalityEngine(state, max_cascade_depth=3).evaluate("a")
 
     assert len(result) <= 3
+
+
+def test_causality_can_change_relation_and_front_clock(tmp_path):
+    state = StateManager(str(tmp_path / "estado.yaml"))
+    state.add_clock("frente_culto", segments=6)
+    state.add_pending_consequence("El culto gana influencia", trigger="ritual")
+    state.data["consecuencias_pendientes"][0]["effects"] = [
+        {
+            "type": "relation",
+            "source": "Culto",
+            "target": "Aldren",
+            "relation": "amenaza",
+            "strength": -70,
+        },
+        {"type": "front_clock_delta", "name": "frente_culto", "delta": 2},
+    ]
+
+    result = CausalityEngine(state).evaluate("ritual")
+
+    assert len(result) == 1
+    assert state.data["relojes"]["frente_culto"]["llenos"] == 2
+    assert state.get_relations("Culto")[0]["relation"] == "amenaza"
+    assert result[0].provenance_id
