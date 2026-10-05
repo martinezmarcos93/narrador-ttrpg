@@ -69,6 +69,19 @@ class CausalityEngine:
                         location=self.state.get_location() or "",
                     )
                     emitted_events.append(event)
+            elif kind == "world_fact":
+                key = str(effect.get("key") or "").strip()
+                if key:
+                    self.state.set_world_fact(key, effect.get("value"), source="causality_engine")
+            elif kind == "character_fact":
+                character = str(effect.get("character") or "").strip()
+                key = str(effect.get("key") or "").strip()
+                if character and key:
+                    self.state.set_character_fact(character, key, effect.get("value"), source="causality_engine")
+            elif kind == "player_fact":
+                key = str(effect.get("key") or "").strip()
+                if key:
+                    self.state.set_player_fact(key, effect.get("value"), source="causality_engine")
             elif kind == "queue_consequence":
                 consequence = str(effect.get("consequence") or effect.get("text") or "").strip()
                 if not consequence:
