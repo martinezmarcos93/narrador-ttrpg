@@ -77,3 +77,40 @@ def test_router_authority_keeps_manual_above_system_and_universal():
     )
     assert rendered.index("MANUAL-AUTHORITY") < rendered.index("system evidence")
     assert rendered.index("system evidence") < rendered.index("universal evidence")
+
+
+def test_context_contract_enforces_full_authority_order():
+    fragments = [
+        ContextFragment("universal", "u", "universal", score=1),
+        ContextFragment("system", "s", "system", score=1),
+        ContextFragment("manual", "m", "manual", score=1),
+        ContextFragment("campaign", "c", "campaign", score=1),
+        ContextFragment("state", "st", "state", score=1),
+    ]
+    from narrator.core.context_contract import render_context
+    rendered = render_context(fragments, max_words=100)
+    assert rendered.index("state") < rendered.index("manual")
+    assert rendered.index("manual") < rendered.index("system")
+    assert rendered.index("system") < rendered.index("campaign")
+    assert rendered.index("campaign") < rendered.index("universal")
+
+
+def test_router_can_place_state_above_manual():
+    router = KnowledgeRouter(RetrieverStub())
+    pack = SystemPack(
+        slug="vampiro",
+        sistema="Vampiro",
+        edition="V20",
+        knowledge=KnowledgePolicy(
+            brain_system="vampiro",
+            preferred_sources=("manual", "system", "campaign"),
+            universal_fallback=True,
+        ),
+    )
+    rendered, _ = router.retrieve_with_metrics(
+        "regla y estado actual",
+        pack,
+        manual_text="MANUAL-AUTHORITY",
+        state_context="STATE-AUTHORITY",
+    )
+    assert rendered.index("STATE-AUTHORITY") < rendered.index("MANUAL-AUTHORITY")
