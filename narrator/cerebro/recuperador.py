@@ -17,6 +17,7 @@ from pathlib import Path
 
 from narrator.core.embedder import Embedder
 from narrator.cerebro.indexador import IndiceCerebro
+from narrator.core.context_contract import ContextFragment
 
 
 _TOKEN_RE = re.compile(r"[\wáéíóúüñÁÉÍÓÚÜÑ]{3,}")
@@ -139,12 +140,26 @@ class RecuperadorCerebro:
         results = []
         for score, path in selected[:max_results]:
             meta, body = self._read(path)
+            layer = str(meta.get("layer", meta.get("capa", "universal")))
+            if layer == "sistema":
+                layer = "system"
+            elif layer not in {"universal", "system", "manual", "campaign", "state"}:
+                layer = "universal"
             results.append({
                 "score": round(score, 5),
                 "path": path,
                 "meta": meta,
                 "body": body,
                 "source": "brain",
+                "layer": layer,
+                "fragment": ContextFragment(
+                    text=body,
+                    source=str(meta.get("source", meta.get("fuente", "cerebro"))),
+                    layer=layer,
+                    title=str(meta.get("title", meta.get("titulo", path))),
+                    score=round(score, 5),
+                    metadata=meta,
+                ),
             })
         return results
 
