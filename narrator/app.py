@@ -208,7 +208,7 @@ def extract_pdf_text(path: str, max_chars: int = 12000) -> str | None:
 def detect_system(text: str) -> tuple[str, str]:
     """Detecta el sistema de juego. Devuelve (display_name, slug)."""
     if _AGENT_MODE and _orchestrator:
-        slug = _orchestrator.detect_and_set_system(text, state)
+        slug = _narrator_service.detect_system(text, state)
         names = {
             "vtm_v20": "Mundo de Tinieblas (Vampiro V20)",
             "dnd_5e": "Dungeons & Dragons 5e",
@@ -642,7 +642,7 @@ def send_message(user_text: str = None):
     if _AGENT_MODE and _orchestrator:
         event_type, intensity = _detect_event_type(user_text)
         state["ultimo_evento"] = event_type
-        _orchestrator.record_event(event_type, intensity)
+        _narrator_service.record_event(event_type, intensity)
 
     _is_streaming = True
     _streaming_token = ""
@@ -661,7 +661,7 @@ def send_message(user_text: str = None):
         global _active_turn_contract
         if _AGENT_MODE and _orchestrator:
             try:
-                contract = _orchestrator.prepare_turn(state)
+                contract = _narrator_service.prepare_turn(state)
                 _active_turn_contract = contract
                 system_content = contract.narrative_prompt
             except Exception as e:
