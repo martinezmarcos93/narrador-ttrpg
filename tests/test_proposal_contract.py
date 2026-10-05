@@ -136,3 +136,21 @@ def test_proposal_rejects_non_integer_front_delta():
     report = ProposalValidator(ContinuityValidator()).validate(proposal)
     assert not report.valid
     assert any(issue.code == "invalid_front_clock_delta" for issue in report.issues)
+
+def test_proposal_rejects_unknown_front_when_contract_is_configured():
+    proposal = NarrativeProposal.from_dict({
+        "consequences": [{
+            "text": "Cambio",
+            "effects": [{
+                "type": "front_clock_delta",
+                "name": "Frente Inventado",
+                "delta": 1,
+            }],
+        }]
+    })
+    report = ProposalValidator(
+        ContinuityValidator(),
+        allowed_fronts={"Culto"},
+    ).validate(proposal)
+    assert not report.valid
+    assert any(issue.code == "unknown_front" for issue in report.issues)
