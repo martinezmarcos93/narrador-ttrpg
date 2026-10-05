@@ -225,7 +225,14 @@ class Orchestrator:
             character=str(character_name),
             include_player=True,
         )
-        return base + (f"\n{knowledge}" if knowledge else "")
+        relation_entities = list(self.state.data.get("escena_actual", {}).get("npcs_presentes", []))
+        relation_graph = self.state.get_relation_graph_text(relation_entities, max_edges=10)
+        parts = [base]
+        if knowledge:
+            parts.append(knowledge)
+        if relation_graph:
+            parts.append("GRAFO SOCIAL RELEVANTE:\n" + relation_graph)
+        return "\n".join(parts)
 
     def build_narrator_context(self, app_state: dict) -> str:
         system_slug = self.get_active_system(app_state)
