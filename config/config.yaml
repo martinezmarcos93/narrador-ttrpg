@@ -44,3 +44,4 @@ log:
 # La carpeta de manuales es propia de cada máquina: ver config/local.example.yaml
 cerebro:
   path: "cerebro"
+  embedding_model: "bge-m3"
