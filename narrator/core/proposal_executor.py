@@ -7,6 +7,7 @@ Nunca interpreta texto narrativo ni ejecuta una propuesta inválida.
 
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any
 
@@ -19,6 +20,8 @@ class ProposalExecution:
     applied: bool
     report: Any
     changes: list[str]
+    rolled_back: bool = False
+    error: str = ""
 
 
 class ProposalExecutor:
@@ -60,19 +63,35 @@ class ProposalExecutor:
                 ))
         report.valid = not any(issue.severity == "error" for issue in report.issues)
 
-    def _create_entities(self, proposal: NarrativeProposal) -> list[str]:
+    def _create_entities(self, proposal: NarrativeProposal) -> tuple[list[str], list[Any]]:
         if not self.vault_writer:
-            return []
+            return [], []
         changes = []
+        created_paths = []
         for npc in proposal.npcs:
             path = self.vault_writer.create_npc(npc)
             if path:
+                created_paths.append(path)
                 changes.append(f"entity:npc+{npc.get('nombre')}")
         for location in proposal.locations:
             path = self.vault_writer.create_locacion(location)
             if path:
+                created_paths.append(path)
                 changes.append(f"entity:locacion+{location.get('nombre')}")
-        return changes
+        return changes, created_paths
+
+    def _rollback(self, state_snapshot, character_snapshot, character, created_paths) -> None:
+        """Revierte las mutaciones propias de esta ejecución."""
+        self.state.data = deepcopy(state_snapshot)
+        try:
+            self.state.save()
+        except Exception:
+            pass
+        if character is not None and character_snapshot is not None:
+            character.clear()
+            character.update(deepcopy(character_snapshot))
+        if self.vault_writer and created_paths:
+            self.vault_writer.rollback_created_entities(created_paths)
 
     def execute(self, raw: dict[str, Any], character: dict | None = None) -> ProposalExecution:
         try:
@@ -89,16 +108,28 @@ class ProposalExecutor:
         if not report.valid:
             return ProposalExecution(False, report, [])
 
-        changes = self._create_entities(proposal)
-        result = self.state.apply_proposal(proposal)
-        changes.extend(result.get("changes", []))
-
-        if character is not None and self.narrator_agent and proposal.character_changes:
-            allowed = self.narrator_agent.character_field_specs(self.character_schema)
-            normalized = [dict(item) for item in proposal.character_changes if "field" in item]
-            char_changes = self.narrator_agent.apply_state_mutations(
-                character, normalized, allowed_fields=allowed
-            )
-            changes.extend(f"character:{item}" for item in char_changes)
-
-        return ProposalExecution(True, report, changes)
+        state_snapshot = deepcopy(self.state.data)
+        character_snapshot = deepcopy(character) if character is not None else None
+        created_paths = []
+        try:
+            entity_changes, created_paths = self._create_entities(proposal)
+            changes = list(entity_changes)
+            result = self.state.apply_proposal(proposal)
+            changes.extend(result.get("changes", []))
+            if character is not None and self.narrator_agent and proposal.character_changes:
+                allowed = self.narrator_agent.character_field_specs(self.character_schema)
+                normalized = [dict(item) for item in proposal.character_changes if "field" in item]
+                char_changes = self.narrator_agent.apply_state_mutations(
+                    character, normalized, allowed_fields=allowed
+                )
+                changes.extend(f"character:{item}" for item in char_changes)
+            return ProposalExecution(True, report, changes)
+        except Exception as exc:
+            self._rollback(state_snapshot, character_snapshot, character, created_paths)
+            report.valid = False
+            from narrator.core.continuity_validator import ContinuityIssue
+            report.issues.append(ContinuityIssue(
+                "proposal_execution_failed", "error",
+                f"La propuesta fue revertida por un error de ejecución: {exc}",
+            ))
+            return ProposalExecution(False, report, [], rolled_back=True, error=str(exc))
