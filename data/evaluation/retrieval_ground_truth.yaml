@@ -28,3 +28,69 @@ cases:
     system: generic
     expected_layers:
       - universal
+
+  - id: universal_agencia
+    query: "el jugador declara una acción y el mundo debe responder sin quitarle agencia"
+    relevant_ids:
+      - universal-agencia-jugador
+      - universal-escena
+    graded_relevance:
+      universal-agencia-jugador: 3
+      universal-escena: 1
+    system: generic
+    expected_layers:
+      - universal
+
+  - id: universal_frentes
+    query: "un frente avanza y un reloj amenaza con cambiar la situación"
+    relevant_ids:
+      - universal-frentes-relojes
+      - universal-causalidad
+      - universal-estado-persistente
+    graded_relevance:
+      universal-frentes-relojes: 3
+      universal-causalidad: 2
+      universal-estado-persistente: 1
+    system: generic
+    expected_layers:
+      - universal
+
+  - id: universal_conocimiento
+    query: "el personaje conoce una pista pero no debe recibir secretos que todavía no descubrió"
+    relevant_ids:
+      - universal-informacion-conocimiento
+      - universal-investigacion
+    graded_relevance:
+      universal-informacion-conocimiento: 3
+      universal-investigacion: 2
+    system: generic
+    expected_layers:
+      - universal
+
+  - id: universal_combate
+    query: "una pelea cambia el estado de ficción y las consecuencias deben persistir"
+    relevant_ids:
+      - universal-combate
+      - universal-estado-persistente
+      - universal-causalidad
+    graded_relevance:
+      universal-combate: 3
+      universal-estado-persistente: 2
+      universal-causalidad: 1
+    system: generic
+    expected_layers:
+      - universal
+
+  - id: universal_causalidad
+    query: "una acción produce una consecuencia que se activa en un turno posterior"
+    relevant_ids:
+      - universal-causalidad
+      - universal-consecuencias
+      - universal-continuidad-temporal
+    graded_relevance:
+      universal-causalidad: 3
+      universal-consecuencias: 2
+      universal-continuidad-temporal: 1
+    system: generic
+    expected_layers:
+      - universal
