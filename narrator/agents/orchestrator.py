@@ -398,10 +398,12 @@ class Orchestrator:
         contract.advance("intent")
         contract.intent, intent_reason = self._infer_intent(input_text)
         contract.provenance.append(f"interpretación: {intent_reason}")
+        contract.causal_metrics = dict(causal_result.get("metrics") or {})
         if causal_result.get("activated"):
             contract.provenance.append(
                 f"causalidad: {causal_result.get('count', 0)} consecuencia(s) activada(s)"
             )
+            contract.state_delta["causalidad"] = dict(contract.causal_metrics)
             for activation in self.causality.last_activations:
                 if activation.provenance_id:
                     contract.provenance.append(
