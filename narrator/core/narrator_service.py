@@ -40,6 +40,15 @@ class NarratorService:
     def detect_system(self, text: str, app_state: dict) -> str:
         return self.orchestrator.detect_and_set_system(text, app_state)
 
+    def record_event(self, event_type: str, intensity: int = 1) -> None:
+        self.orchestrator.record_event(event_type, intensity)
+
+    def prepare_turn(self, app_state: dict):
+        return self.orchestrator.prepare_turn(app_state)
+
+    def world_status(self) -> str:
+        return self.orchestrator.get_world_status_text()
+
     def context_for_phase(self, app_state: dict) -> str:
         return self.orchestrator.get_context_for_phase(app_state)
 
