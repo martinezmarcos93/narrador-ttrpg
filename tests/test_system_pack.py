@@ -28,3 +28,40 @@ def test_all_shipped_systems_satisfy_contract(slug):
     pack = SystemPack.load(slug, Path("data/systems"))
     assert pack.slug == slug
     assert pack.knowledge.brain_system == slug
+
+def test_system_pack_formal_front_contract():
+    pack = SystemPack.from_dict({
+        "slug": "test",
+        "sistema": "Test",
+        "edition": "1",
+        "vocabulario": {},
+        "character_sheet_schema": {},
+        "resolution": {},
+        "lorebook": [],
+        "knowledge": {},
+        "factions": {
+            "culto": {"nombre": "Culto del Eclipse"},
+        },
+        "fronts": {
+            "ritual": {"nombre": "Ritual", "faccion": "culto"},
+        },
+        "llm_system_prompt": "",
+    })
+    assert pack.validate_front_contract() == []
+    assert pack.front_definition("ritual")["faccion"] == "culto"
+
+
+def test_system_pack_rejects_front_unknown_faction():
+    pack = SystemPack.from_dict({
+        "slug": "test",
+        "sistema": "Test",
+        "edition": "1",
+        "vocabulario": {},
+        "character_sheet_schema": {},
+        "resolution": {},
+        "lorebook": [],
+        "knowledge": {},
+        "fronts": {"ritual": {"nombre": "Ritual", "faccion": "missing"}},
+        "llm_system_prompt": "",
+    })
+    assert any("facción inexistente" in error for error in pack.validate_front_contract())
