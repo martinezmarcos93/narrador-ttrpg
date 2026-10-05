@@ -30,3 +30,26 @@ def test_causality_keeps_unmatched_consequence_pending(tmp_path):
     result = CausalityEngine(state).evaluate("El grupo descansa")
     assert result == []
     assert len(state.get_pending_consequences()) == 1
+
+
+def test_causality_applies_declared_effects(tmp_path):
+    state = StateManager(str(tmp_path / "estado.yaml"))
+    state.add_clock("alarma", segments=4)
+    state.add_pending_consequence(
+        "La alarma dispara refuerzos",
+        trigger="alarma",
+    )
+    result = CausalityEngine(state).evaluate(
+        "La alarma comienza a sonar",
+    )
+    assert len(result) == 1
+    assert state.get_flag("refuerzos_avisados") is None
+    # La consecuencia se activa; sus efectos solo pueden venir del estado declarado.
+    state.data["consecuencias_pendientes"].append({
+        "consecuencia": "El reloj avanza",
+        "trigger": "alarma2",
+        "estado": "pendiente",
+        "effects": [{"type": "clock_delta", "name": "alarma", "delta": 2}],
+    })
+    CausalityEngine(state).evaluate("alarma2")
+    assert state.data["relojes"]["alarma"]["llenos"] == 2
