@@ -214,6 +214,76 @@ class StateManager:
         """Devuelve los últimos resúmenes técnicos, sin prompts ni respuestas LLM."""
         return list(self.data.get("turnos", [])[-max(0, int(limit)):])
 
+    # ── Aplicación atómica de propuestas ────────────────────────
+    def apply_proposal(self, proposal) -> dict:
+        """Aplica una propuesta ya validada y devuelve un changelog.
+
+        Este método no interpreta texto libre: recibe un NarrativeProposal.
+        """
+        changes = []
+        for key, value in proposal.facts.items():
+            before = self.get_known_fact(key, None)
+            self.set_known_fact(key, value, source="narrative_proposal")
+            changes.append(f"fact:{key} {before!r} -> {value!r}")
+
+        for event in proposal.events:
+            self.record_event(event, location=self.get_location() or "")
+            changes.append(f"event:{event}")
+
+        escena = self.data.setdefault("escena_actual", {})
+        present = escena.setdefault("npcs_presentes", [])
+        for name, desired in proposal.npc_presence.items():
+            if desired and name not in present:
+                present.append(name)
+                changes.append(f"npc:+{name}")
+            elif not desired and name in present:
+                present.remove(name)
+                changes.append(f"npc:-{name}")
+
+        for item in proposal.consequences:
+            consequence = str(item.get("text") or item.get("consequence") or "").strip()
+            if consequence:
+                self.add_pending_consequence(
+                    consequence,
+                    trigger=str(item.get("trigger") or ""),
+                    due=str(item.get("due") or ""),
+                )
+                changes.append(f"consequence:+{consequence}")
+
+        for item in proposal.clock_changes:
+            name = str(item.get("name") or "").strip()
+            if not name:
+                continue
+            try:
+                delta = int(item.get("delta", 0))
+            except (TypeError, ValueError):
+                continue
+            if name not in self.data.get("relojes", {}):
+                continue
+            before = self.data["relojes"][name].get("llenos", 0)
+            self.advance_clock(name, delta)
+            after = self.data["relojes"][name].get("llenos", 0)
+            changes.append(f"clock:{name} {before} -> {after}")
+
+        if proposal.scene_changes:
+            for key, value in proposal.scene_changes.items():
+                if key == "locacion":
+                    before = escena.get("locacion")
+                    self.set_location(str(value) if value is not None else "")
+                    changes.append(f"scene:locacion {before!r} -> {value!r}")
+                elif key == "turno_narrativo_delta":
+                    try:
+                        delta = int(value)
+                    except (TypeError, ValueError):
+                        delta = 0
+                    escena["turno_narrativo"] = max(
+                        0, escena.get("turno_narrativo", 0) + delta
+                    )
+                    changes.append(f"scene:turno_narrativo delta={delta}")
+
+        self.save()
+        return {"applied": True, "changes": changes}
+
     # ── Escena actual ─────────────────────────────────────────
     def set_location(self, loc: str):
         self.data["escena_actual"]["locacion"] = loc
