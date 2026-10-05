@@ -39,3 +39,31 @@ def test_service_exposes_prepare_turn_without_ui_dependency():
     service.record_event("combate", 2)
     assert service.orchestrator.last_event == ("combate", 2)
     assert service.world_status() == "world"
+
+
+def test_service_persists_completed_turn_without_ui_dependency():
+    service = NarratorService.__new__(NarratorService)
+
+    class _State:
+        def record_turn(self, payload):
+            self.payload = payload
+
+    class _FakeOrchestrator:
+        def __init__(self):
+            self.state = _State()
+
+    service.orchestrator = _FakeOrchestrator()
+
+    class _Contract:
+        def __init__(self):
+            self.persisted = False
+        def mark_persisted(self):
+            self.persisted = True
+        def to_dict(self):
+            return {"stage": "persist"}
+
+    contract = _Contract()
+    result = service.persist_turn(contract)
+    assert contract.persisted is True
+    assert result["stage"] == "persist"
+    assert service.orchestrator.state.payload == {"stage": "persist"}
