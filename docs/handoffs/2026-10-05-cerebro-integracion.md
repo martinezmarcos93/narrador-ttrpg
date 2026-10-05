@@ -178,3 +178,30 @@ El sistema todavía no interpreta automáticamente la respuesta narrativa libre 
 Se añadió un protocolo opcional `json-proposal` al prompt del narrador. `NarratorAgent` lo extrae y elimina del texto visible. `app.py` lo envía al `Orchestrator.validate_and_apply_proposal()`. Si la propuesta falla validación, no se aplica. Si contiene `character_changes`, esas mutaciones pasan por el schema activo y no se aplican también por las etiquetas `[state: ...]`, evitando doble aplicación.
 
 Los tests de extracción, sanitización y ejecución segura quedaron agregados. No se ejecutaron localmente.
+
+### Barrido de entidades y causalidad — 2026-10-05
+
+Se amplió el contrato json-proposal para soportar:
+- npcs: NPCs nuevos confirmados por la ficción.
+- locations: locaciones nuevas confirmadas por la ficción.
+- npc_presence, consecuencias, relojes y cambios de escena continúan dentro del mismo contrato.
+
+ProposalValidator rechaza NPCs o locaciones sin nombre. ProposalExecutor puede materializarlos mediante VaultWriter, manteniendo el vault como biblioteca persistente de entidades.
+
+StateManager.apply_proposal() fue refactorizado para realizar las mutaciones de una propuesta en memoria y ejecutar una sola persistencia al final. Esto evita múltiples escrituras intermedias durante una misma propuesta.
+
+Se añadió narrator/core/causality_engine.py:
+- activa consecuencias por trigger textual explícito;
+- activa consecuencias por sesión/turno lógico;
+- activa consecuencias marcadas para el siguiente turno al comienzo del turno siguiente;
+- registra la activación como evento persistente;
+- no genera contenido ni interpreta narrativa libre.
+
+Orchestrator expone evaluate_causality() y prepare_turn() activa las consecuencias de siguiente turno antes del retrieval, de modo que el estado causal ya forme parte del contexto que recibe el LLM.
+
+Tests agregados:
+- tests/test_causality_engine.py
+- cobertura de entidades en tests/test_proposal_contract.py
+- cobertura de ejecución de entidades en tests/test_proposal_executor.py
+
+No se ejecutaron pruebas locales.
