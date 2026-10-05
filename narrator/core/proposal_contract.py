@@ -99,6 +99,29 @@ class ProposalValidator:
                 "invalid_character_change", "error",
                 "Cada cambio de personaje debe declarar un field.",
             ))
+        allowed_effects = {"fact", "flag", "npc_presence", "scene_location", "clock_delta"}
+        for consequence in proposal.consequences:
+            for effect in consequence.get("effects", []) or []:
+                if not isinstance(effect, dict) or effect.get("type") not in allowed_effects:
+                    report.issues.append(ContinuityIssue(
+                        "invalid_causal_effect", "error",
+                        f"Efecto causal no permitido: {effect.get('type') if isinstance(effect, dict) else '<inválido>'}.",
+                    ))
+                    continue
+                kind = effect.get("type")
+                required = {
+                    "fact": ("key",),
+                    "flag": ("name",),
+                    "npc_presence": ("name", "present"),
+                    "scene_location": ("value",),
+                    "clock_delta": ("name", "delta"),
+                }[kind]
+                if any(key not in effect for key in required):
+                    report.issues.append(ContinuityIssue(
+                        "invalid_causal_effect", "error",
+                        f"Efecto causal '{kind}' incompleto.",
+                    ))
+
         for item in proposal.clock_changes:
             if "name" not in item or "delta" not in item:
                 report.issues.append(ContinuityIssue(
