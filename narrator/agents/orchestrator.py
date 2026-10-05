@@ -16,6 +16,7 @@ from narrator.core.scene_manager import SceneManager
 from narrator.core.state_manager import StateManager
 from narrator.core.turn_contract import TurnContract
 from narrator.core.proposal_executor import ProposalExecutor
+from narrator.core.vault_writer import VaultWriter
 from narrator.agents.narrator_agent import NarratorAgent
 from narrator.core.theory_engine import MasterMoveEngine, PacingToneAgent, WorldSimulationEngine, InvestigationEngine
 
@@ -62,7 +63,12 @@ class Orchestrator:
         self._last_retrieved_context = ""
         self._last_retrieval_metrics: dict = {}
         self.narrator_agent = NarratorAgent()
-        self.proposal_executor = ProposalExecutor(self.state, narrator_agent=self.narrator_agent)
+        self.vault_writer = VaultWriter(vault_path=vault_path)
+        self.proposal_executor = ProposalExecutor(
+            self.state,
+            narrator_agent=self.narrator_agent,
+            vault_writer=self.vault_writer,
+        )
 
     def _load_config(self, path: str) -> dict:
         try:
