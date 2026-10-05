@@ -2,6 +2,7 @@
 
 ## Rama
 - feat/retrieval-evaluation
+- 103 commits por delante de main y 2 por detrás al momento de este handoff.
 - Sin merge a main.
 - No se ejecutaron pruebas locales.
 
