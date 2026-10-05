@@ -261,3 +261,27 @@ Se agregaron tests para aislamiento de conocimiento, cadenas causales y límite 
 ### Pendiente inmediato
 
 El siguiente bloque puede formalizar el grafo social y causal: relaciones NPC/facción, frentes como entidades causales, propagación de relojes y provenance completa desde efecto → evento → consecuencia → turno. Después conviene endurecer la atomicidad de ProposalExecutor y medir la utilización real del contexto por turno.
+
+
+## Barrido de grafo social, frentes y provenance — 2026-10-05
+
+El estado persistente ahora contiene:
+- `relaciones`: grafo dirigido de relaciones entre NPCs, facciones u otras entidades, con tipo, fuerza, razón y sesión.
+- `provenance`: cadena técnica de hasta 500 operaciones causales recientes.
+
+El Orchestrator construye un subgrafo limitado a los NPCs presentes en la escena y lo incorpora al contexto narrativo. No se inyecta indiscriminadamente todo el grafo de campaña.
+
+La causalidad admite:
+- `relation`: crea/modifica una relación dirigida.
+- `front_clock_delta`: modifica declarativamente un reloj de frente.
+- `event`: genera un evento que puede disparar otra consecuencia.
+- `queue_consequence`: planta una consecuencia posterior.
+- `world_fact`, `character_fact`, `player_fact`: mantiene la separación de perspectivas.
+
+Cada activación causal recibe un identificador de provenance. Las consecuencias encadenadas heredan ese identificador como `parent_id`, formando una cadena auditable efecto → activación → nueva consecuencia.
+
+Se añadieron tests para el grafo social, filtrado del subgrafo, provenance y propagación causal hacia relaciones/relojes. No fueron ejecutados localmente.
+
+### Siguiente endurecimiento
+
+Queda como siguiente bloque la atomicidad real de `ProposalExecutor`: evitar estados parciales cuando participan simultáneamente estado de campaña, ficha de personaje y escritura en vault. También conviene añadir un contrato explícito de relaciones/facciones a los System Packs y métricas de profundidad/ramificación de las cascadas causales.
