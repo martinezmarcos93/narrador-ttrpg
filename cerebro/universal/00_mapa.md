@@ -36,3 +36,14 @@ Este nodo conecta los conceptos universales del cerebro.
 - [[universal-tono-horror|Tono, horror y tensión]]
 - [[universal-separacion-reglas-lore|Separación entre reglas, lore y ficción]]
 - [[universal-fallo-y-avance|Fallo con avance]]
+
+
+## Extensiones
+- [[universal-causalidad]] — causalidad y consecuencias
+- [[universal-informacion-conocimiento]] — información y conocimiento
+- [[universal-transiciones-escena]] — transiciones de escena
+- [[universal-conflicto-social]] — conflicto social
+- [[universal-incertidumbre]] — gestión de incertidumbre
+- [[universal-estado-ficcion]] — estado mecánico y estado ficcional
+- [[universal-presupuesto-contexto]] — presupuesto de contexto
+- [[universal-continuidad-temporal]] — continuidad temporal
