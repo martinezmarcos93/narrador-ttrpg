@@ -42,12 +42,93 @@ class StateManager:
             "hechos_conocidos": {},
             # Conocimiento por perspectiva: nunca mezclar verdad objetiva con
             # lo que sabe el personaje o el jugador.
+            "relaciones": {},
+            "provenance": [],
             "conocimiento": {
                 "mundo": {},
                 "personajes": {},
                 "jugador": {},
             },
         }
+
+    # ── Grafo social y provenance ─────────────────────────────
+    def set_relation(
+        self,
+        source: str,
+        target: str,
+        relation: str,
+        strength: int = 0,
+        *,
+        source_type: str = "npc",
+        target_type: str = "npc",
+        reason: str = "",
+    ) -> None:
+        """Persiste una arista social dirigida entre dos entidades."""
+        source = str(source).strip()
+        target = str(target).strip()
+        relation = str(relation).strip()
+        if not source or not target or not relation:
+            return
+        key = f"{source}::{target}"
+        self.data.setdefault("relaciones", {})[key] = {
+            "source": source,
+            "target": target,
+            "source_type": source_type,
+            "target_type": target_type,
+            "relation": relation,
+            "strength": max(-100, min(100, int(strength))),
+            "reason": reason,
+            "sesion": self.get_session_number(),
+        }
+        self.save()
+
+    def get_relations(self, entity: str = "", *, relation: str = "") -> list[dict]:
+        result = []
+        for item in self.data.get("relaciones", {}).values():
+            if entity and entity not in {item.get("source"), item.get("target")}:
+                continue
+            if relation and item.get("relation") != relation:
+                continue
+            result.append(dict(item))
+        return result
+
+    def get_relation_graph_text(self, entities: list[str] | None = None, max_edges: int = 12) -> str:
+        allowed = set(entities or [])
+        edges = []
+        for item in self.get_relations():
+            if allowed and item.get("source") not in allowed and item.get("target") not in allowed:
+                continue
+            edges.append(
+                f"{item.get('source')} --[{item.get('relation')}, {item.get('strength', 0)}]--> {item.get('target')}"
+            )
+        return "\n".join(edges[:max_edges])
+
+    def record_provenance(
+        self,
+        *,
+        kind: str,
+        source: str,
+        turn_id: str = "",
+        detail: str = "",
+        parent_id: str = "",
+    ) -> str:
+        """Registra causalidad técnica sin guardar prompts completos."""
+        entry = {
+            "id": datetime.now().strftime("%Y%m%d%H%M%S%f"),
+            "kind": str(kind),
+            "source": str(source),
+            "turn_id": str(turn_id),
+            "detail": str(detail),
+            "parent_id": str(parent_id),
+            "timestamp": datetime.now().isoformat(),
+        }
+        self.data.setdefault("provenance", []).append(entry)
+        del self.data["provenance"][:-500]
+        self.save()
+        return entry["id"]
+
+    def get_recent_provenance(self, limit: int = 20) -> list[dict]:
+        return list(self.data.get("provenance", [])[-max(0, int(limit)):])
 
     # ── Persistencia ──────────────────────────────────────────
     def load(self) -> bool:
