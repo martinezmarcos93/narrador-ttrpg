@@ -237,3 +237,27 @@ Se añadió narrator/core/narrator_service.py como fachada independiente de la i
 Flask todavía no fue creado. La decisión sigue siendo construirlo sobre esta fachada cuando el núcleo sea estable, evitando trasladar lógica de juego a rutas HTTP.
 
 No se ejecutaron pruebas locales.
+
+## Barrido de conocimiento por perspectiva y causalidad encadenada — 2026-10-05
+
+Se añadió una separación persistente entre tres perspectivas:
+- `conocimiento.mundo`: verdad objetiva de campaña.
+- `conocimiento.personajes.<nombre>`: hechos que conoce explícitamente un personaje.
+- `conocimiento.jugador`: información que el jugador conoce explícitamente.
+
+`KnowledgeVisibility` construye una vista para el narrador sin exponer automáticamente la verdad objetiva. El Orchestrator incorpora esta vista al contexto narrativo. Esto evita el fallo clásico de un narrador omnisciente que revela secretos solo porque existen en el estado.
+
+La causalidad ahora admite cascadas acotadas. Una consecuencia puede emitir un `event`, y ese evento puede activar otra consecuencia. También puede plantar una nueva `queue_consequence`. La profundidad máxima está limitada a 8 por defecto para impedir ciclos infinitos.
+
+Se añadieron efectos declarativos de conocimiento:
+- `world_fact`
+- `character_fact`
+- `player_fact`
+
+El contrato de propuestas y el PromptBuilder documentan y validan estos efectos junto con `event` y `queue_consequence`. No existe ejecución arbitraria de código desde propuestas.
+
+Se agregaron tests para aislamiento de conocimiento, cadenas causales y límite de profundidad. No fueron ejecutados localmente.
+
+### Pendiente inmediato
+
+El siguiente bloque puede formalizar el grafo social y causal: relaciones NPC/facción, frentes como entidades causales, propagación de relojes y provenance completa desde efecto → evento → consecuencia → turno. Después conviene endurecer la atomicidad de ProposalExecutor y medir la utilización real del contexto por turno.
