@@ -44,7 +44,7 @@ No local tests, no benchmark real, no pull, no Ollama, no merge.
 
 ## Cierre de pasada — 2026-10-05
 - Branch: feat/retrieval-evaluation.
-- No merge a main. Compare verificado: 122 ahead / 2 behind / 42 archivos.
+- No merge a main. Compare verificado: 125 ahead / 2 behind / 42 archivos.
 - Writer boundary endurecida: `on_narrator_response_safe()` aísla log de sesión, evento, notas de NPC y notas de locación; un fallo no aborta las demás salidas.
 - UI → Core endurecido para avances de World Agent: `NarratorService.apply_world_advances()` centraliza mutaciones de frentes/relojes y WorldSimulation.
 - Cross-front endurecido: `front_clock_delta` solo emite `frente <nombre> lleno` al cruzar el umbral; no re-dispara si ya estaba lleno y los decrementos quedan acotados a cero.
