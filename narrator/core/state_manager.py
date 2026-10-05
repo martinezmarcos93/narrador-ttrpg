@@ -15,6 +15,8 @@ class StateManager:
     def __init__(self, state_path: str = "./estado_campana.yaml"):
         self.path = Path(state_path)
         self.data: dict = self._default()
+        self._batch_depth = 0
+        self._save_pending = False
 
     def _default(self) -> dict:
         return {
@@ -160,9 +162,35 @@ class StateManager:
                 logger.error(f"No pude hacer backup del estado corrupto: {be}")
             return False
 
-    def save(self):
+    def begin_batch(self) -> None:
+        """Agrupa múltiples mutaciones en una única persistencia."""
+        self._batch_depth += 1
+
+    def end_batch(self) -> None:
+        """Cierra un lote; solo el lote exterior escribe en disco."""
+        if self._batch_depth <= 0:
+            return
+        self._batch_depth -= 1
+        if self._batch_depth == 0 and self._save_pending:
+            self._save_pending = False
+            self._save_now()
+
+    def _save_now(self) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
         with open(self.path, "w", encoding="utf-8") as f:
-            yaml.dump(self.data, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+            yaml.dump(
+                self.data,
+                f,
+                allow_unicode=True,
+                default_flow_style=False,
+                sort_keys=False,
+            )
+
+    def save(self):
+        if self._batch_depth > 0:
+            self._save_pending = True
+            return
+        self._save_now()
 
     def get_turn_context_text(self) -> str:
         """Resumen determinista del estado mutable que puede afectar este turno.
