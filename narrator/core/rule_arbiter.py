@@ -70,12 +70,32 @@ class RuleArbiter:
                 return None
             mecanica = res.get("mecanica", "ratio")
             if mecanica == "d20_vs_dc":
-                return self._d20_vs_dc(action_text, character or {}, res, rolls, sides)
-            if mecanica == "pool_d10":
-                return self._pool_d10(action_text, character or {}, res, rolls)
-            if mecanica == "percentil":
-                return self._percentil(action_text, character or {}, res, rolls, sides)
-            return self._ratio(res, rolls, sides)
+                result = self._d20_vs_dc(action_text, character or {}, res, rolls, sides)
+            elif mecanica == "pool_d10":
+                result = self._pool_d10(action_text, character or {}, res, rolls)
+            elif mecanica == "percentil":
+                result = self._percentil(action_text, character or {}, res, rolls, sides)
+            else:
+                result = self._ratio(res, rolls, sides)
+
+            if result is None:
+                return None
+
+            accion = self._elegir_accion(action_text, res)
+            result.update({
+                "system_slug": system_slug,
+                "mecanica": mecanica,
+                "accion": accion.get("etiqueta", "Acción"),
+                "atributo": accion.get("atributo", ""),
+                "rolls": list(rolls),
+                "sides": sides,
+                "rule_source": f"data/systems/{system_slug}.yaml:resolution",
+            })
+            if mecanica != "ratio":
+                dificultad, dificultad_label = self._elegir_dificultad(action_text, res)
+                result["dificultad"] = dificultad
+                result["dificultad_label"] = dificultad_label
+            return result
         except Exception as e:
             logger.error(f"RuleArbiter.resolve: {e}", exc_info=True)
             return None
