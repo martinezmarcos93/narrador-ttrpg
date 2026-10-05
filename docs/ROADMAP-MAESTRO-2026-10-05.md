@@ -48,7 +48,7 @@ Precedencia: STATE > MANUAL > SYSTEM PACK > UNIVERSAL BRAIN > conocimiento gener
 - ADR y handoff del núcleo.
 
 ### 1.2 Rama actual
-feat/retrieval-evaluation. Está 76 commits por delante de main y 0 por detrás. El último commit pertenece a la pasada de consolidación de continuidad/causalidad del 2026-10-05. No mergear sin autorización expresa.
+feat/retrieval-evaluation. Está 99 commits por delante de main y 0 por detrás. El último commit pertenece a la pasada de consolidación de continuidad/causalidad del 2026-10-05. No mergear sin autorización expresa.
 
 ## 2. FASE A — Consolidación del núcleo
 
@@ -78,8 +78,10 @@ feat/retrieval-evaluation. Está 76 commits por delante de main y 0 por detrás.
 - HECHO: persistencia de estado mediante escritura temporal + `fsync` + reemplazo atómico.
 - HECHO: regresión que garantiza que un fallo de reemplazo conserva el archivo anterior.
 - HECHO: contrato de turno conserva cambios de propuesta, errores de validación y provenance sin perder deltas causales.
-- PENDIENTE: fallos de persistencia de disco y recuperación tras escritura parcial.
-- PENDIENTE: verificar atómicamente fallos de persistencia después de la composición post-LLM.
+- HECHO: escritura temporal + fsync + replace atómico.
+- HECHO: regresión de fallo de replace conserva el archivo anterior y elimina temporales.
+- HECHO: regresión de fallo de serialización conserva el archivo anterior y limpia temporales.
+- HECHO: recuperación de estado corrupto mediante cuarentena/backup antes de continuar.
 
 ### A3. Continuidad
 - HECHO: conflictos de facts, eventos duplicados y regresión temporal.
@@ -105,9 +107,9 @@ feat/retrieval-evaluation. Está 76 commits por delante de main y 0 por detrás.
 - HECHO: índice, embeddings, búsqueda semántica/léxica, filtros, grafo, reranking, deduplicación, métricas, evaluador y benchmark.
 - HECHO: IDs iniciales verificados contra el cerebro universal.
 - HECHO: ground truth ampliado con agencia, frentes, conocimiento, combate y causalidad.
-- PENDIENTE: casos ambiguos y multi-capa.
-- PENDIENTE: casos ambiguos y multi-capa.
-- PENDIENTE: casos específicos por sistema.
+- HECHO: casos ambiguos y multi-capa añadidos al ground truth.
+- HECHO: casos específicos por sistema añadidos para V20 y D&D.
+- LOCAL PENDIENTE: validar resultados reales contra esos casos.
 - PENDIENTE: benchmark sobre manuales y campaña.
 - LOCAL PENDIENTE: ejecutar benchmark real.
 - LOCAL PENDIENTE: ajustar pesos según resultados reales.
@@ -132,14 +134,20 @@ Objetivo: input → interpretation → intent → rule_need → retrieval → re
 - HECHO: salidas estructuradas de personaje y entidades pasan por NarratorService/ProposalExecutor en lugar de mutar directamente el estado.
 - HECHO: postprocesado LLM convergido en una única propuesta compuesta por turno.
 - HECHO: JSON legacy, [state:], propuesta narrativa y entidades se deduplican antes de ejecutar.
-- PARCIAL: queda auditar otros caminos legacy fuera del postprocesado principal.
-- PENDIENTE: fallback narrativo determinista ante propuesta inválida.
+- HECHO: auditoría del postprocesado no encontró otro bypass de personaje/entidades en app/orchestrator.
+- HECHO: propuesta inválida degrada explícitamente a narración-only y se registra en TurnContract.
+- PENDIENTE: auditoría de writers/background persistence fuera del postprocesado.
 - HECHO: resultado de propuesta y persistencia del contrato atraviesan NarratorService.
 
 ## 5. FASE D — Causalidad y mundo dinámico
 - HECHO: CausalityEngine, cascadas acotadas, eventos, facts, relaciones, consecuencias, clocks, métricas y provenance.
 - HECHO: escenarios compuestos de investigación, combate, conflicto social y fronts/relojes.
-- PENDIENTE: ciclos, límites de profundidad, cadenas largas, múltiples consecuencias y cross-front.
+- HECHO: relaciones sociales forman parte del NarrativeProposal y persisten por StateManager.
+- HECHO: límite de profundidad configurable y métrica `depth_limit_reached`.
+- HECHO: regresiones de cadena larga y ciclo causal.
+- HECHO: múltiples consecuencias en una cascada.
+- HECHO: `front_clock_delta` valida reloj existente y límites acumulados.
+- PENDIENTE: interacción cross-front entre múltiples relojes en campaña real.
 - HECHO: contratos de facciones/fronts.
 - PENDIENTE: reglas de avance, umbrales, interacción entre fronts y campaña real.
 - HECHO: grafo social.
@@ -151,7 +159,10 @@ Objetivo: input → interpretation → intent → rule_need → retrieval → re
 - PARCIAL: KnowledgeVisibility está integrada en el contexto narrativo.
 - HECHO: KnowledgeRouter filtra documentos de campaña con `llm_visible=false` y visibilidad `secret/private/dm/hidden` (incluidas variantes en español).
 - HECHO: regresiones de secreto no visible y precedencia STATE > MANUAL > SYSTEM/CAMPAIGN > UNIVERSAL.
-- PENDIENTE: pruebas de fuga E2E e integración definitiva con retrieval y prompt final.
+- HECHO: recall por mención deja de saltarse KnowledgeRouter.
+- HECHO: entidades restringidas no entran al conjunto de nombres recuperables por mención.
+- HECHO: regresión router → prompt garantiza que un secreto excluido no llega al prompt final.
+- PENDIENTE: fuga E2E completa con estado/perspectiva/campaña real.
 
 ## 7. FASE F — System Packs
 Prioridad: Vampiro V20 → Hombre Lobo → Cthulhu → D&D → otros → Pathfinder.
