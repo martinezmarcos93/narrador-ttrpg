@@ -141,3 +141,18 @@ Los tests están escritos pero **no fueron ejecutados localmente**, de acuerdo c
 3. Persistir un `TurnContract` resumido en el log de sesión para trazabilidad/debug.
 4. Completar métricas de retrieval y procedencia.
 5. Recién después avanzar a Flask.
+
+
+## Barridos posteriores — 2026-10-05
+
+Se avanzó sin depender de manuales:
+
+- Turn Contract: identidad única, timestamp, transiciones monotónicas, errores, cierre persistente y resumen técnico limitado a 200 turnos.
+- Rule Arbiter: rechazo de resultados fuera de rango y dados incompatibles con la mecánica; trazabilidad de validación.
+- Knowledge Router: estado vivo como fragmento autoritativo; recuperación universal desacoplada del slug del sistema; métricas de recuperación.
+- Cerebro universal: nuevas neuronas sobre causalidad, información/conocimiento, transiciones, conflicto social, incertidumbre, estado ficción/mecánica, presupuesto de contexto y continuidad temporal.
+- StateManager: eventos, consecuencias pendientes y hechos conocidos, expuestos en el contexto de turno.
+- Continuidad: validador determinista para conflictos de hechos, eventos duplicados, presencia de NPCs y regresión temporal.
+- Propuestas narrativas: contrato estructural separado de la aplicación de mutaciones; el LLM todavía no tiene permiso para mutar directamente el estado.
+
+No se ejecutaron pruebas locales. Los tests correspondientes quedaron escritos para validación posterior.
