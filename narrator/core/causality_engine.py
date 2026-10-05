@@ -20,6 +20,7 @@ class CausalActivation:
     consequence: str
     reason: str
     depth: int = 0
+    provenance_id: str = ""
 
 
 class CausalityEngine:
@@ -93,7 +94,7 @@ class CausalityEngine:
                     "effects": [dict(x) for x in effect.get("effects", []) if isinstance(x, dict)],
                     "estado": "pendiente",
                     "sesion_creacion": self.state.get_session_number(),
-                    "causal_parent": str(effect.get("parent") or ""),
+                    "causal_parent": str(effect.get("parent") or provenance_id),
                 })
                 emitted_events.append(consequence)
         if any(str(e.get("type") or "").strip().lower() == "queue_consequence" for e in effects):
@@ -133,11 +134,19 @@ class CausalityEngine:
                 if not (0 <= index < len(pending)) or pending[index].get("estado", "pendiente") != "pendiente":
                     continue
                 effects = self._effects(pending[index])
+                parent_id = str(pending[index].get("causal_parent") or "")
+                provenance_id = self.state.record_provenance(
+                    kind="causal_activation",
+                    source="CausalityEngine",
+                    detail=f"{pending[index].get('consecuencia', '')} [{reason}] depth={depth}",
+                    parent_id=parent_id,
+                )
                 activation = CausalActivation(
                     index=index,
                     consequence=str(pending[index].get("consecuencia", "")),
                     reason=reason,
                     depth=depth,
+                    provenance_id=provenance_id,
                 )
                 self.state.apply_causal_activation(
                     index,
