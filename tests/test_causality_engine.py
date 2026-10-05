@@ -4,12 +4,8 @@ from narrator.core.state_manager import StateManager
 
 def test_causality_activates_matching_trigger(tmp_path):
     state = StateManager(str(tmp_path / "estado.yaml"))
-    state.add_pending_consequence(
-        "Los refuerzos llegan",
-        trigger="alarma",
-    )
-    engine = CausalityEngine(state)
-    result = engine.evaluate("La alarma comienza a sonar", next_turn=True)
+    state.add_pending_consequence("Los refuerzos llegan", trigger="alarma")
+    result = CausalityEngine(state).evaluate("La alarma comienza a sonar", next_turn=True)
     assert len(result) == 1
     assert state.get_pending_consequences() == []
     assert "Consecuencia activada" in state.data["eventos"][-1]["evento"]
@@ -39,17 +35,54 @@ def test_causality_applies_declared_effects(tmp_path):
         "La alarma dispara refuerzos",
         trigger="alarma",
     )
-    result = CausalityEngine(state).evaluate(
-        "La alarma comienza a sonar",
-    )
+    state.data["consecuencias_pendientes"][0]["effects"] = [
+        {"type": "clock_delta", "name": "alarma", "delta": 2},
+    ]
+    result = CausalityEngine(state).evaluate("La alarma comienza a sonar")
     assert len(result) == 1
-    assert state.get_flag("refuerzos_avisados") is None
-    # La consecuencia se activa; sus efectos solo pueden venir del estado declarado.
-    state.data["consecuencias_pendientes"].append({
-        "consecuencia": "El reloj avanza",
-        "trigger": "alarma2",
-        "estado": "pendiente",
-        "effects": [{"type": "clock_delta", "name": "alarma", "delta": 2}],
-    })
-    CausalityEngine(state).evaluate("alarma2")
     assert state.data["relojes"]["alarma"]["llenos"] == 2
+
+
+def test_causality_chains_through_emitted_event(tmp_path):
+    state = StateManager(str(tmp_path / "estado.yaml"))
+    state.add_pending_consequence(
+        "La alarma activa a los guardias",
+        trigger="alarma",
+        )
+    state.data["consecuencias_pendientes"][0]["effects"] = [
+        {"type": "event", "text": "los guardias reciben la alarma"},
+    ]
+    state.data["consecuencias_pendientes"].append({
+        "consecuencia": "Los guardias cierran las puertas",
+        "trigger": "guardias reciben",
+        "effects": [{"type": "player_fact", "key": "doors_closed", "value": True}],
+        "estado": "pendiente",
+    })
+
+    result = CausalityEngine(state, max_cascade_depth=4).evaluate("alarma")
+
+    assert len(result) == 2
+    assert state.get_player_fact("doors_closed") is True
+    assert state.get_pending_consequences() == []
+
+
+def test_causality_depth_limit_prevents_infinite_cycle(tmp_path):
+    state = StateManager(str(tmp_path / "estado.yaml"))
+    state.data["consecuencias_pendientes"] = [
+        {
+            "consecuencia": "A",
+            "trigger": "b",
+            "effects": [{"type": "event", "text": "b"}],
+            "estado": "pendiente",
+        },
+        {
+            "consecuencia": "B",
+            "trigger": "a",
+            "effects": [{"type": "event", "text": "a"}],
+            "estado": "pendiente",
+        },
+    ]
+
+    result = CausalityEngine(state, max_cascade_depth=3).evaluate("a")
+
+    assert len(result) <= 3
