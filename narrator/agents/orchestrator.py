@@ -201,38 +201,29 @@ class Orchestrator:
         # Recuperación unificada: cerebro, sistema, manual y campaña llegan
         # al prompt conservando su procedencia y autoridad relativa.
         brain_query = last_user_msg or "escena, personaje, conflicto, investigación y consecuencias"
+        manual_text = app_state.get("manual_text", "")
         vault_ctx = self.retriever.get_combined_context(
             brain_query,
-            max_words=650,
+            max_words=700,
             system=system_slug,
+            manual_text=manual_text,
         )
         brain_ctx = ""
-        if not self.retriever.vault_is_empty():
-            if last_user_msg:
-                vault_ctx = self.retriever.get_relevant_context(
-                    last_user_msg, max_words=300, lorebook_entries=lorebook_entries
-                )
-            if not vault_ctx:
-                vault_ctx = self.retriever.get_relevant_context(
-                    "escena NPC frente", max_words=300, lorebook_entries=lorebook_entries
-                )
 
-            # Recall por mención (Fase 8): si el jugador nombra explícitamente
-            # un NPC/Locación conocido, forzar su ficha en el contexto aunque
-            # no haya sido el top-match de la búsqueda general.
-            if last_user_msg:
-                mentioned = mention_detector.detect_mentions(
-                    last_user_msg, self._get_known_entity_names()
+        # Recall por mención: complementa el contexto híbrido, pero ya no lo
+        # reemplaza. Así el cerebro y los manuales siguen presentes aunque
+        # exista una ficha de NPC/locación muy relevante.
+        if last_user_msg:
+            mentioned = mention_detector.detect_mentions(
+                last_user_msg, self._get_known_entity_names()
+            )
+            if mentioned:
+                extra_ctx = self.retriever.get_relevant_context(
+                    mentioned[0], max_words=150, lorebook_entries=lorebook_entries
                 )
-                if mentioned:
-                    extra_ctx = self.retriever.get_relevant_context(mentioned[0], max_words=150)
-                    if extra_ctx and extra_ctx not in vault_ctx:
-                        vault_ctx = f"{vault_ctx}\n---\n{extra_ctx}" if vault_ctx else extra_ctx
+                if extra_ctx and extra_ctx not in vault_ctx:
+                    vault_ctx = f"{vault_ctx}\n---\n[CAMPAIGN | mención explícita]\n{extra_ctx}"
 
-        if not vault_ctx:
-            manual_text = app_state.get("manual_text", "")
-            if manual_text:
-                vault_ctx = manual_text[:1500]
 
         active_npcs = self.retriever.get_active_npcs_summary(max_npcs=6)
         active_fronts = self.retriever.get_active_fronts_summary()
