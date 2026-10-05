@@ -67,11 +67,17 @@ class RecuperadorCerebro:
     def _graph_neighbors(self, path: str) -> list[str]:
         meta = self.index.metadata(path)
         values = []
+        values.extend(meta.get("links", []))
         for key in ("contains", "also", "previous", "next"):
             value = meta.get(key, [])
             if isinstance(value, str):
                 value = [value] if value else []
-            values.extend(value or [])
+            for item in value or []:
+                # Neurona serializa relaciones como (id, título).
+                if isinstance(item, (list, tuple)) and item:
+                    values.append(item[0])
+                else:
+                    values.append(item)
         by_id = {
             str(self.index.metadata(p).get("id", "")): p
             for p in self.index.paths()
