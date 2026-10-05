@@ -384,3 +384,17 @@ Componentes:
 - docs/adr/ADR-2026-10-05-evaluacion-retrieval.md: decisión arquitectónica y criterio de comparación.
 
 Importante: todavía no se ejecutó el benchmark contra el índice real ni se informan métricas empíricas. Para eso hace falta disponer localmente del índice de neuronas y del modelo de embeddings. Los tests quedaron escritos para esa futura ejecución.
+
+
+## Segunda pasada — benchmark real y atomicidad reforzada
+
+Se añadió `tools/evaluate_retrieval.py`, un CLI offline que instancia el Orchestrator real, carga el ground truth y ejecuta el KnowledgeRouter contra el índice del Cerebro. El comando falla explícitamente si el índice o el modelo de embeddings no están disponibles, evitando falsos resultados de recall cero.
+
+También se reforzó ProposalExecutor:
+- creación de NPCs/localizaciones con rollback si falla una creación posterior;
+- transacción de estado agrupada;
+- rollback de memoria/personaje;
+- persistencia única al confirmar o restaurar;
+- cobertura de fallo a mitad de creación de entidades.
+
+No se ejecutó el CLI ni los tests localmente.
