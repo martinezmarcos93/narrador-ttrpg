@@ -1260,21 +1260,7 @@ def run_world_agent():
                 session_number=state.get("session_number", 1),
                 on_progress=on_progress,
             )
-            for adv in result.get("advances", []):
-                nombre = adv.get("nombre", "")
-                ticks = adv.get("ticks", 1)
-                razon = adv.get("razon", "")
-                if not nombre:
-                    continue
-                # Registrar el frente si no existe: antes ambas llamadas eran
-                # no-ops (relojes YAML y world_state.json siempre vacíos) y
-                # solo los checkboxes del MD avanzaban.
-                _orchestrator.state.add_front(nombre, razon)
-                _orchestrator.state.advance_front_clock(nombre, ticks)
-                if _orchestrator.world_sim.get_front_stage(nombre) is None:
-                    _orchestrator.world_sim.initialize_front(
-                        nombre, razon, initial_stage=0, max_stage=6)
-                _orchestrator.world_sim.advance_front(nombre, ticks)
+            _narrator_service.apply_world_advances(result.get("advances", []))
             summary = (
                 f"Mundo avanzado: {result['frentes_avanzados']} frentes, "
                 f"{result['npcs_simulados']} NPCs simulados.\n\n"
