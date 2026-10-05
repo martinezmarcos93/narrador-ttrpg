@@ -211,3 +211,29 @@ No se ejecutaron pruebas locales.
 RetrievalMetrics ahora registra latencia, media/máximo de relevancia, diversidad por capas, cobertura de procedencia y utilización del contexto, además de conteo de fragmentos, fuentes, capas y duplicados. Son métricas operativas/proxy; recall y precision reales requieren un conjunto de consultas con ground truth y no se inventan en runtime.
 
 No se ejecutaron pruebas locales.
+
+### Barrido de causalidad avanzada y desacoplamiento — 2026-10-05
+
+La causalidad dejó de ser únicamente un activador de consecuencias. Las consecuencias ahora pueden declarar efectos deterministas permitidos sobre:
+- hechos conocidos;
+- flags;
+- presencia de NPCs;
+- locación de escena;
+- relojes.
+
+ProposalValidator valida el tipo y los campos mínimos de cada efecto. El motor no ejecuta tipos arbitrarios ni interpreta código o texto como instrucciones.
+
+StateManager.apply_causal_activation() aplica los efectos declarativos y registra el evento causal. El LLM continúa limitado a proponer; la mutación efectiva sigue siendo Python.
+
+Se añadió narrator/core/narrator_service.py como fachada independiente de la interfaz. Expone las operaciones de dominio que necesitarán tanto Dear PyGui como la futura Flask:
+- preparar turno;
+- aplicar propuesta;
+- evaluar causalidad;
+- detectar sistema;
+- obtener contexto;
+- extraer/limpiar propuesta narrativa;
+- resolver tiradas.
+
+Flask todavía no fue creado. La decisión sigue siendo construirlo sobre esta fachada cuando el núcleo sea estable, evitando trasladar lógica de juego a rutas HTTP.
+
+No se ejecutaron pruebas locales.
