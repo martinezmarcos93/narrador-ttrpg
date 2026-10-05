@@ -112,6 +112,7 @@ feat/retrieval-evaluation. Está 41 commits por delante de main y 0 por detrás.
 - HECHO: manual como ContextFragment, layer manual y provenance.
 - PENDIENTE: pipeline PDF → conocimiento formal.
 - PENDIENTE: identificar sistema/edición y asociar manual ↔ System Pack.
+- PARCIAL: precedencia de ContextFragment implementada como STATE > MANUAL > SYSTEM > CAMPAIGN > UNIVERSAL y cubierta por regresión.
 - PENDIENTE: precedencia formal, excepciones y retrieval específico de manuales.
 - PENDIENTE: evaluación de citas/provenance.
 - PENDIENTE: protección ante prompt injection en documentos.
