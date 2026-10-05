@@ -46,3 +46,25 @@ def test_narrator_extracts_and_hides_structured_proposal():
     visible = agent.strip_system_tags(text)
     assert "json-proposal" not in visible
     assert "La puerta se abre." in visible
+
+
+def test_proposal_contract_roundtrip_entities():
+    proposal = NarrativeProposal.from_dict({
+        "npcs": [{"nombre": "El Vigía", "rol": "guardián", "amenaza": "media"}],
+        "locations": [{"nombre": "Cripta del Norte", "distrito": "Barrio Viejo"}],
+    })
+    restored = NarrativeProposal.from_dict(proposal.to_dict())
+    assert restored.npcs[0]["nombre"] == "El Vigía"
+    assert restored.locations[0]["nombre"] == "Cripta del Norte"
+
+
+def test_proposal_validator_rejects_unnamed_entities(tmp_path):
+    state = StateManager(str(tmp_path / "estado.yaml"))
+    proposal = NarrativeProposal.from_dict({
+        "npcs": [{}],
+        "locations": [{"distrito": "Barrio Viejo"}],
+    })
+    report = ProposalValidator(ContinuityValidator(state)).validate(proposal)
+    assert not report.valid
+    assert any(issue.code == "invalid_npc" for issue in report.errors)
+    assert any(issue.code == "invalid_location" for issue in report.errors)
