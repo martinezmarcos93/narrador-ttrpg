@@ -479,7 +479,7 @@ def finish_streaming(full_text: str):
                 break
         session_n = state.get("session_number", 1)
         threading.Thread(
-            target=_vault_writer.on_narrator_response,
+            target=_vault_writer.on_narrator_response_safe,
             args=(last_user, full_text),
             kwargs={"session_number": session_n, "is_important": is_important},
             daemon=True,
