@@ -34,6 +34,7 @@ class StateManager:
                 "turno_narrativo": 0,
             },
             "relojes": {},
+            "facciones": {},
             "frentes": {},
             "flags": {},
             "escenas": {},
@@ -725,6 +726,38 @@ class StateManager:
 
     def get_session_number(self) -> int:
         return self.data["meta"].get("sesion_actual", 0)
+
+    # ── Facciones y frentes ──────────────────────────────────
+    def add_faction(
+        self,
+        slug: str,
+        name: str = "",
+        description: str = "",
+        *,
+        agenda: str = "",
+        status: str = "activa",
+    ) -> None:
+        slug = str(slug).strip()
+        if not slug:
+            return
+        self.data.setdefault("facciones", {})[slug] = {
+            "slug": slug,
+            "nombre": str(name).strip() or slug,
+            "descripcion": str(description).strip(),
+            "agenda": str(agenda).strip(),
+            "estado": str(status).strip() or "activa",
+        }
+        self.save()
+
+    def get_faction(self, slug: str) -> dict:
+        return dict(self.data.get("facciones", {}).get(str(slug).strip(), {}))
+
+    def get_active_factions(self) -> list[dict]:
+        return [
+            dict(item)
+            for item in self.data.get("facciones", {}).values()
+            if item.get("estado", "activa") in {"activa", "activo", "active"}
+        ]
 
     # ── Frentes (gestión programática) ───────────────────────
     def add_front(
