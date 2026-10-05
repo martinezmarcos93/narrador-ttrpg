@@ -68,3 +68,37 @@ def test_proposal_validator_rejects_unnamed_entities(tmp_path):
     assert not report.valid
     assert any(issue.code == "invalid_npc" for issue in report.errors)
     assert any(issue.code == "invalid_location" for issue in report.errors)
+
+
+def test_proposal_accepts_chained_causal_effects():
+    proposal = NarrativeProposal.from_dict({
+        "consequences": [{
+            "text": "Los guardias reciben la alarma",
+            "trigger": "alarma",
+            "effects": [
+                {"type": "event", "text": "guardias movilizados"},
+                {
+                    "type": "queue_consequence",
+                    "consequence": "Las puertas se cierran",
+                    "trigger": "guardias movilizados",
+                    "effects": [
+                        {"type": "player_fact", "key": "doors_closed", "value": True},
+                    ],
+                },
+            ],
+        }]
+    })
+    report = ProposalValidator(ContinuityValidator()).validate(proposal)
+    assert report.valid
+
+
+def test_proposal_rejects_unknown_causal_effect():
+    proposal = NarrativeProposal.from_dict({
+        "consequences": [{
+            "text": "Cambio",
+            "effects": [{"type": "execute_python", "code": "print(1)"}],
+        }]
+    })
+    report = ProposalValidator(ContinuityValidator()).validate(proposal)
+    assert not report.valid
+    assert any(issue.code == "invalid_causal_effect" for issue in report.issues)
