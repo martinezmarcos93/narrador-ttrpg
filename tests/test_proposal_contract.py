@@ -102,3 +102,37 @@ def test_proposal_rejects_unknown_causal_effect():
     report = ProposalValidator(ContinuityValidator()).validate(proposal)
     assert not report.valid
     assert any(issue.code == "invalid_causal_effect" for issue in report.issues)
+
+
+def test_proposal_rejects_invalid_relation_strength():
+    proposal = NarrativeProposal.from_dict({
+        "consequences": [{
+            "text": "Cambio social",
+            "effects": [{
+                "type": "relation",
+                "source": "A",
+                "target": "B",
+                "relation": "hostilidad",
+                "strength": 101,
+            }],
+        }]
+    })
+    report = ProposalValidator(ContinuityValidator()).validate(proposal)
+    assert not report.valid
+    assert any(issue.code == "invalid_relation_strength" for issue in report.issues)
+
+
+def test_proposal_rejects_non_integer_front_delta():
+    proposal = NarrativeProposal.from_dict({
+        "consequences": [{
+            "text": "Cambio de frente",
+            "effects": [{
+                "type": "front_clock_delta",
+                "name": "Culto",
+                "delta": "mucho",
+            }],
+        }]
+    })
+    report = ProposalValidator(ContinuityValidator()).validate(proposal)
+    assert not report.valid
+    assert any(issue.code == "invalid_front_clock_delta" for issue in report.issues)
