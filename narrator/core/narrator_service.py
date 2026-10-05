@@ -6,7 +6,6 @@ Dear PyGui, Flask, CLI o una futura API. No importa widgets ni framework web.
 
 from __future__ import annotations
 
-from narrator.agents.narrator_agent import NarratorAgent
 from narrator.agents.orchestrator import Orchestrator
 from narrator.core.rule_arbiter import RuleArbiter
 
@@ -16,7 +15,7 @@ class NarratorService:
 
     def __init__(self, config_path: str = "./config/config.yaml"):
         self.orchestrator = Orchestrator(config_path=config_path)
-        self.narrator_agent = NarratorAgent()
+        self.narrator_agent = self.orchestrator.narrator_agent
         self.rule_arbiter = RuleArbiter(builder=self.orchestrator.builder)
 
     @property
