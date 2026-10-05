@@ -268,3 +268,71 @@ Una funcionalidad no se considera terminada simplemente porque existe código. D
 
 ## Principio final
 El objetivo no es construir un chatbot que improvise partidas. Es construir un motor TTRPG determinista y persistente donde el cerebro aporta conocimiento general, los manuales reglas específicas, el System Pack define el sistema, retrieval selecciona evidencia, Python determina las reglas, el estado conserva la verdad, causalidad mueve el mundo, visibilidad controla quién sabe qué y el LLM interpreta y narra.
+
+## Actualización final de la jornada — 2026-10-05
+
+### K. Flask/API
+- [x] Capa web Flask aislada de Dear PyGui.
+- [x] Application factory.
+- [x] DTOs/validación HTTP.
+- [x] Session ownership server-side.
+- [x] API versioning `/api/v1`.
+- [x] Request IDs y error contract.
+- [x] Bearer/API-key boundary; obligatoria en production.
+- [x] Request-size limit y security headers.
+- [x] Arquitectura frontend/backend documentada.
+- [ ] Persistencia real de sesiones.
+- [ ] Identidad multiusuario/rotación/revocación.
+- [ ] Streaming HTTP/SSE/WebSocket del turn engine.
+- [ ] Rate limiting y E2E local.
+
+### L. Seguridad
+- [x] Revisión de perímetro HTTP.
+- [x] No exposición de stack traces.
+- [x] Origin allowlist configurable.
+- [x] Contrato de errores estable.
+- [x] Revisión de filesystem/LLM/logging documentada.
+- [ ] HTTPS/reverse proxy.
+- [ ] Pen-test/smoke E2E.
+- [ ] Hardening de producción.
+
+### M. Nueva GUI
+- [x] Contrato API definido antes de duplicar lógica.
+- [x] Backend/frontend separados conceptualmente.
+- [x] Rutas iniciales: health, sessions, world, rolls, turns.
+- [ ] Implementar UI Flask/HTML/JS.
+- [ ] Conectar streaming real.
+- [ ] UX responsive/accessibility final.
+
+### B. Cerebro + documentos
+- [x] Loader PDF determinista.
+- [x] Chunks con provenance/hash.
+- [x] Metadata system/campaign/kind/layer.
+- [x] Indexación incremental existente.
+- [x] Recuperación híbrida.
+- [x] Filtro por sistema.
+- [x] Filtro por campaña.
+- [x] Scripts de ingestión y evaluación.
+- [ ] Ejecutar ingestión real con corpus local.
+- [ ] Construir embeddings reales.
+- [ ] Ejecutar benchmark real y fijar baseline.
+- [ ] Auditar casos ambiguos sobre corpus real.
+
+### H. Regresión determinista
+- [x] Contratos de propuesta.
+- [x] Persistencia atómica/batch.
+- [x] Visibilidad.
+- [x] Relaciones.
+- [x] Causalidad/cross-front.
+- [x] VaultWriter aislado.
+- [x] Boundary UI -> Service -> Orchestrator para world advances.
+- [x] Primer contrato web.
+- [ ] Ejecutar suite local.
+
+### I/J/N
+- [ ] Evaluación real.
+- [ ] Optimización basada en métricas reales.
+- [ ] Release Candidate después de pruebas locales, seguridad y E2E.
+
+### Regla de transición
+Esta rama debe ser revisada/pulled localmente antes de iniciar cambios de infraestructura pesados. La siguiente etapa depende de resultados reales del corpus, embeddings, startup Flask y suite de regresión.
