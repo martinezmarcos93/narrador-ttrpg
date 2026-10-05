@@ -152,3 +152,16 @@ class IndiceCerebro:
     def paths(self) -> list[str]:
         self.load()
         return list(self._index or {})
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Construye el índice persistente del Cerebro.")
+    parser.add_argument("--path", default="cerebro", help="Ruta del vault de neuronas.")
+    parser.add_argument("--model", default="bge-m3", help="Modelo Ollama de embeddings.")
+    args = parser.parse_args()
+
+    index = IndiceCerebro(args.path, embedding_model=args.model)
+    total = index.build(on_progress=print)
+    print(f"Índice actualizado: {total} neuronas nuevas.")
