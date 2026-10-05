@@ -198,17 +198,15 @@ class Orchestrator:
         # complemento liviano cuando no hay búsqueda semántica disponible.
         lorebook_entries = self.builder.load_system(system_slug).get("lorebook", [])
 
-        # Cerebro permanente: aporta conceptos roleros y conexiones de grafo.
-        # Se consulta aparte del vault de campaña para conservar la distinción
-        # entre conocimiento universal y material específico de la crónica.
+        # Recuperación unificada: cerebro, sistema, manual y campaña llegan
+        # al prompt conservando su procedencia y autoridad relativa.
         brain_query = last_user_msg or "escena, personaje, conflicto, investigación y consecuencias"
-        brain_ctx = self.retriever.get_brain_context(
+        vault_ctx = self.retriever.get_combined_context(
             brain_query,
-            max_words=450,
+            max_words=650,
             system=system_slug,
         )
-
-        vault_ctx = ""
+        brain_ctx = ""
         if not self.retriever.vault_is_empty():
             if last_user_msg:
                 vault_ctx = self.retriever.get_relevant_context(
