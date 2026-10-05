@@ -79,6 +79,14 @@ class RuleArbiter:
                 return None
             mecanica = res.get("mecanica", "ratio")
             expected_sides = _MECHANIC_SIDES.get(mecanica)
+            expected_count = 1 if mecanica in {"d20_vs_dc", "percentil"} else None
+            if expected_count is not None and len(rolls) != expected_count:
+                logger.warning(
+                    "RuleArbiter: cantidad de dados incompatible con mecanica %s: %s",
+                    mecanica,
+                    len(rolls),
+                )
+                return None
             if expected_sides and sides not in expected_sides:
                 logger.warning(
                     "RuleArbiter: dado incompatible con mecánica %s: d%s",
