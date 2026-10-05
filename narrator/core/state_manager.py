@@ -176,6 +176,20 @@ class StateManager:
             self._save_pending = False
             self._save_now()
 
+    def rollback_batch(self) -> None:
+        """Cancela el lote actual sin persistir sus escrituras pendientes.
+
+        La restauración del estado en memoria la realiza el llamador que posee
+        el snapshot transaccional. Este método solo cierra la frontera de batch
+        y elimina la intención de persistencia pendiente.
+        """
+        if self._batch_depth <= 0:
+            self._save_pending = False
+            return
+        self._batch_depth -= 1
+        if self._batch_depth == 0:
+            self._save_pending = False
+
     def _save_now(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with open(self.path, "w", encoding="utf-8") as f:
