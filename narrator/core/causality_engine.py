@@ -101,8 +101,11 @@ class CausalityEngine:
                     if clock is not None:
                         before = int(clock.get("llenos", 0))
                         maximum = int(clock.get("segmentos", 6))
-                        clock["llenos"] = min(max(0, before + delta), maximum)
-                        emitted_events.append(f"reloj {name}: {before}->{clock['llenos']}")
+                        after = min(max(0, before + delta), maximum)
+                        clock["llenos"] = after
+                        emitted_events.append(f"reloj {name}: {before}->{after}")
+                        if before < maximum <= after:
+                            emitted_events.append(f"frente {name} lleno")
             elif kind == "event":
                 event = str(effect.get("text") or "").strip()
                 if event:
