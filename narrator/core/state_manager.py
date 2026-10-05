@@ -37,6 +37,9 @@ class StateManager:
             "downtime": {"pendiente": [], "npcs_activos": []},
             "historial": [],
             "turnos": [],
+            "eventos": [],
+            "consecuencias_pendientes": [],
+            "hechos_conocidos": {},
         }
 
     # ── Persistencia ──────────────────────────────────────────
@@ -104,6 +107,67 @@ class StateManager:
         if combat:
             lines.append("Combate: " + combat)
         return "\n".join(lines)
+
+    # ── Continuidad y causalidad ─────────────────────────────────
+    def record_event(self, event: str, *, actor: str = "", location: str = "") -> None:
+        """Registra un evento factual que puede afectar turnos posteriores."""
+        if not str(event).strip():
+            return
+        self.data.setdefault("eventos", []).append({
+            "sesion": self.get_session_number(),
+            "turno": self.data.get("escena_actual", {}).get("turno_narrativo", 0),
+            "evento": str(event).strip(),
+            "actor": actor,
+            "locacion": location,
+            "timestamp": datetime.now().isoformat(),
+        })
+        del self.data["eventos"][:-200]
+        self.save()
+
+    def add_pending_consequence(self, consequence: str, *, trigger: str = "", due: str = "") -> None:
+        """Planta una consecuencia futura sin resolverla prematuramente."""
+        if not str(consequence).strip():
+            return
+        self.data.setdefault("consecuencias_pendientes", []).append({
+            "consecuencia": str(consequence).strip(),
+            "trigger": trigger,
+            "due": due,
+            "estado": "pendiente",
+            "sesion_creacion": self.get_session_number(),
+        })
+        self.save()
+
+    def resolve_pending_consequence(self, index: int, outcome: str = "") -> dict:
+        pending = self.data.setdefault("consecuencias_pendientes", [])
+        if index < 0 or index >= len(pending):
+            return {}
+        entry = pending[index]
+        entry["estado"] = "resuelta"
+        if outcome:
+            entry["resultado"] = outcome
+        self.save()
+        return dict(entry)
+
+    def get_pending_consequences(self) -> list[dict]:
+        return [
+            dict(item) for item in self.data.get("consecuencias_pendientes", [])
+            if item.get("estado", "pendiente") == "pendiente"
+        ]
+
+    def set_known_fact(self, key: str, value: Any, *, source: str = "") -> None:
+        """Persiste un hecho conocido sin mezclarlo con reglas del sistema."""
+        if not str(key).strip():
+            return
+        self.data.setdefault("hechos_conocidos", {})[str(key).strip()] = {
+            "valor": value,
+            "fuente": source,
+            "sesion": self.get_session_number(),
+        }
+        self.save()
+
+    def get_known_fact(self, key: str, default: Any = None) -> Any:
+        entry = self.data.get("hechos_conocidos", {}).get(key)
+        return entry.get("valor", default) if isinstance(entry, dict) else default
 
     # ── Trazabilidad de turnos ─────────────────────────────────
     def record_turn(self, contract: dict) -> None:
