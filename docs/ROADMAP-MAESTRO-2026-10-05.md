@@ -110,6 +110,12 @@ feat/retrieval-evaluation. Está 101 commits por delante de main y 1 por detrás
 - HECHO: casos ambiguos y multi-capa añadidos al ground truth.
 - HECHO: casos específicos por sistema añadidos para V20 y D&D.
 - LOCAL PENDIENTE: validar resultados reales contra esos casos.
+- HECHO: `StateManager.load()` usa merge recursivo de defaults; estados antiguos no pierden subestructuras nuevas al reiniciar.
+- HECHO: regresiones de reinicio para relaciones, consecuencias, conocimiento por perspectiva y relojes cross-front.
+- HECHO: cascadas causales pueden emitir el evento determinista `frente <nombre> lleno` al cruzar el umbral de un reloj.
+- HECHO: regresión cross-front: un reloj lleno dispara una consecuencia que avanza otro frente.
+- HECHO: el contexto neutral de estado ya no expone `hechos_conocidos` legacy; la exposición de conocimiento queda bajo KnowledgeVisibility.
+- HECHO: auditoría del VaultWriter confirma que la escritura de sesión es narrativa/player-facing; las mutaciones estructuradas de entidades siguen exclusivamente bajo ProposalExecutor.
 - PENDIENTE: benchmark sobre manuales y campaña.
 - LOCAL PENDIENTE: ejecutar benchmark real.
 - LOCAL PENDIENTE: ajustar pesos según resultados reales.
