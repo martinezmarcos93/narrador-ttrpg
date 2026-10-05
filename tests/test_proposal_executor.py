@@ -224,3 +224,16 @@ def test_executor_rolls_back_entities_when_entity_creation_fails_mid_batch(tmp_p
     assert result.rolled_back
     assert vault.created == []
     assert not state.path.exists()
+
+
+def test_executor_uses_public_batch_api_for_nested_transaction(tmp_path):
+    state = StateManager(str(tmp_path / "estado.yaml"))
+    state.begin_batch()
+    result = ProposalExecutor(state).execute({
+        "facts": {"inside": True},
+    })
+    assert result.applied
+    assert state.batch_depth == 1
+    assert state.get_known_fact("inside") is True
+    state.end_batch()
+    assert state.path.exists()
