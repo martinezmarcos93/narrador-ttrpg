@@ -37,6 +37,16 @@ class NarratorService:
             app_state=app_state,
         )
 
+    def apply_character_snapshot(self, character_data: dict, app_state: dict) -> dict:
+        """Convierte una salida estructurada de personaje en una propuesta validable."""
+        if not isinstance(character_data, dict):
+            return {"applied": False, "changes": [], "validation": {"valid": False}}
+        changes = [
+            {"field": str(field), "value": value, "reason": "json legacy"}
+            for field, value in character_data.items()
+        ]
+        return self.apply_proposal({"character_changes": changes}, app_state=app_state)
+
     def evaluate_causality(self, event_text: str = "", *, next_turn: bool = False) -> dict:
         return self.orchestrator.evaluate_causality(
             event_text,
