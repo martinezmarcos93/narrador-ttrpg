@@ -383,9 +383,11 @@ def finish_streaming(full_text: str):
     # técnicas) antes de limpiarlo — el jugador nunca debe ver las etiquetas.
     new_entities: list = []
     mutations: list = []
+    narrative_proposal: dict | None = None
     if _narrator_agent:
         new_entities = _narrator_agent.extract_new_entities(full_text)
         mutations = _narrator_agent.extract_state_mutations(full_text)
+        narrative_proposal = _narrator_agent.extract_narrative_proposal(full_text)
         full_text = _narrator_agent.strip_system_tags(full_text)
 
     # Procesamiento sin DPG — hilo worker
@@ -403,6 +405,26 @@ def finish_streaming(full_text: str):
             needs_char_refresh = True
         with state_lock:
             state["tirada_sugerida"] = _narrator_agent.extract_dice_suggestion(full_text)
+
+        if narrative_proposal:
+            try:
+                proposal_result = _orchestrator.validate_and_apply_proposal(
+                    narrative_proposal,
+                    app_state=state,
+                )
+                if not proposal_result.get("applied"):
+                    logger.warning(
+                        "Propuesta narrativa rechazada: %s",
+                        proposal_result.get("validation", {}),
+                    )
+                elif proposal_result.get("changes"):
+                    if _active_turn_contract is not None:
+                        _active_turn_contract.state_delta = {
+                            "proposal_changes": list(proposal_result["changes"])
+                        }
+                    is_important = True
+            except Exception as e:
+                logger.error(f"Error ejecutando propuesta narrativa: {e}", exc_info=True)
 
         if mutations:
             try:
