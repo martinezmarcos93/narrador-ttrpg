@@ -60,6 +60,7 @@ feat/retrieval-evaluation. Está 41 commits por delante de main y 0 por detrás.
 - HECHO: Knowledge Router.
 - HECHO: Service Boundary inicial.
 - HECHO: NarratorService reutiliza el NarratorAgent del Orchestrator.
+- PARCIAL: UI usa NarratorService para detección de sistema, eventos y preparación de turno.
 - PENDIENTE: terminar migración de UI a NarratorService.
 - PENDIENTE: eliminar accesos innecesarios de UI a componentes internos.
 - PENDIENTE: formalizar interfaces públicas Core/Service/UI.
@@ -71,7 +72,10 @@ feat/retrieval-evaluation. Está 41 commits por delante de main y 0 por detrás.
 - HECHO: ProposalExecutor utiliza la frontera pública de rollback.
 - PENDIENTE: eliminar dependencia de campos privados del StateManager desde ProposalExecutor.
 - HECHO: escenario básico de rollback de batch.
-- PENDIENTE: escenarios de transacciones anidadas y fallos en todas las etapas.
+- HECHO: frontera pública de batch expuesta mediante `batch_depth`.
+- HECHO: ProposalExecutor respeta un batch externo sin cerrar la transacción del llamador.
+- HECHO: escenario de ejecución anidada.
+- PENDIENTE: escenarios de fallos en todas las etapas y rollback transaccional compuesto.
 
 ### A3. Continuidad
 - HECHO: conflictos de facts, eventos duplicados y regresión temporal.
@@ -95,8 +99,9 @@ feat/retrieval-evaluation. Está 41 commits por delante de main y 0 por detrás.
 
 ### B2. Retrieval
 - HECHO: índice, embeddings, búsqueda semántica/léxica, filtros, grafo, reranking, deduplicación, métricas, evaluador y benchmark.
-- PENDIENTE: verificar IDs reales contra ground truth.
-- PENDIENTE: ampliar ground truth.
+- HECHO: IDs iniciales verificados contra el cerebro universal.
+- HECHO: ground truth ampliado con agencia, frentes, conocimiento, combate y causalidad.
+- PENDIENTE: casos ambiguos y multi-capa.
 - PENDIENTE: casos ambiguos y multi-capa.
 - PENDIENTE: casos específicos por sistema.
 - PENDIENTE: benchmark sobre manuales y campaña.
