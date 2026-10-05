@@ -91,6 +91,9 @@ class NarratorService:
         if not changes:
             return {"applied": False, "changes": [], "validation": {"valid": False}}
         return self.apply_proposal({"character_changes": changes}, app_state=app_state)
+    def apply_world_advances(self, advances: list[dict]) -> list[str]:
+        return self.orchestrator.apply_world_advances(advances)
+
     def evaluate_causality(self, event_text: str = "", *, next_turn: bool = False) -> dict:
         return self.orchestrator.evaluate_causality(
             event_text,
