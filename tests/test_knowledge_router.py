@@ -66,3 +66,28 @@ def test_router_incluye_estado_vivo_como_fuente_autoritativa():
     )
     assert "Estado mutable de la campaña" in rendered
     assert "Locación: Mansión Blackwood" in rendered
+
+
+def test_router_retrieval_metrics_reporta_capas_y_fuentes():
+    router = KnowledgeRouter(FakeRetriever())
+    pack = SystemPack(
+        slug="x",
+        sistema="X",
+        edition="1",
+        knowledge=KnowledgePolicy(
+            brain_system="x",
+            preferred_sources=("state",),
+            universal_fallback=False,
+        ),
+    )
+    rendered, metrics = router.retrieve_with_metrics(
+        "qué ocurre",
+        pack,
+        state_context="Locación: Mansión Blackwood",
+    )
+    assert "Mansión Blackwood" in rendered
+    assert metrics.fragment_count == 1
+    assert metrics.layers == {"state": 1}
+    assert metrics.sources == {"StateManager": 1}
+    assert metrics.context_words > 0
+    assert metrics.to_dict()["duplicate_count"] == 0
