@@ -83,3 +83,37 @@ def test_service_character_snapshot_is_validated_as_proposal():
     assert result["applied"] is True
     assert service.orchestrator.proposal["character_changes"][0]["field"] == "hp"
     assert service.orchestrator.proposal["character_changes"][0]["value"] == 7
+
+
+def test_service_composes_structured_proposal_without_duplicate_legacy_character_changes():
+    proposal = NarratorService.compose_postprocessing_proposal(
+        narrative_proposal={"character_changes": [{"field": "hp", "value": 8}]},
+        character_data={"hp": 4},
+        mutations=[{"field": "hp", "value": 3}],
+    )
+    assert proposal["character_changes"] == [{"field": "hp", "value": 8}]
+
+
+def test_service_composes_entities_and_deduplicates_structured_entities():
+    proposal = NarratorService.compose_postprocessing_proposal(
+        narrative_proposal={"npcs": [{"nombre": "El Custodio"}]},
+        new_entities=[
+            ("npc", {"nombre": "El Custodio"}),
+            ("npc", {"nombre": "La Testigo"}),
+            ("location", {"nombre": "Cripta"}),
+        ],
+        include_entities=True,
+    )
+    assert [item["nombre"] for item in proposal["npcs"]] == ["El Custodio", "La Testigo"]
+    assert proposal["locations"] == [{"nombre": "Cripta"}]
+
+
+def test_service_uses_legacy_character_json_only_when_no_structured_character_changes():
+    proposal = NarratorService.compose_postprocessing_proposal(
+        character_data={"hp": 7, "fuerza": 3},
+        mutations=[],
+    )
+    assert proposal["character_changes"] == [
+        {"field": "hp", "value": 7, "reason": "json legacy"},
+        {"field": "fuerza", "value": 3, "reason": "json legacy"},
+    ]
