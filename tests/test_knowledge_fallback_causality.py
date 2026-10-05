@@ -140,3 +140,77 @@ def test_front_clock_effect_rejects_unknown_or_out_of_range_clock(tmp_path):
         }]
     })
     assert not overflow.applied
+
+
+def test_cross_front_consequences_progress_multiple_clocks_and_persist(tmp_path):
+    path = tmp_path / "estado.yaml"
+    state = StateManager(str(path))
+    state.add_front("Culto", faction="culto", goal="ritual", max_stage=3)
+    state.add_front("Guardia", faction="ciudad", goal="toque de queda", max_stage=4)
+
+    from narrator.core.proposal_executor import ProposalExecutor
+
+    result = ProposalExecutor(state).execute({
+        "consequences": [{
+            "text": "La presión crece en ambos frentes.",
+            "trigger": "alarma",
+            "effects": [
+                {"type": "front_clock_delta", "name": "Culto", "delta": 2},
+                {"type": "front_clock_delta", "name": "Guardia", "delta": 1},
+                {"type": "event", "text": "ambos frentes avanzan"},
+            ],
+        }]
+    })
+    assert result.applied
+
+    # La consecuencia está plantada; la cascada siguiente la resuelve.
+    from narrator.core.narrator_service import NarratorService
+    service = NarratorService.__new__(NarratorService)
+    service.state = state
+    service.causality = CausalityEngine(state)
+    activated = service.evaluate_causality("alarma")
+    assert activated["activated"]
+    assert state.data["relojes"]["Culto"]["llenos"] == 2
+    assert state.data["relojes"]["Guardia"]["llenos"] == 1
+
+    reloaded = StateManager(str(path))
+    assert reloaded.load()
+    assert reloaded.data["relojes"]["Culto"]["llenos"] == 2
+    assert reloaded.data["relojes"]["Guardia"]["llenos"] == 1
+
+
+def test_restart_preserves_relations_consequences_and_perspective(tmp_path):
+    path = tmp_path / "estado.yaml"
+    state = StateManager(str(path))
+    state.set_relation("Alicia", "Bruno", "confianza", 70, reason="alianza")
+    state.add_pending_consequence(
+        "Bruno aparecerá",
+        trigger="alarma",
+        due="turno:4",
+    )
+    state.set_world_fact("portal_abierto", True, source="test")
+    state.set_character_fact("Alicia", "vio_el_portal", True, source="test")
+    state.set_player_fact("sabe_del_portal", True, source="test")
+
+    reloaded = StateManager(str(path))
+    assert reloaded.load()
+    assert reloaded.get_relations("Alicia")[0]["strength"] == 70
+    assert reloaded.get_pending_consequences()[0]["trigger"] == "alarma"
+    assert reloaded.get_world_fact("portal_abierto") is True
+    assert reloaded.get_character_fact("Alicia", "vio_el_portal") is True
+    assert reloaded.get_player_fact("sabe_del_portal") is True
+
+
+def test_reload_merges_new_nested_defaults(tmp_path):
+    path = tmp_path / "estado.yaml"
+    path.write_text(
+        "meta:\n  sistema: generic\n"
+        "conocimiento:\n  mundo:\n    secreto: true\n",
+        encoding="utf-8",
+    )
+    state = StateManager(str(path))
+    assert state.load()
+    assert "personajes" in state.data["conocimiento"]
+    assert "jugador" in state.data["conocimiento"]
+    assert "flags" in state.data
+    assert state.data["conocimiento"]["mundo"]["secreto"] is True
