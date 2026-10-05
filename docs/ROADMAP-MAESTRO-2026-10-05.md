@@ -48,7 +48,7 @@ Precedencia: STATE > MANUAL > SYSTEM PACK > UNIVERSAL BRAIN > conocimiento gener
 - ADR y handoff del núcleo.
 
 ### 1.2 Rama actual
-feat/retrieval-evaluation. Está 16 commits por delante de main y 0 por detrás. No mergear sin autorización expresa.
+feat/retrieval-evaluation. Está 39 commits por delante de main y 0 por detrás. El último commit pertenece a la pasada de consolidación de continuidad/causalidad del 2026-10-05. No mergear sin autorización expresa.
 
 ## 2. FASE A — Consolidación del núcleo
 
@@ -76,8 +76,14 @@ feat/retrieval-evaluation. Está 16 commits por delante de main y 0 por detrás.
 ### A3. Continuidad
 - HECHO: conflictos de facts, eventos duplicados y regresión temporal.
 - HECHO: validación de clocks inexistentes, deltas no enteros y límites 0..segmentos.
-- PENDIENTE: continuidad de NPCs/localizaciones, relaciones, clocks/fronts y consecuencias complejas.
-- PENDIENTE: entidades inexistentes y cambios incompatibles.
+- HECHO: referencias de NPCs y locaciones conocidas, entidades creadas dentro de la misma propuesta y duplicados internos.
+- HECHO: relaciones, fuerza -100..100, entidades de relación y fronts declarativos.
+- HECHO: estructura de consecuencias, triggers/due, efectos permitidos y referencias causales.
+- HECHO: acumulación de múltiples cambios sobre un mismo clock dentro de una propuesta.
+- HECHO: ejecución determinista de todos los efectos causales declarados por contrato.
+- PENDIENTE: registro global formal de entidades del campaign vault para validar NPCs/locaciones existentes fuera del estado vivo.
+- PENDIENTE: agregación de clocks/fronts entre múltiples consecuencias antes de activarlas.
+- PENDIENTE: validaciones de incompatibilidades de dominio específicas de cada System Pack.
 
 ## 3. FASE B — Cerebro + biblioteca documental
 
