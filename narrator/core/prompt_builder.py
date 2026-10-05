@@ -25,6 +25,20 @@ DICE_RESOLUTION_RULES = """RESOLUCIÓN DE TIRADAS:
 - Éxito parcial (PbtA 7-9): ofrecé una elección difícil.
 - Fallo: complicación interesante, la historia avanza igual."""
 
+NARRATIVE_PROPOSAL_RULES = """PROPUESTAS ESTRUCTURADAS DE ESTADO (bloque técnico opcional):
+- Solo emití este bloque si durante este turno ocurrió un cambio persistente que el sistema deba recordar.
+- No inventes hechos, consecuencias, NPCs, locaciones o cambios mecánicos que no estén respaldados por la ficción o por la resolución del sistema.
+- El bloque debe usar exactamente el formato \`json-proposal\` y solo estas claves: facts, events, npc_presence, consequences, character_changes, scene_changes, clock_changes.
+- Omití claves vacías.
+- facts contiene hechos persistentes como pares clave/valor.
+- events contiene eventos ya ocurridos, no intenciones futuras.
+- consequences contiene objetos con text y opcionalmente trigger/due.
+- character_changes contiene field + delta o value + reason opcional.
+- clock_changes contiene name + delta.
+- scene_changes puede contener locacion o turno_narrativo_delta.
+- No uses este bloque para repetir información puramente narrativa."""
+
+
 ENTITY_AUTO_SAVE_RULES = """AUTO-GUARDADO DE ENTIDADES Y ESTADO (instrucciones técnicas, NUNCA visibles para el jugador):
 - Si en la narración aparece un NPC o Locación NUEVO que no está en el contexto, declaralo al final de tu respuesta:
   [[NUEVO_NPC]]
@@ -121,7 +135,7 @@ class PromptBuilder:
         base_prompt = sys.get("llm_system_prompt", "Eres un narrador de juego de rol.")
         voc = sys.get("vocabulario", {})
 
-        sections = [base_prompt, NARRATIVE_PRINCIPLES, DICE_RESOLUTION_RULES, ENTITY_AUTO_SAVE_RULES]
+        sections = [base_prompt, NARRATIVE_PRINCIPLES, DICE_RESOLUTION_RULES, ENTITY_AUTO_SAVE_RULES, NARRATIVE_PROPOSAL_RULES]
 
         if mechanical_resolution:
             # Veredicto del Rule Arbiter: la matemática ya está resuelta en
