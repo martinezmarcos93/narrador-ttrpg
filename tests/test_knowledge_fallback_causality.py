@@ -155,9 +155,15 @@ def test_cross_front_consequences_progress_multiple_clocks_and_persist(tmp_path)
             "text": "La presión crece en ambos frentes.",
             "trigger": "alarma",
             "effects": [
-                {"type": "front_clock_delta", "name": "Culto", "delta": 2},
+                {"type": "front_clock_delta", "name": "Culto", "delta": 3},
                 {"type": "front_clock_delta", "name": "Guardia", "delta": 1},
                 {"type": "event", "text": "ambos frentes avanzan"},
+            ],
+        }, {
+            "text": "La guardia reacciona al frente lleno.",
+            "trigger": "frente Culto lleno",
+            "effects": [
+                {"type": "front_clock_delta", "name": "Guardia", "delta": 2},
             ],
         }]
     })
