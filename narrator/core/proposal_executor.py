@@ -80,18 +80,22 @@ class ProposalExecutor:
                 changes.append(f"entity:locacion+{location.get('nombre')}")
         return changes, created_paths
 
-    def _rollback(self, state_snapshot, character_snapshot, character, created_paths) -> None:
+    def _rollback(self, state_snapshot, character_snapshot, character, created_paths, state_file_existed) -> None:
         """Revierte las mutaciones propias de esta ejecución."""
         self.state.data = deepcopy(state_snapshot)
         try:
-            self.state.save()
+            if state_file_existed:
+                self.state.save()
+            elif self.state.path.exists():
+                self.state.path.unlink()
         except Exception:
             pass
         if character is not None and character_snapshot is not None:
             character.clear()
             character.update(deepcopy(character_snapshot))
-        if self.vault_writer and created_paths:
-            self.vault_writer.rollback_created_entities(created_paths)
+        rollback = getattr(self.vault_writer, "rollback_created_entities", None)
+        if rollback and created_paths:
+            rollback(created_paths)
 
     def execute(self, raw: dict[str, Any], character: dict | None = None) -> ProposalExecution:
         try:
@@ -125,7 +129,13 @@ class ProposalExecutor:
                 changes.extend(f"character:{item}" for item in char_changes)
             return ProposalExecution(True, report, changes)
         except Exception as exc:
-            self._rollback(state_snapshot, character_snapshot, character, created_paths)
+            self._rollback(
+                state_snapshot,
+                character_snapshot,
+                character,
+                created_paths,
+                state_file_existed,
+            )
             report.valid = False
             from narrator.core.continuity_validator import ContinuityIssue
             report.issues.append(ContinuityIssue(
