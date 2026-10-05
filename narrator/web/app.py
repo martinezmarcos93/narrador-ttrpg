@@ -39,6 +39,9 @@ def create_app(
     )
 
     api_key = os.getenv("NARRATOR_API_KEY", "").strip()
+    environment = os.getenv("NARRATOR_ENV", "development").strip().lower()
+    if environment == "production" and not api_key:
+        raise RuntimeError("NARRATOR_API_KEY is required in production")
     allowed_origins = {
         item.strip()
         for item in os.getenv("NARRATOR_ALLOWED_ORIGINS", "").split(",")
