@@ -64,7 +64,7 @@ class NarratorService:
                 if not isinstance(data, dict):
                     continue
                 key = str(data.get("nombre", data.get("name", ""))).strip().lower()
-                field = "npcs" if tipo == "npc" else "locations" if tipo == "location" else None
+                field = "npcs" if tipo == "npc" else "locations" if tipo in {"location", "locacion"} else None
                 if not key or field is None:
                     continue
                 existing = proposal.get(field) or []
