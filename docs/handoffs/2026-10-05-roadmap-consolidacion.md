@@ -73,3 +73,28 @@ Continuar con la misma regla:
 6. dejar benchmark real y optimización para cuando se habiliten pruebas locales.
 
 No saltar todavía a Flask.
+
+
+## Pasada siguiente — retrieval por capas + continuidad
+
+Se añadieron contratos de regresión para:
+
+- composición manual + system + universal + campaign;
+- precedencia por autoridad de ContextFragment;
+- validación de clocks inexistentes;
+- validación de delta no entero;
+- validación de overflow/underflow de clocks;
+- puente ProposalValidator → ContinuityValidator para clock_changes.
+
+La integración usa stubs deterministas en tests, no embeddings ni LLM.
+
+## Restricción
+
+No se ejecutaron tests locales ni benchmark real.
+
+## Próximo bloque
+
+- conectar escenarios a retrieval real cuando se habilite ejecución local;
+- ampliar ContinuityValidator a entidades, relaciones y consecuencias;
+- completar turn end-to-end sin depender de LLM real;
+- avanzar hacia campaña real.
