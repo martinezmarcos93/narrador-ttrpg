@@ -6,7 +6,9 @@ el LLM recibe ese resultado y genera únicamente la capa narrativa.
 """
 
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any
+from uuid import uuid4
 
 
 TURN_STAGES = (
@@ -31,6 +33,8 @@ class TurnContract:
 
     input_text: str
     system_slug: str
+    turn_id: str = field(default_factory=lambda: uuid4().hex)
+    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     character_snapshot: dict[str, Any] = field(default_factory=dict)
 
     interpretation: str = ""
@@ -47,12 +51,23 @@ class TurnContract:
 
     provenance: list[str] = field(default_factory=list)
     stage: str = "input"
+    errors: list[str] = field(default_factory=list)
+    completed_at: str = ""
 
     def advance(self, stage: str) -> None:
-        """Avanza el contrato a una etapa conocida."""
+        """Avanza el contrato sin permitir retrocesos silenciosos."""
         if stage not in TURN_STAGES:
             raise ValueError(f"Etapa de turno desconocida: {stage}")
+        current = TURN_STAGES.index(self.stage)
+        target = TURN_STAGES.index(stage)
+        if target < current:
+            raise ValueError(f"Retroceso de etapa no permitido: {self.stage} -> {stage}")
         self.stage = stage
+
+    def record_error(self, error: str) -> None:
+        if error:
+            self.errors.append(str(error))
+
 
     def record_source(self, source: str) -> None:
         if source and source not in self.provenance:
@@ -90,9 +105,14 @@ class TurnContract:
 
     def mark_persisted(self) -> None:
         self.advance("persist")
+        self.completed_at = datetime.now(timezone.utc).isoformat()
+
 
     def to_dict(self) -> dict[str, Any]:
         return {
+            "turn_id": self.turn_id,
+            "created_at": self.created_at,
+            "completed_at": self.completed_at,
             "stage": self.stage,
             "input": self.input_text,
             "system": self.system_slug,
@@ -101,4 +121,5 @@ class TurnContract:
             "mechanical_resolution": self.mechanical_resolution,
             "state_delta": self.state_delta,
             "provenance": list(self.provenance),
+            "errors": list(self.errors),
         }
