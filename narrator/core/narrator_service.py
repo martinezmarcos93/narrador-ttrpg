@@ -25,6 +25,12 @@ class NarratorService:
     def prepare_turn(self, app_state: dict):
         return self.orchestrator.prepare_turn(app_state)
 
+    def persist_turn(self, contract) -> dict:
+        """Persiste el resumen técnico de un turno completado."""
+        contract.mark_persisted()
+        self.orchestrator.state.record_turn(contract.to_dict())
+        return contract.to_dict()
+
     def apply_proposal(self, proposal: dict, app_state: dict | None = None) -> dict:
         return self.orchestrator.validate_and_apply_proposal(
             proposal,
@@ -42,9 +48,6 @@ class NarratorService:
 
     def record_event(self, event_type: str, intensity: int = 1) -> None:
         self.orchestrator.record_event(event_type, intensity)
-
-    def prepare_turn(self, app_state: dict):
-        return self.orchestrator.prepare_turn(app_state)
 
     def world_status(self) -> str:
         return self.orchestrator.get_world_status_text()
