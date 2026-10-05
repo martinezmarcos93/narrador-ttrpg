@@ -45,3 +45,16 @@ def test_router_can_retrieve_campaign_and_state_without_second_rag():
     )
     assert router.retrieve("pista", pack) == ""
     assert retriever.calls == [("campaign", 4), ("state", 4)]
+
+
+def test_router_incluye_estado_vivo_como_fuente_autoritativa():
+    router = KnowledgeRouter(object())
+    pack = _pack()
+    # El método de render no necesita acceso al retriever si solo se inyecta estado.
+    rendered = router.retrieve(
+        "qué ocurre",
+        pack,
+        state_context="Locación: Mansión Blackwood\nFlag: puerta_abierta=True",
+    )
+    assert "Estado mutable de la campaña" in rendered
+    assert "Locación: Mansión Blackwood" in rendered
