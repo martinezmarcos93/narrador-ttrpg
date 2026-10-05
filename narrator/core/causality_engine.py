@@ -150,7 +150,7 @@ class CausalityEngine:
                 matches.append((index, item, "due"))
         return matches
 
-    def evaluate(self, event_text: str = "", *, next_turn: bool = False) -> list[CausalActivation]:
+    def _evaluate_impl(self, event_text: str = "", *, next_turn: bool = False) -> list[CausalActivation]:
         """Evalúa una cascada completa hasta agotarla o alcanzar el límite."""
         activations: list[CausalActivation] = []
         current_event = str(event_text or "")
@@ -206,6 +206,14 @@ class CausalityEngine:
             "pending_remaining": len(self.state.get_pending_consequences()),
         }
         return activations
+
+    def evaluate(self, event_text: str = "", *, next_turn: bool = False) -> list[CausalActivation]:
+        """Evalúa una cascada con persistencia agrupada en una sola escritura."""
+        self.state.begin_batch()
+        try:
+            return self._evaluate_impl(event_text, next_turn=next_turn)
+        finally:
+            self.state.end_batch()
 
     def summary(self, activations: list[CausalActivation]) -> str:
         if not activations:
