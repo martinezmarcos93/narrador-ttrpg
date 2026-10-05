@@ -6,7 +6,8 @@ consultadas. La autoridad final sigue definida por ContextFragment.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from collections import Counter
 from typing import TYPE_CHECKING
 
 from narrator.core.context_contract import ContextFragment
@@ -21,6 +22,26 @@ class KnowledgeRoute:
     source: str
     enabled: bool
     budget: int
+
+
+@dataclass(frozen=True)
+class RetrievalMetrics:
+    query: str
+    fragment_count: int
+    layers: dict[str, int] = field(default_factory=dict)
+    sources: dict[str, int] = field(default_factory=dict)
+    duplicate_count: int = 0
+    context_words: int = 0
+
+    def to_dict(self) -> dict:
+        return {
+            "query": self.query,
+            "fragment_count": self.fragment_count,
+            "layers": dict(self.layers),
+            "sources": dict(self.sources),
+            "duplicate_count": self.duplicate_count,
+            "context_words": self.context_words,
+        }
 
 
 class KnowledgeRouter:
@@ -42,15 +63,14 @@ class KnowledgeRouter:
             result.append(KnowledgeRoute("universal", True, budgets["universal"]))
         return tuple(result)
 
-    def retrieve(
+    def retrieve_fragments(
         self,
         query: str,
         pack: SystemPack,
         *,
         manual_text: str = "",
         state_context: str = "",
-        max_words: int = 700,
-    ) -> str:
+    ) -> tuple[list[ContextFragment], int]:
         fragments: list[ContextFragment] = []
         routes = self.routes(pack, manual_available=bool(manual_text.strip()))
 
@@ -68,23 +88,68 @@ class KnowledgeRouter:
             if route.source == "manual":
                 fragments.extend(self._manual(manual_text))
             elif route.source == "system":
-                fragments.extend(
-                    self._system_fragments(query, pack, route.budget)
-                )
+                fragments.extend(self._system_fragments(query, pack, route.budget))
             elif route.source == "campaign":
-                fragments.extend(
-                    self._campaign_fragments(query, route.budget)
-                )
+                fragments.extend(self._campaign_fragments(query, route.budget))
             elif route.source == "state":
-                fragments.extend(
-                    self._state_fragments(query, route.budget)
-                )
+                fragments.extend(self._state_fragments(query, route.budget))
             elif route.source == "universal":
-                fragments.extend(
-                    self._universal_fragments(query, pack, route.budget)
-                )
+                fragments.extend(self._universal_fragments(query, pack, route.budget))
 
+        seen: set[tuple[str, str]] = set()
+        unique: list[ContextFragment] = []
+        duplicates = 0
+        for fragment in fragments:
+            key = (fragment.source, fragment.title or fragment.text[:120])
+            if key in seen:
+                duplicates += 1
+                continue
+            seen.add(key)
+            unique.append(fragment)
+        return unique, duplicates
+
+    def retrieve(
+        self,
+        query: str,
+        pack: SystemPack,
+        *,
+        manual_text: str = "",
+        state_context: str = "",
+        max_words: int = 700,
+    ) -> str:
+        fragments, _ = self.retrieve_fragments(
+            query,
+            pack,
+            manual_text=manual_text,
+            state_context=state_context,
+        )
         return self._render_unique(fragments, max_words)
+
+    def retrieve_with_metrics(
+        self,
+        query: str,
+        pack: SystemPack,
+        *,
+        manual_text: str = "",
+        state_context: str = "",
+        max_words: int = 700,
+    ) -> tuple[str, RetrievalMetrics]:
+        fragments, duplicates = self.retrieve_fragments(
+            query,
+            pack,
+            manual_text=manual_text,
+            state_context=state_context,
+        )
+        rendered = self._render_unique(fragments, max_words)
+        metrics = RetrievalMetrics(
+            query=query,
+            fragment_count=len(fragments),
+            layers=dict(Counter(fragment.layer for fragment in fragments)),
+            sources=dict(Counter(fragment.source for fragment in fragments)),
+            duplicate_count=duplicates,
+            context_words=len(rendered.split()),
+        )
+        return rendered, metrics
 
     @staticmethod
     def _manual(text: str) -> list[ContextFragment]:
