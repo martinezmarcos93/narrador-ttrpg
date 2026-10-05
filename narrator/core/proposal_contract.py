@@ -80,6 +80,7 @@ class ProposalValidator:
             "facts": proposal.facts,
             "events": proposal.events,
             "npc_presence": proposal.npc_presence,
+            "clock_changes": proposal.clock_changes,
         }
         report = self.continuity.validate(continuity_payload)
         from narrator.core.continuity_validator import ContinuityIssue
