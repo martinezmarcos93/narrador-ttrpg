@@ -37,16 +37,47 @@ class NarratorService:
             app_state=app_state,
         )
 
-    def apply_character_snapshot(self, character_data: dict, app_state: dict) -> dict:
-        """Convierte una salida estructurada de personaje en una propuesta validable."""
+    @staticmethod
+    def build_character_changes(character_data: dict | None) -> list[dict]:
+        """Convierte JSON legacy en cambios de propuesta sin ejecutar nada."""
         if not isinstance(character_data, dict):
-            return {"applied": False, "changes": [], "validation": {"valid": False}}
-        changes = [
+            return []
+        return [
             {"field": str(field), "value": value, "reason": "json legacy"}
             for field, value in character_data.items()
         ]
-        return self.apply_proposal({"character_changes": changes}, app_state=app_state)
 
+    @classmethod
+    def compose_postprocessing_proposal(
+        cls, *, narrative_proposal: dict | None = None, character_data: dict | None = None,
+        mutations: list | None = None, new_entities: list | None = None,
+        include_entities: bool = False,
+    ) -> dict:
+        """Compone todas las salidas estructuradas del LLM en una sola propuesta."""
+        proposal = dict(narrative_proposal) if isinstance(narrative_proposal, dict) else {}
+        if not proposal.get("character_changes"):
+            legacy_changes = list(mutations or []) or cls.build_character_changes(character_data)
+            if legacy_changes:
+                proposal["character_changes"] = legacy_changes
+        if include_entities:
+            for tipo, data in new_entities or []:
+                if not isinstance(data, dict):
+                    continue
+                key = str(data.get("nombre", data.get("name", ""))).strip().lower()
+                field = "npcs" if tipo == "npc" else "locations" if tipo == "location" else None
+                if not key or field is None:
+                    continue
+                existing = proposal.get(field) or []
+                if not any(isinstance(item, dict) and str(item.get("nombre", item.get("name", ""))).strip().lower() == key for item in existing):
+                    proposal[field] = [*existing, data]
+        return proposal
+
+    def apply_character_snapshot(self, character_data: dict, app_state: dict) -> dict:
+        """Convierte una salida estructurada de personaje en una propuesta validable."""
+        changes = self.build_character_changes(character_data)
+        if not changes:
+            return {"applied": False, "changes": [], "validation": {"valid": False}}
+        return self.apply_proposal({"character_changes": changes}, app_state=app_state)
     def evaluate_causality(self, event_text: str = "", *, next_turn: bool = False) -> dict:
         return self.orchestrator.evaluate_causality(
             event_text,
