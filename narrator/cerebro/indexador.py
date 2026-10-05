@@ -7,6 +7,7 @@ comparten infraestructura, no datos ni memoria.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -99,6 +100,14 @@ class IndiceCerebro:
             if not isinstance(tags, list):
                 tags = [tags] if tags else []
             links = re.findall(r"\[\[([^|\]]+)(?:\|[^\]]+)?\]\]", body)
+            content_hash = hashlib.sha256(
+                path.read_bytes()
+            ).hexdigest()
+            previous_hash = (
+                self._metadata.get(key, {}).get("content_hash")
+                if self._metadata
+                else None
+            )
             self._metadata[key] = {
                 "id": meta.get("id", path.stem),
                 "title": meta.get("title", meta.get("titulo", path.stem)),
@@ -113,9 +122,10 @@ class IndiceCerebro:
                 "next": meta.get("next", meta.get("siguiente", "")),
                 "links": links,
                 "path": key,
+                "content_hash": content_hash,
             }
 
-            if key in self._index:
+            if key in self._index and previous_hash == content_hash:
                 continue
 
             text = "\n".join(
