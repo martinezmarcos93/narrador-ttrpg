@@ -160,3 +160,25 @@ def test_router_excludes_explicitly_restricted_campaign_fragments():
     assert "secreto del director" not in rendered
     assert "otra nota privada" not in rendered
     assert "dato publico de campaña" in rendered
+
+
+def test_retrieval_precedence_keeps_state_and_manual_above_campaign_and_universal():
+    router = KnowledgeRouter(RetrieverStub())
+    pack = SystemPack(
+        slug="vampiro",
+        sistema="Vampiro",
+        edition="V20",
+        knowledge=KnowledgePolicy(
+            preferred_sources=("manual", "campaign", "system"),
+            universal_fallback=True,
+        ),
+    )
+    rendered = router.retrieve(
+        "regla contradictoria",
+        pack,
+        manual_text="MANUAL-OVERRIDE",
+        state_context="STATE-CANON",
+    )
+    assert rendered.index("STATE-CANON") < rendered.index("MANUAL-OVERRIDE")
+    assert rendered.index("MANUAL-OVERRIDE") < rendered.index("campaign evidence")
+    assert rendered.index("campaign evidence") < rendered.index("universal evidence")
