@@ -370,3 +370,17 @@ Quedan principalmente tareas de integración y endurecimiento de nivel superior:
 - Flask como capa final;
 - pruebas locales y validación de extremo a extremo;
 - integración posterior de configuración/entidades de campaña reales.
+
+
+## Actualización posterior al merge — evaluación reproducible del retrieval
+
+Se añadió una capa offline para medir la calidad del retrieval sin depender de la ejecución local del modelo de embeddings.
+
+Componentes:
+- narrator/core/retrieval_evaluator.py: ground truth + precision@k + recall@k + MRR + nDCG@k + cobertura de capas.
+- narrator/core/retrieval_benchmark.py: adapta KnowledgeRouter al evaluador y extrae IDs/procedencia de los fragmentos reales.
+- data/evaluation/retrieval_ground_truth.yaml: batería inicial de consultas universales, sin texto de manuales.
+- tests/test_retrieval_evaluator.py y tests/test_retrieval_benchmark.py: cobertura matemática y de integración con router mediante fixture determinista.
+- docs/adr/ADR-2026-10-05-evaluacion-retrieval.md: decisión arquitectónica y criterio de comparación.
+
+Importante: todavía no se ejecutó el benchmark contra el índice real ni se informan métricas empíricas. Para eso hace falta disponer localmente del índice de neuronas y del modelo de embeddings. Los tests quedaron escritos para esa futura ejecución.
