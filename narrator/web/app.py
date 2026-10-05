@@ -5,6 +5,7 @@ here; game-state mutations remain behind NarratorService.
 """
 from __future__ import annotations
 
+import hmac
 import os
 from uuid import uuid4
 
@@ -37,9 +38,32 @@ def create_app(
         )
     )
 
+    api_key = os.getenv("NARRATOR_API_KEY", "").strip()
+    allowed_origins = {
+        item.strip()
+        for item in os.getenv("NARRATOR_ALLOWED_ORIGINS", "").split(",")
+        if item.strip()
+    }
+
     @app.before_request
     def assign_request_id() -> None:
         request.request_id = request.headers.get("X-Request-ID") or uuid4().hex
+        if request.path == "/api/v1/health":
+            return
+        if api_key:
+            supplied = request.headers.get("Authorization", "")
+            token = supplied[7:].strip() if supplied.startswith("Bearer ") else ""
+            if not token or not hmac.compare_digest(token, api_key):
+                return jsonify(error_payload(
+                    "unauthorized", "authentication required",
+                    request_id=request.request_id,
+                )), 401
+        origin = request.headers.get("Origin")
+        if origin and allowed_origins and origin not in allowed_origins:
+            return jsonify(error_payload(
+                "forbidden_origin", "origin is not allowed",
+                request_id=request.request_id,
+            )), 403
 
     @app.after_request
     def add_security_headers(response):
