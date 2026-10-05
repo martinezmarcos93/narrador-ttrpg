@@ -98,30 +98,69 @@ class NarratorAgent:
                 mutations.append(inner)
         return mutations
 
-    def apply_state_mutations(self, character: dict, mutations: "list[dict]") -> "list[str]":
-        """Aplica mutaciones a `character` IN-PLACE. Devuelve una entrada de
-        log legible por cada cambio aplicado — salvaguarda de trazabilidad:
-        nunca se pisa un campo sin dejar constancia del antes/después."""
+    @staticmethod
+    def character_field_specs(schema: dict | None) -> dict[str, dict]:
+        """Extrae campos permitidos del schema, incluidos bloques condicionales."""
+        specs = {}
+        if not isinstance(schema, dict):
+            return specs
+        for section in schema.get("base_sections", []) or []:
+            for field in section.get("fields", []) or []:
+                if field.get("key"):
+                    specs[field["key"]] = field
+        for section_group in (schema.get("conditional_sections", {}) or {}).values():
+            for section in section_group or []:
+                for field in section.get("fields", []) or []:
+                    if field.get("key"):
+                        specs[field["key"]] = field
+        return specs
+
+    def apply_state_mutations(
+        self,
+        character: dict,
+        mutations: "list[dict]",
+        allowed_fields: "dict[str, dict] | None" = None,
+    ) -> "list[str]":
+        """Aplica propuestas del LLM solo sobre campos declarados por el schema.
+
+        El LLM puede proponer un cambio narrativo, pero Python decide si el
+        campo existe y normaliza límites numéricos declarados por el sistema.
+        """
+        specs = allowed_fields or {}
         changelog = []
         for mut in mutations:
-            field = mut.get("field")
-            if not field:
+            field = (mut.get("field") or "").strip()
+            if not field or (specs and field not in specs):
                 continue
             before = character.get(field)
+            spec = specs.get(field, {})
             if "delta" in mut:
                 try:
                     delta = int(mut["delta"])
+                    current = int(before) if before is not None else 0
+                    after = current + delta
                 except (TypeError, ValueError):
                     continue
-                try:
-                    current = int(before) if before is not None else 0
-                except (TypeError, ValueError):
-                    current = 0
-                after = current + delta
             elif "value" in mut:
                 after = mut["value"]
+                if spec.get("type") == "int":
+                    try:
+                        after = int(after)
+                    except (TypeError, ValueError):
+                        continue
             else:
                 continue
+
+            if spec.get("type") == "int":
+                try:
+                    after = int(after)
+                except (TypeError, ValueError):
+                    continue
+                if spec.get("min") is not None:
+                    after = max(int(spec["min"]), after)
+                if spec.get("max") is not None:
+                    after = min(int(spec["max"]), after)
+
             character[field] = after
             reason = mut.get("reason", "")
             reason_str = f" ({reason})" if reason else ""
