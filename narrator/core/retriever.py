@@ -120,6 +120,37 @@ class VaultRetriever:
             max_words=max_words,
         )
 
+    def get_vault_fragments_by_layer(
+        self,
+        query: str,
+        layer: str,
+        max_results: int = 4,
+    ) -> list[ContextFragment]:
+        """Recupera solo una capa del vault de campaña, conservando procedencia."""
+        fragments: list[ContextFragment] = []
+        for result in self.search(query, max_results=max_results * 2):
+            meta, body = result["meta"], result["body"]
+            item_layer = str(meta.get("capa", meta.get("layer", ""))).lower()
+            if item_layer == "sistema":
+                item_layer = "system"
+            elif meta.get("origen") == "manual":
+                item_layer = "manual"
+            elif not item_layer:
+                item_layer = "campaign"
+            if item_layer != layer:
+                continue
+            fragments.append(ContextFragment(
+                text=body,
+                source=str(meta.get("fuente", meta.get("source", "vault"))),
+                layer=item_layer,
+                title=str(meta.get("nombre", Path(result["path"]).stem)),
+                score=float(result.get("score", 0.0)),
+                metadata=meta,
+            ))
+            if len(fragments) >= max_results:
+                break
+        return fragments
+
     # ── Cerebro permanente ─────────────────────────────────────
     def get_brain_context(self, query: str, max_words: int = 500, system: str | None = None, kind: str | None = None) -> str:
         """Consulta conocimiento persistente del cerebro."""
