@@ -192,3 +192,35 @@ def test_executor_failure_without_existing_file_leaves_no_state_file(tmp_path):
     assert not result.applied
     assert result.rolled_back
     assert not state.path.exists()
+
+
+class _PartiallyFailingVault:
+    def __init__(self):
+        self.created = []
+
+    def create_npc(self, data):
+        marker = f"npc:{data['nombre']}"
+        self.created.append(marker)
+        return marker
+
+    def create_locacion(self, data):
+        raise RuntimeError("fallo creando locación")
+
+    def rollback_created_entities(self, paths):
+        self.created = [item for item in self.created if item not in paths]
+
+
+def test_executor_rolls_back_entities_when_entity_creation_fails_mid_batch(tmp_path):
+    state = StateManager(str(tmp_path / "estado.yaml"))
+    vault = _PartiallyFailingVault()
+    executor = ProposalExecutor(state, vault_writer=vault)
+
+    result = executor.execute({
+        "npcs": [{"nombre": "NPC Parcial"}],
+        "locations": [{"nombre": "Locación Fallida"}],
+    })
+
+    assert not result.applied
+    assert result.rolled_back
+    assert vault.created == []
+    assert not state.path.exists()
