@@ -40,3 +40,15 @@
 
 ## Restricciones
 No local tests, no benchmark real, no pull, no Ollama, no merge.
+
+
+## Cierre de pasada — 2026-10-05
+- Branch: feat/retrieval-evaluation.
+- No merge a main. Compare verificado: 122 ahead / 2 behind / 42 archivos.
+- Writer boundary endurecida: `on_narrator_response_safe()` aísla log de sesión, evento, notas de NPC y notas de locación; un fallo no aborta las demás salidas.
+- UI → Core endurecido para avances de World Agent: `NarratorService.apply_world_advances()` centraliza mutaciones de frentes/relojes y WorldSimulation.
+- Cross-front endurecido: `front_clock_delta` solo emite `frente <nombre> lleno` al cruzar el umbral; no re-dispara si ya estaba lleno y los decrementos quedan acotados a cero.
+- Ground truth verificado contra los packs presentes en `data/systems`: VTM V20, D&D 5e, Cthulhu 7e, Pathfinder 2e y generic. Añadidos casos específicos para Cthulhu y Pathfinder.
+- Tests nuevos preparados, no ejecutados: aislamiento del VaultWriter y cruce de umbral de front clock.
+- LOCAL PENDIENTE: ejecución real de suite, benchmark, carga de campaña/manuales y E2E.
+- Siguiente bloque: cerrar interfaces públicas restantes Core/Service/UI, campaña real + manuales, benchmark local y endurecimiento final de seguridad/API antes de Release Candidate.
