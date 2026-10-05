@@ -192,3 +192,60 @@ def test_compound_turn_rejects_conflict_before_partial_execution(tmp_path):
     assert character["hp"] == 12
     assert not (tmp_path / "vault" / "NPCs" / "No_Debe_Existir.md").exists()
     assert state.get_known_fact("puerta") == "cerrada"
+
+
+def test_combat_turn_updates_character_and_initiative_without_narrative_authority(tmp_path):
+    state = StateManager(str(tmp_path / "estado.yaml"))
+    state.start_combat([("Alicia", 18), ("Guardia", 12)])
+    character = {"hp": 20}
+    result = ProposalExecutor(state).execute(
+        {
+            "character_changes": [],
+            "events": ["Alicia hiere al Guardia."],
+        },
+        character=character,
+    )
+    assert result.applied
+    assert state.is_in_combat()
+    assert state.get_combat_queue().current_name() == "Alicia"
+
+    next_actor = state.advance_combat_turn()
+    assert next_actor == "Guardia"
+    assert state.get_combat_queue().current_name() == "Guardia"
+
+
+def test_social_conflict_proposal_persists_relation_and_event(tmp_path):
+    state = StateManager(str(tmp_path / "estado.yaml"))
+    result = ProposalExecutor(state).execute(
+        {
+            "relations": [{
+                "source": "Alicia",
+                "target": "Bruno",
+                "relation": "desconfianza",
+                "strength": -60,
+                "reason": "Alicia descubre la mentira.",
+            }],
+            "events": ["Alicia rompe la negociación con Bruno."],
+        }
+    )
+    assert result.applied
+    relation = state.get_relations("Alicia")[0]
+    assert relation["strength"] == -60
+    assert state.data["eventos"][-1]["evento"] == "Alicia rompe la negociación con Bruno."
+
+
+def test_front_clock_progression_is_persistent_and_bounded(tmp_path):
+    state = StateManager(str(tmp_path / "estado.yaml"))
+    state.add_front("Culto", faction="culto", goal="Abrir el portal", max_stage=4)
+    result = ProposalExecutor(state).execute({
+        "clock_changes": [{"name": "Culto", "delta": 3}],
+        "events": ["El ritual avanza."],
+    })
+    assert result.applied
+    assert state.data["relojes"]["Culto"]["llenos"] == 3
+
+    result = ProposalExecutor(state).execute({
+        "clock_changes": [{"name": "Culto", "delta": 9}],
+    })
+    assert result.applied
+    assert state.data["relojes"]["Culto"]["llenos"] == 4
