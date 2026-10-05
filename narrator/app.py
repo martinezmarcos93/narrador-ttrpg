@@ -417,6 +417,8 @@ def finish_streaming(full_text: str):
                 state["character"], mutations, allowed_fields=allowed_fields
             )
             if changelog:
+                if _active_turn_contract is not None:
+                    _active_turn_contract.state_delta = {"character_changes": list(changelog)}
                 needs_char_refresh = True
                 is_important = True
                 ts = datetime.now().strftime("%H:%M")
