@@ -59,6 +59,7 @@ feat/retrieval-evaluation. Está 16 commits por delante de main y 0 por detrás.
 - HECHO: NarrativeProposal contract.
 - HECHO: Knowledge Router.
 - HECHO: Service Boundary inicial.
+- HECHO: NarratorService reutiliza el NarratorAgent del Orchestrator.
 - PENDIENTE: terminar migración de UI a NarratorService.
 - PENDIENTE: eliminar accesos innecesarios de UI a componentes internos.
 - PENDIENTE: formalizar interfaces públicas Core/Service/UI.
@@ -66,8 +67,10 @@ feat/retrieval-evaluation. Está 16 commits por delante de main y 0 por detrás.
 ### A2. Estado y transacciones
 - HECHO: StateManager, persistencia, batch, snapshots y rollback.
 - HECHO: rollback de entidades externas y creación parcial.
-- PENDIENTE: API pública de rollback/cancelación de batch.
+- HECHO: API pública rollback_batch().
+- HECHO: ProposalExecutor utiliza la frontera pública de rollback.
 - PENDIENTE: eliminar dependencia de campos privados del StateManager desde ProposalExecutor.
+- HECHO: escenario básico de rollback de batch.
 - PENDIENTE: escenarios de transacciones anidadas y fallos en todas las etapas.
 
 ### A3. Continuidad
