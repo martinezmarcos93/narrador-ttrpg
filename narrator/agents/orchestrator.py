@@ -16,6 +16,7 @@ from narrator.core.scene_manager import SceneManager
 from narrator.core.state_manager import StateManager
 from narrator.core.turn_contract import TurnContract
 from narrator.core.proposal_executor import ProposalExecutor
+from narrator.agents.narrator_agent import NarratorAgent
 from narrator.core.theory_engine import MasterMoveEngine, PacingToneAgent, WorldSimulationEngine, InvestigationEngine
 
 _THEORY_ENGINE_PATH = Path(__file__).parent.parent / "core" / "theory_engine"
@@ -60,7 +61,8 @@ class Orchestrator:
         self.knowledge_router = KnowledgeRouter(self.retriever)
         self._last_retrieved_context = ""
         self._last_retrieval_metrics: dict = {}
-        self.proposal_executor = ProposalExecutor(self.state)
+        self.narrator_agent = NarratorAgent()
+        self.proposal_executor = ProposalExecutor(self.state, narrator_agent=self.narrator_agent)
 
     def _load_config(self, path: str) -> dict:
         try:
@@ -306,6 +308,12 @@ class Orchestrator:
     ) -> dict:
         """Punto único para futuras propuestas estructuradas del LLM."""
         character = app_state.get("character") if app_state else None
+        system_slug = self.get_active_system(app_state or {})
+        try:
+            schema = self.builder.load_system(system_slug).get("character_sheet_schema", {})
+        except Exception:
+            schema = {}
+        self.proposal_executor.character_schema = schema
         result = self.proposal_executor.execute(proposal, character=character)
         return {
             "applied": result.applied,
