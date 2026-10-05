@@ -6,6 +6,7 @@ Mantiene el contexto total dentro de un budget de palabras para modelos pequeño
 import json
 from narrator.logger import logger
 from narrator.core.resolution_schema import ResolutionSchemaError, validate_resolution
+from narrator.core.system_pack import SystemPack
 import yaml
 from pathlib import Path
 
@@ -52,6 +53,18 @@ class PromptBuilder:
             path = self.systems_path / "generic.yaml"
         with open(path, encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
+
+        # Contrato ejecutable: todos los sistemas deben declarar cómo se
+        # enruta su conocimiento. El contenido histórico sigue siendo un
+        # dict para mantener compatibilidad con el resto del código.
+        try:
+            SystemPack.from_dict(
+                data,
+                expected_slug=None if path.name == "generic.yaml" else slug,
+            )
+        except ValueError as exc:
+            logger.error(f"System Pack inválido '{slug}': {exc}")
+            raise
 
         # Validación del bloque resolution (Fase 10): se registra el error
         # apenas se carga el sistema, sin frenar el turno en curso — el
