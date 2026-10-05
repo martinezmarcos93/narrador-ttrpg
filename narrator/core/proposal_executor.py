@@ -115,18 +115,17 @@ class ProposalExecutor:
     def _persist_rollback(self, state_file_existed: bool) -> None:
         """Cierra la transacción persistiendo el snapshot restaurado."""
         try:
+            self.state.rollback_batch()
             if state_file_existed:
-                self.state._save_pending = True
-                self.state.end_batch()
-            else:
-                self.state._save_pending = False
-                self.state.end_batch()
-                if self.state.path.exists():
-                    self.state.path.unlink()
+                self.state.save()
+            elif self.state.path.exists():
+                self.state.path.unlink()
         except Exception:
+            # El rollback de memoria ya ocurrió; como último recurso evitamos
+            # dejar un batch abierto, sin depender de campos privados.
             try:
-                self.state._batch_depth = 0
-                self.state._save_pending = False
+                while getattr(self.state, "_batch_depth", 0) > 0:
+                    self.state.rollback_batch()
             except Exception:
                 pass
 
