@@ -168,5 +168,13 @@ class ProposalValidator:
                     "invalid_clock_change", "error",
                     "Cada cambio de reloj debe declarar name y delta.",
                 ))
+                continue
+            try:
+                int(item.get("delta"))
+            except (TypeError, ValueError):
+                report.issues.append(ContinuityIssue(
+                    "invalid_clock_delta", "error",
+                    "El delta de un reloj debe ser entero.",
+                ))
         report.valid = not any(issue.severity == "error" for issue in report.issues)
         return report
