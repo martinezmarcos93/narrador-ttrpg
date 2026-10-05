@@ -54,3 +54,27 @@ def test_request_id_is_returned_in_error_payload():
     response = client.post("/api/v1/sessions", json={"campaign": ""})
     assert response.status_code == 400
     assert response.json["error"]["request_id"]
+
+
+def test_production_requires_api_key(monkeypatch):
+    monkeypatch.setenv("NARRATOR_ENV", "production")
+    monkeypatch.delenv("NARRATOR_API_KEY", raising=False)
+    try:
+        create_app(web_service=None, narrator_service=FakeNarrator())
+    except RuntimeError as exc:
+        assert "NARRATOR_API_KEY" in str(exc)
+    else:
+        raise AssertionError("production app must require NARRATOR_API_KEY")
+
+
+def test_bearer_key_is_enforced(monkeypatch):
+    monkeypatch.setenv("NARRATOR_API_KEY", "test-secret")
+    app = _app()
+    client = app.test_client()
+    response = client.get("/api/v1/sessions/nope/world")
+    assert response.status_code == 401
+    response = client.get(
+        "/api/v1/sessions/nope/world",
+        headers={"Authorization": "Bearer test-secret"},
+    )
+    assert response.status_code == 404
