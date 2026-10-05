@@ -45,3 +45,33 @@ opciones concretas de personaje, excepciones, tablas, lore y tono específico.
 - No crear otro RAG.
 - No pasar reglas al LLM para que las resuelva por cuenta propia.
 - No iniciar Flask antes de estabilizar recuperación y contrato de turno.
+
+
+## Bloque posterior — System Pack y routing efectivo
+
+Se implementó el contrato ejecutable `narrator/core/system_pack.py`.
+
+Cambios relevantes:
+- Los cinco sistemas distribuidos declaran `knowledge`.
+- `SystemPack.from_dict()` valida campos obligatorios y fuentes permitidas.
+- `PromptBuilder.load_system()` valida el paquete al cargarlo.
+- El prompt expone la política de conocimiento del sistema.
+- Un `manual_text` adjunto entra al contexto como capa `MANUAL`, sin eliminar la biblioteca PDF/manual.
+- Se corrigió `build_narrator_context()`: el RAG legado ya no sobrescribe el contexto híbrido cerebro + vault.
+- El recall por mención de NPC/locación ahora complementa el contexto híbrido.
+- La expansión por grafo del cerebro se reranquea antes del truncado final.
+- Se agregaron pruebas del contrato para todos los System Packs distribuidos.
+
+Precedencia operativa actual:
+`STATE > MANUAL > SYSTEM > CAMPAIGN > UNIVERSAL`.
+
+Esto es deliberado: el cerebro universal aporta conceptos generales; el manual/PDF sigue siendo la fuente específica para reglas, lore, excepciones y creación de personajes.
+
+### Pendiente inmediato
+
+1. Introducir un router de conocimiento explícito basado en `SystemPack.knowledge`, para que la preferencia de fuentes deje de ser solo metadata/prompt y gobierne la recuperación.
+2. Incorporar procedencia documental más precisa (libro/página cuando el barrido del manual la conserve).
+3. Formalizar el contrato de turno Python → resolución → estado → contexto → LLM, reutilizando los motores existentes.
+4. Recién después endurecer Flask/UI.
+
+Las pruebas nuevas están escritas pero no se han ejecutado en un entorno local durante esta iteración.
