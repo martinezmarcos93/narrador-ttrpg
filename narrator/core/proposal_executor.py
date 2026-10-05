@@ -22,10 +22,17 @@ class ProposalExecution:
 
 
 class ProposalExecutor:
-    def __init__(self, state_manager, narrator_agent=None, character_schema=None):
+    def __init__(
+        self,
+        state_manager,
+        narrator_agent=None,
+        character_schema=None,
+        vault_writer=None,
+    ):
         self.state = state_manager
         self.narrator_agent = narrator_agent
         self.character_schema = character_schema or {}
+        self.vault_writer = vault_writer
         self.continuity = ContinuityValidator(state_manager)
         self.validator = ProposalValidator(self.continuity)
 
@@ -33,6 +40,7 @@ class ProposalExecutor:
         if not proposal.character_changes:
             return
         from narrator.core.continuity_validator import ContinuityIssue
+
         allowed = (
             self.narrator_agent.character_field_specs(self.character_schema)
             if self.narrator_agent else {}
@@ -52,6 +60,20 @@ class ProposalExecutor:
                 ))
         report.valid = not any(issue.severity == "error" for issue in report.issues)
 
+    def _create_entities(self, proposal: NarrativeProposal) -> list[str]:
+        if not self.vault_writer:
+            return []
+        changes = []
+        for npc in proposal.npcs:
+            path = self.vault_writer.create_npc(npc)
+            if path:
+                changes.append(f"entity:npc+{npc.get('nombre')}")
+        for location in proposal.locations:
+            path = self.vault_writer.create_locacion(location)
+            if path:
+                changes.append(f"entity:locacion+{location.get('nombre')}")
+        return changes
+
     def execute(self, raw: dict[str, Any], character: dict | None = None) -> ProposalExecution:
         try:
             proposal = NarrativeProposal.from_dict(raw)
@@ -67,16 +89,13 @@ class ProposalExecutor:
         if not report.valid:
             return ProposalExecution(False, report, [])
 
+        changes = self._create_entities(proposal)
         result = self.state.apply_proposal(proposal)
-        changes = list(result.get("changes", []))
+        changes.extend(result.get("changes", []))
 
         if character is not None and self.narrator_agent and proposal.character_changes:
             allowed = self.narrator_agent.character_field_specs(self.character_schema)
-            normalized = []
-            for item in proposal.character_changes:
-                mutation = dict(item)
-                if "field" in mutation:
-                    normalized.append(mutation)
+            normalized = [dict(item) for item in proposal.character_changes if "field" in item]
             char_changes = self.narrator_agent.apply_state_mutations(
                 character, normalized, allowed_fields=allowed
             )
