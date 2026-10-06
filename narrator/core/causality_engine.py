@@ -58,12 +58,55 @@ class CausalityEngine:
         return [dict(effect) for effect in item.get("effects", []) if isinstance(effect, dict)]
 
     def _apply_secondary_effects(self, effects: list[dict], *, parent_id: str = "") -> list[str]:
-        """Aplica efectos que generan nuevos eventos o consecuencias."""
+        """Aplica efectos declarativos y devuelve eventos que pueden propagar causalidad."""
         emitted_events = []
         pending = self.state.data.setdefault("consecuencias_pendientes", [])
         for effect in effects:
             kind = str(effect.get("type") or "").strip().lower()
-            if kind == "event":
+
+            if kind == "fact":
+                key = str(effect.get("key") or "").strip()
+                if key:
+                    self.state.set_known_fact(key, effect.get("value"), source="causality_engine")
+            elif kind == "flag":
+                name = str(effect.get("name") or "").strip()
+                if name:
+                    self.state.set_flag(
+                        name,
+                        effect.get("value"),
+                        description=str(effect.get("description") or ""),
+                    )
+            elif kind == "npc_presence":
+                name = str(effect.get("name") or "").strip()
+                present = effect.get("present")
+                if name and isinstance(present, bool):
+                    scene = self.state.data.setdefault("escena_actual", {})
+                    npcs = scene.setdefault("npcs_presentes", [])
+                    if present and name not in npcs:
+                        npcs.append(name)
+                    elif not present:
+                        scene["npcs_presentes"] = [item for item in npcs if item != name]
+            elif kind == "scene_location":
+                location = str(effect.get("value") or "").strip()
+                if location:
+                    self.state.set_location(location)
+            elif kind == "clock_delta":
+                name = str(effect.get("name") or "").strip()
+                if name:
+                    try:
+                        delta = int(effect.get("delta"))
+                    except (TypeError, ValueError):
+                        delta = 0
+                    clock = self.state.data.get("relojes", {}).get(name)
+                    if clock is not None:
+                        before = int(clock.get("llenos", 0))
+                        maximum = int(clock.get("segmentos", 6))
+                        after = min(max(0, before + delta), maximum)
+                        clock["llenos"] = after
+                        emitted_events.append(f"reloj {name}: {before}->{after}")
+                        if before < maximum <= after:
+                            emitted_events.append(f"frente {name} lleno")
+            elif kind == "event":
                 event = str(effect.get("text") or "").strip()
                 if event:
                     self.state.record_event(
@@ -80,7 +123,9 @@ class CausalityEngine:
                 character = str(effect.get("character") or "").strip()
                 key = str(effect.get("key") or "").strip()
                 if character and key:
-                    self.state.set_character_fact(character, key, effect.get("value"), source="causality_engine")
+                    self.state.set_character_fact(
+                        character, key, effect.get("value"), source="causality_engine"
+                    )
             elif kind == "player_fact":
                 key = str(effect.get("key") or "").strip()
                 if key:
@@ -103,36 +148,45 @@ class CausalityEngine:
                 name = str(effect.get("name") or "").strip()
                 if name:
                     try:
-                        delta = int(effect.get("delta", 0))
+                        delta = int(effect.get("delta"))
                     except (TypeError, ValueError):
                         delta = 0
                     clock = self.state.data.get("relojes", {}).get(name)
                     if clock is not None:
                         before = int(clock.get("llenos", 0))
-                        clock["llenos"] = min(
-                            max(0, before + delta),
-                            int(clock.get("segmentos", 6)),
-                        )
-                        emitted_events.append(
-                            f"reloj {name}: {before}->{clock['llenos']}"
-                        )
+                        maximum = int(clock.get("segmentos", 6))
+                        after = min(max(0, before + delta), maximum)
+                        clock["llenos"] = after
+                        emitted_events.append(f"reloj {name}: {before}->{after}")
+                        # El evento de frente lleno solo nace al cruzar el
+                        # umbral; un reloj ya lleno no re-dispara infinitamente.
+                        if before < maximum <= after:
+                            emitted_events.append(f"frente {name} lleno")
             elif kind == "queue_consequence":
-                consequence = str(effect.get("consequence") or effect.get("text") or "").strip()
+                consequence = str(
+                    effect.get("consequence") or effect.get("text") or ""
+                ).strip()
                 if not consequence:
                     continue
                 pending.append({
                     "consecuencia": consequence,
                     "trigger": str(effect.get("trigger") or ""),
                     "due": str(effect.get("due") or ""),
-                    "effects": [dict(x) for x in effect.get("effects", []) if isinstance(x, dict)],
+                    "effects": [
+                        dict(x) for x in effect.get("effects", [])
+                        if isinstance(x, dict)
+                    ],
                     "estado": "pendiente",
                     "sesion_creacion": self.state.get_session_number(),
                     "causal_parent": str(effect.get("parent") or parent_id),
                 })
                 emitted_events.append(consequence)
-        if any(str(e.get("type") or "").strip().lower() == "queue_consequence" for e in effects):
+
+        if any(
+            str(e.get("type") or "").strip().lower() == "queue_consequence"
+            for e in effects
+        ):
             del pending[:-200]
-            self.state.save()
         return emitted_events
 
     def _find_matches(self, event_text: str, *, next_turn: bool) -> list[tuple[int, dict, str]]:
@@ -195,9 +249,16 @@ class CausalityEngine:
             current_next_turn = False
 
         self.last_activations = list(activations)
+        depth_limit_reached = bool(
+            activations
+            and len(activations) > 0
+            and activations[-1].depth >= self.max_cascade_depth - 1
+            and bool(self._find_matches(current_event, next_turn=current_next_turn))
+        )
         self.last_metrics = {
             "activations": len(activations),
             "max_depth": max((item.depth for item in activations), default=0),
+            "depth_limit_reached": depth_limit_reached,
             "reasons": {
                 reason: sum(1 for item in activations if item.reason == reason)
                 for reason in {item.reason for item in activations}

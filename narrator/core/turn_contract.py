@@ -101,6 +101,25 @@ class TurnContract:
             "prompt": self.narrative_prompt,
         }
 
+    def record_proposal_result(self, result: dict[str, Any] | None) -> None:
+        """Registra el resultado determinista de una propuesta post-LLM.
+
+        El contrato nunca considera una mutación narrativa como válida solo
+        porque el LLM la haya emitido: conserva el veredicto del executor,
+        sus cambios y los errores de validación.
+        """
+        payload = result or {}
+        changes = list(payload.get("changes") or [])
+        if changes:
+            self.state_delta.setdefault("proposal_changes", []).extend(changes)
+        validation = payload.get("validation") or {}
+        if validation and not validation.get("valid", True):
+            self.record_error("proposal_validation_failed")
+        if payload.get("applied"):
+            self.record_source("ProposalExecutor")
+        elif payload:
+            self.record_source("ProposalValidator")
+
     def mark_llm_output(self, text: str) -> None:
         self.llm_output = text or ""
         self.final_output = self.llm_output
@@ -124,7 +143,7 @@ class TurnContract:
             "mechanical_resolution": self.mechanical_resolution,
             "retrieval_metrics": self.retrieval_metrics,
             "causal_metrics": self.causal_metrics,
-            "state_delta": self.state_delta,
+            "state_delta": dict(self.state_delta),
             "provenance": list(self.provenance),
             "errors": list(self.errors),
         }

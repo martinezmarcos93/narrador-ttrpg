@@ -222,7 +222,26 @@ class KnowledgeRouter:
         ]
 
     def _campaign_fragments(self, query: str, limit: int) -> list[ContextFragment]:
-        return self.retriever.get_vault_fragments_by_layer(query, "campaign", limit)
+        fragments = self.retriever.get_vault_fragments_by_layer(query, "campaign", limit * 2)
+        visible = []
+        for fragment in fragments:
+            metadata = fragment.metadata or {}
+            llm_visible = metadata.get("llm_visible")
+            visibility = str(
+                metadata.get("visibility", metadata.get("visibilidad", ""))
+            ).strip().lower()
+            if llm_visible is False:
+                continue
+            if visibility in {"secret", "private", "dm", "hidden", "oculto", "secreto", "privado"}:
+                continue
+            visible.append(fragment)
+            if len(visible) >= limit:
+                break
+        return visible
+
+    def retrieve_visible_campaign_fragments(self, query: str, limit: int = 4) -> list[ContextFragment]:
+        """Recupera exclusivamente campaña visible para el LLM."""
+        return self._campaign_fragments(query, limit)
 
     def _state_fragments(self, query: str, limit: int) -> list[ContextFragment]:
         return self.retriever.get_vault_fragments_by_layer(query, "state", limit)

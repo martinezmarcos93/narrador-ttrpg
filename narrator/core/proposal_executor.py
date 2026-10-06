@@ -39,7 +39,10 @@ class ProposalExecutor:
         self.vault_writer = vault_writer
         self.continuity = ContinuityValidator(state_manager)
         self.allowed_fronts = set(allowed_fronts or [])
-        self.validator = ProposalValidator(self.continuity, allowed_fronts=self.allowed_fronts)
+        self.validator = ProposalValidator(
+            self.continuity,
+            allowed_fronts=self.allowed_fronts,
+        )
 
     def configure_front_contract(self, allowed_fronts) -> None:
         self.allowed_fronts = set(allowed_fronts or [])
@@ -74,43 +77,72 @@ class ProposalExecutor:
             return [], []
         changes = []
         created_paths = []
-        for npc in proposal.npcs:
-            path = self.vault_writer.create_npc(npc)
-            if path:
-                created_paths.append(path)
-                changes.append(f"entity:npc+{npc.get('nombre')}")
-        for location in proposal.locations:
-            path = self.vault_writer.create_locacion(location)
-            if path:
-                created_paths.append(path)
-                changes.append(f"entity:locacion+{location.get('nombre')}")
+        rollback = getattr(self.vault_writer, "rollback_created_entities", None)
+
+        try:
+            for npc in proposal.npcs:
+                path = self.vault_writer.create_npc(npc)
+                if path:
+                    created_paths.append(path)
+                    changes.append(f"entity:npc+{npc.get('nombre')}")
+
+            for location in proposal.locations:
+                path = self.vault_writer.create_locacion(location)
+                if path:
+                    created_paths.append(path)
+                    changes.append(f"entity:locacion+{location.get('nombre')}")
+        except Exception:
+            if rollback and created_paths:
+                try:
+                    rollback(created_paths)
+                except Exception:
+                    pass
+            raise
+
         return changes, created_paths
 
-    def _rollback(self, state_snapshot, character_snapshot, character, created_paths, state_file_existed) -> None:
-        """Revierte las mutaciones propias de esta ejecución."""
+    def _rollback_memory(
+        self,
+        state_snapshot,
+        character_snapshot,
+        character,
+    ) -> None:
         self.state.data = deepcopy(state_snapshot)
+        if character is not None and character_snapshot is not None:
+            character.clear()
+            character.update(deepcopy(character_snapshot))
+
+    def _persist_rollback(self, state_file_existed: bool) -> None:
+        """Cierra la transacción persistiendo el snapshot restaurado."""
         try:
+            self.state.rollback_batch()
             if state_file_existed:
                 self.state.save()
             elif self.state.path.exists():
                 self.state.path.unlink()
         except Exception:
-            pass
-        if character is not None and character_snapshot is not None:
-            character.clear()
-            character.update(deepcopy(character_snapshot))
-        rollback = getattr(self.vault_writer, "rollback_created_entities", None)
-        if rollback and created_paths:
-            rollback(created_paths)
+            # El rollback de memoria ya ocurrió; como último recurso evitamos
+            # dejar un batch abierto, sin depender de campos privados.
+            try:
+                while self.state.batch_depth > 0:
+                    self.state.rollback_batch()
+            except Exception:
+                pass
 
-    def execute(self, raw: dict[str, Any], character: dict | None = None) -> ProposalExecution:
+    def execute(
+        self,
+        raw: dict[str, Any],
+        character: dict | None = None,
+    ) -> ProposalExecution:
         try:
             proposal = NarrativeProposal.from_dict(raw)
         except (TypeError, ValueError) as exc:
             report = self.continuity.validate({})
             report.valid = False
             from narrator.core.continuity_validator import ContinuityIssue
-            report.issues.append(ContinuityIssue("invalid_proposal", "error", str(exc)))
+            report.issues.append(
+                ContinuityIssue("invalid_proposal", "error", str(exc))
+            )
             return ProposalExecution(False, report, [])
 
         report = self.validator.validate(proposal)
@@ -122,31 +154,63 @@ class ProposalExecutor:
         character_snapshot = deepcopy(character) if character is not None else None
         created_paths = []
         state_file_existed = self.state.path.exists()
+
+        initial_batch_depth = self.state.batch_depth
+        self.state.begin_batch()
         try:
             entity_changes, created_paths = self._create_entities(proposal)
             changes = list(entity_changes)
+
             result = self.state.apply_proposal(proposal)
             changes.extend(result.get("changes", []))
+
             if character is not None and self.narrator_agent and proposal.character_changes:
                 allowed = self.narrator_agent.character_field_specs(self.character_schema)
-                normalized = [dict(item) for item in proposal.character_changes if "field" in item]
+                normalized = [
+                    dict(item)
+                    for item in proposal.character_changes
+                    if "field" in item
+                ]
                 char_changes = self.narrator_agent.apply_state_mutations(
-                    character, normalized, allowed_fields=allowed
+                    character,
+                    normalized,
+                    allowed_fields=allowed,
                 )
                 changes.extend(f"character:{item}" for item in char_changes)
+
+            if self.state.batch_depth > initial_batch_depth:
+                self.state.end_batch()
             return ProposalExecution(True, report, changes)
+
         except Exception as exc:
-            self._rollback(
+            self._rollback_memory(
                 state_snapshot,
                 character_snapshot,
                 character,
-                created_paths,
-                state_file_existed,
             )
+
+            rollback = getattr(self.vault_writer, "rollback_created_entities", None)
+            if rollback and created_paths:
+                try:
+                    rollback(created_paths)
+                except Exception:
+                    pass
+
+            self._persist_rollback(state_file_existed)
+
             report.valid = False
             from narrator.core.continuity_validator import ContinuityIssue
-            report.issues.append(ContinuityIssue(
-                "proposal_execution_failed", "error",
-                f"La propuesta fue revertida por un error de ejecución: {exc}",
-            ))
-            return ProposalExecution(False, report, [], rolled_back=True, error=str(exc))
+            report.issues.append(
+                ContinuityIssue(
+                    "proposal_execution_failed",
+                    "error",
+                    f"La propuesta fue revertida por un error de ejecución: {exc}",
+                )
+            )
+            return ProposalExecution(
+                False,
+                report,
+                [],
+                rolled_back=True,
+                error=str(exc),
+            )

@@ -370,3 +370,31 @@ Quedan principalmente tareas de integración y endurecimiento de nivel superior:
 - Flask como capa final;
 - pruebas locales y validación de extremo a extremo;
 - integración posterior de configuración/entidades de campaña reales.
+
+
+## Actualización posterior al merge — evaluación reproducible del retrieval
+
+Se añadió una capa offline para medir la calidad del retrieval sin depender de la ejecución local del modelo de embeddings.
+
+Componentes:
+- narrator/core/retrieval_evaluator.py: ground truth + precision@k + recall@k + MRR + nDCG@k + cobertura de capas.
+- narrator/core/retrieval_benchmark.py: adapta KnowledgeRouter al evaluador y extrae IDs/procedencia de los fragmentos reales.
+- data/evaluation/retrieval_ground_truth.yaml: batería inicial de consultas universales, sin texto de manuales.
+- tests/test_retrieval_evaluator.py y tests/test_retrieval_benchmark.py: cobertura matemática y de integración con router mediante fixture determinista.
+- docs/adr/ADR-2026-10-05-evaluacion-retrieval.md: decisión arquitectónica y criterio de comparación.
+
+Importante: todavía no se ejecutó el benchmark contra el índice real ni se informan métricas empíricas. Para eso hace falta disponer localmente del índice de neuronas y del modelo de embeddings. Los tests quedaron escritos para esa futura ejecución.
+
+
+## Segunda pasada — benchmark real y atomicidad reforzada
+
+Se añadió `tools/evaluate_retrieval.py`, un CLI offline que instancia el Orchestrator real, carga el ground truth y ejecuta el KnowledgeRouter contra el índice del Cerebro. El comando falla explícitamente si el índice o el modelo de embeddings no están disponibles, evitando falsos resultados de recall cero.
+
+También se reforzó ProposalExecutor:
+- creación de NPCs/localizaciones con rollback si falla una creación posterior;
+- transacción de estado agrupada;
+- rollback de memoria/personaje;
+- persistencia única al confirmar o restaurar;
+- cobertura de fallo a mitad de creación de entidades.
+
+No se ejecutó el CLI ni los tests localmente.

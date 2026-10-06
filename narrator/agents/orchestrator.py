@@ -202,11 +202,18 @@ class Orchestrator:
         return ""
 
     def _get_known_entity_names(self) -> "list[str]":
-        """Nombres de NPCs y Locaciones del vault (Fase 8: recall por mención)."""
+        """Nombres de entidades que el retrieval puede exponer por mención."""
         names = []
+        restricted = {"secret", "private", "dm", "hidden", "oculto", "secreto", "privado"}
         for tipo in ("npc", "locacion"):
             for item in self.retriever.get_by_type(tipo, max_files=50):
-                nombre = item["meta"].get("nombre")
+                meta = item.get("meta", {}) or {}
+                if meta.get("llm_visible") is False:
+                    continue
+                visibility = str(meta.get("visibility", meta.get("visibilidad", ""))).strip().lower()
+                if visibility in restricted:
+                    continue
+                nombre = meta.get("nombre")
                 if nombre:
                     names.append(nombre)
         return names
@@ -268,11 +275,13 @@ class Orchestrator:
                 last_user_msg, self._get_known_entity_names()
             )
             if mentioned:
-                extra_ctx = self.retriever.get_relevant_context(
-                    mentioned[0], max_words=150, lorebook_entries=lorebook_entries
+                visible_mentions = self.knowledge_router.retrieve_visible_campaign_fragments(
+                    mentioned[0], limit=1
                 )
-                if extra_ctx and extra_ctx not in vault_ctx:
-                    vault_ctx = f"{vault_ctx}\n---\n[CAMPAIGN | mención explícita]\n{extra_ctx}"
+                if visible_mentions:
+                    extra_ctx = visible_mentions[0].text
+                    if extra_ctx and extra_ctx not in vault_ctx:
+                        vault_ctx = f"{vault_ctx}\n---\n[CAMPAIGN | mención explícita]\n{extra_ctx}"
 
 
         active_npcs = self.retriever.get_active_npcs_summary(max_npcs=6)
@@ -365,6 +374,28 @@ class Orchestrator:
             "changes": result.changes,
             "validation": result.report.to_dict(),
         }
+
+    def apply_world_advances(self, advances: list[dict]) -> list[str]:
+        """Aplica avances de mundo en el límite de servicio, no desde la UI."""
+        applied = []
+        for adv in advances or []:
+            nombre = str(adv.get("nombre") or "").strip()
+            if not nombre:
+                continue
+            try:
+                ticks = int(adv.get("ticks", 1))
+            except (TypeError, ValueError):
+                ticks = 1
+            razon = str(adv.get("razon") or "").strip()
+            self.state.add_front(nombre, razon)
+            self.state.advance_front_clock(nombre, ticks)
+            if self.world_sim.get_front_stage(nombre) is None:
+                self.world_sim.initialize_front(
+                    nombre, razon, initial_stage=0, max_stage=6
+                )
+            self.world_sim.advance_front(nombre, ticks)
+            applied.append(nombre)
+        return applied
 
     def evaluate_causality(self, event_text: str = "", *, next_turn: bool = False) -> dict:
         """Activa consecuencias pendientes cuando su trigger/due ya se cumple."""

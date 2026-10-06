@@ -29,21 +29,20 @@ _memory = MemoryManager()
 # ── Backend de agentes ────────────────────────────────────
 # Carga con fallback: si el package no está listo, usa modo legacy.
 try:
-    from narrator.agents.orchestrator import Orchestrator
     from narrator.agents.extractor_agent import ExtractorAgent
-    from narrator.agents.narrator_agent import NarratorAgent
     from narrator.agents.world_agent import WorldAgent
-    from narrator.core.prompt_builder import PromptBuilder
-    from narrator.core.rule_arbiter import RuleArbiter
+    from narrator.core.narrator_service import NarratorService
     from narrator.core.vault_writer import VaultWriter
 
     _CONFIG_PATH = str(PROJECT_ROOT / "config" / "config.yaml")
-    _orchestrator = Orchestrator(config_path=_CONFIG_PATH)
-    _narrator_agent = NarratorAgent()
-    _rule_arbiter = RuleArbiter(builder=_orchestrator.builder)
+    _narrator_service = NarratorService(config_path=_CONFIG_PATH)
+    _orchestrator = _narrator_service.orchestrator
+    _narrator_agent = _narrator_service.narrator_agent
+    _rule_arbiter = _narrator_service.rule_arbiter
     _vault_writer: "VaultWriter | None" = None
     _AGENT_MODE = True
 except Exception as _agent_err:
+    _narrator_service = None
     _orchestrator = None
     _narrator_agent = None
     _rule_arbiter = None
@@ -209,7 +208,7 @@ def extract_pdf_text(path: str, max_chars: int = 12000) -> str | None:
 def detect_system(text: str) -> tuple[str, str]:
     """Detecta el sistema de juego. Devuelve (display_name, slug)."""
     if _AGENT_MODE and _orchestrator:
-        slug = _orchestrator.detect_and_set_system(text, state)
+        slug = _narrator_service.detect_system(text, state)
         names = {
             "vtm_v20": "Mundo de Tinieblas (Vampiro V20)",
             "dnd_5e": "Dungeons & Dragons 5e",
@@ -403,57 +402,53 @@ def finish_streaming(full_text: str):
     if _narrator_agent:
         is_important = _narrator_agent.is_important_event(full_text)
         char_data = _narrator_agent.extract_character_json(full_text)
-        if char_data:
-            with state_lock:
-                state["character"].update(char_data)
-            needs_char_refresh = True
+
+        # Toda salida estructurada del LLM converge en una única propuesta.
+        # Esto evita que narrative_proposal, [state:], JSON legacy y entidades
+        # se ejecuten como transacciones independientes dentro del mismo turno.
+        proposal = _narrator_service.compose_postprocessing_proposal(
+            narrative_proposal=narrative_proposal,
+            character_data=char_data if not narrative_proposal else None,
+            mutations=mutations,
+            new_entities=new_entities,
+            include_entities=bool(_vault_writer),
+        )
+        if proposal:
+            try:
+                proposal_result = _narrator_service.apply_proposal_with_fallback(
+                    proposal,
+                    app_state=state,
+                )
+                if not proposal_result.get("applied"):
+                    logger.warning(
+                        "Propuesta post-LLM rechazada; fallback narración-only: %s",
+                        proposal_result.get("validation", {}),
+                    )
+                    if _active_turn_contract is not None:
+                        _active_turn_contract.record_proposal_result(proposal_result)
+                else:
+                    changelog = list(proposal_result.get("changes", []))
+                    if _active_turn_contract is not None:
+                        _active_turn_contract.record_proposal_result(proposal_result)
+                    if changelog:
+                        needs_char_refresh = bool(
+                            proposal.get("character_changes") or proposal.get("character")
+                        )
+                        is_important = True
+                        ts = datetime.now().strftime("%H:%M")
+                        with state_lock:
+                            state["session_log"].extend(
+                                f"[{ts}] Estado: {change}" for change in changelog
+                            )
+            except Exception as e:
+                logger.error(
+                    "Error ejecutando propuesta post-LLM compuesta: %s",
+                    e,
+                    exc_info=True,
+                )
+
         with state_lock:
             state["tirada_sugerida"] = _narrator_agent.extract_dice_suggestion(full_text)
-
-        if narrative_proposal:
-            try:
-                proposal_result = _orchestrator.validate_and_apply_proposal(
-                    narrative_proposal,
-                    app_state=state,
-                )
-                if not proposal_result.get("applied"):
-                    logger.warning(
-                        "Propuesta narrativa rechazada: %s",
-                        proposal_result.get("validation", {}),
-                    )
-                elif proposal_result.get("changes"):
-                    if _active_turn_contract is not None:
-                        _active_turn_contract.state_delta = {
-                            "proposal_changes": list(proposal_result["changes"])
-                        }
-                    is_important = True
-            except Exception as e:
-                logger.error(f"Error ejecutando propuesta narrativa: {e}", exc_info=True)
-
-        if mutations:
-            try:
-                proposal_result = _orchestrator.validate_and_apply_proposal(
-                    {"character_changes": mutations},
-                    app_state=state,
-                )
-                changelog = list(proposal_result.get("changes", []))
-                if not proposal_result.get("applied"):
-                    logger.warning(
-                        "Propuesta de mutación rechazada: %s",
-                        proposal_result.get("validation", {}),
-                    )
-            except Exception as e:
-                changelog = []
-                logger.error(f"Error validando propuesta de estado: {e}", exc_info=True)
-
-            if changelog:
-                if _active_turn_contract is not None:
-                    _active_turn_contract.state_delta = {"character_changes": list(changelog)}
-                needs_char_refresh = True
-                is_important = True
-                ts = datetime.now().strftime("%H:%M")
-                with state_lock:
-                    state["session_log"].extend(f"[{ts}] Estado: {c}" for c in changelog)
 
         # Fase 13: solo señala (log), nunca bloquea el turno.
         last_user = next(
@@ -465,17 +460,6 @@ def finish_streaming(full_text: str):
                 f"Jugador: {last_user[:80]!r}"
             )
 
-        if new_entities and _vault_writer:
-            for tipo, data in new_entities:
-                try:
-                    if tipo == "npc":
-                        _vault_writer.create_npc(data)
-                    else:
-                        _vault_writer.create_locacion(data)
-                except Exception as e:
-                    logger.error(
-                        f"Error auto-guardando entidad '{data.get('nombre')}': {e}", exc_info=True
-                    )
     else:
         is_important = any(
             w in full_text.lower()
@@ -495,7 +479,7 @@ def finish_streaming(full_text: str):
                 break
         session_n = state.get("session_number", 1)
         threading.Thread(
-            target=_vault_writer.on_narrator_response,
+            target=_vault_writer.on_narrator_response_safe,
             args=(last_user, full_text),
             kwargs={"session_number": session_n, "is_important": is_important},
             daemon=True,
@@ -504,8 +488,7 @@ def finish_streaming(full_text: str):
     # Cierre determinista del contrato: persistimos solo el resumen técnico.
     if _active_turn_contract is not None and _orchestrator is not None:
         try:
-            _active_turn_contract.mark_persisted()
-            _orchestrator.state.record_turn(_active_turn_contract.to_dict())
+            _narrator_service.persist_turn(_active_turn_contract)
         except Exception as e:
             logger.error(f"Error persistiendo contrato de turno: {e}", exc_info=True)
             _active_turn_contract.record_error(str(e))
@@ -643,7 +626,7 @@ def send_message(user_text: str = None):
     if _AGENT_MODE and _orchestrator:
         event_type, intensity = _detect_event_type(user_text)
         state["ultimo_evento"] = event_type
-        _orchestrator.record_event(event_type, intensity)
+        _narrator_service.record_event(event_type, intensity)
 
     _is_streaming = True
     _streaming_token = ""
@@ -662,7 +645,7 @@ def send_message(user_text: str = None):
         global _active_turn_contract
         if _AGENT_MODE and _orchestrator:
             try:
-                contract = _orchestrator.prepare_turn(state)
+                contract = _narrator_service.prepare_turn(state)
                 _active_turn_contract = contract
                 system_content = contract.narrative_prompt
             except Exception as e:
@@ -1277,21 +1260,7 @@ def run_world_agent():
                 session_number=state.get("session_number", 1),
                 on_progress=on_progress,
             )
-            for adv in result.get("advances", []):
-                nombre = adv.get("nombre", "")
-                ticks = adv.get("ticks", 1)
-                razon = adv.get("razon", "")
-                if not nombre:
-                    continue
-                # Registrar el frente si no existe: antes ambas llamadas eran
-                # no-ops (relojes YAML y world_state.json siempre vacíos) y
-                # solo los checkboxes del MD avanzaban.
-                _orchestrator.state.add_front(nombre, razon)
-                _orchestrator.state.advance_front_clock(nombre, ticks)
-                if _orchestrator.world_sim.get_front_stage(nombre) is None:
-                    _orchestrator.world_sim.initialize_front(
-                        nombre, razon, initial_stage=0, max_stage=6)
-                _orchestrator.world_sim.advance_front(nombre, ticks)
+            _narrator_service.apply_world_advances(result.get("advances", []))
             summary = (
                 f"Mundo avanzado: {result['frentes_avanzados']} frentes, "
                 f"{result['npcs_simulados']} NPCs simulados.\n\n"

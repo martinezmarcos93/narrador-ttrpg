@@ -141,14 +141,19 @@ class StateManager:
         try:
             with open(self.path, encoding="utf-8") as f:
                 loaded = yaml.safe_load(f) or {}
-            # Deep merge sobre el default para no perder claves nuevas
+            # Merge recursivo: un estado antiguo puede carecer de subclaves
+            # nuevas sin destruir los defaults anidados.
             merged = self._default()
-            for key, val in loaded.items():
-                if isinstance(val, dict) and key in merged:
-                    merged[key].update(val)
-                else:
-                    merged[key] = val
-            self.data = merged
+
+            def merge_dict(base: dict, incoming: dict) -> dict:
+                for key, val in incoming.items():
+                    if isinstance(val, dict) and isinstance(base.get(key), dict):
+                        merge_dict(base[key], val)
+                    else:
+                        base[key] = val
+                return base
+
+            self.data = merge_dict(merged, loaded)
             return True
         except Exception as e:
             # Estado corrupto: backup antes de que el próximo save() lo pise.
@@ -163,6 +168,11 @@ class StateManager:
                 logger.error(f"No pude hacer backup del estado corrupto: {be}")
             return False
 
+    @property
+    def batch_depth(self) -> int:
+        """Cantidad de fronteras de persistencia actualmente abiertas."""
+        return self._batch_depth
+
     def begin_batch(self) -> None:
         """Agrupa múltiples mutaciones en una única persistencia."""
         self._batch_depth += 1
@@ -176,17 +186,49 @@ class StateManager:
             self._save_pending = False
             self._save_now()
 
-    def _save_now(self) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.path, "w", encoding="utf-8") as f:
-            yaml.dump(
-                self.data,
-                f,
-                allow_unicode=True,
-                default_flow_style=False,
-                sort_keys=False,
-            )
+    def rollback_batch(self) -> None:
+        """Cancela el lote actual sin persistir sus escrituras pendientes.
 
+        La restauración del estado en memoria la realiza el llamador que posee
+        el snapshot transaccional. Este método solo cierra la frontera de batch
+        y elimina la intención de persistencia pendiente.
+        """
+        if self._batch_depth <= 0:
+            self._save_pending = False
+            return
+        self._batch_depth -= 1
+        if self._batch_depth == 0:
+            self._save_pending = False
+
+    def _save_now(self) -> None:
+        """Escribe el estado mediante reemplazo atómico del archivo final."""
+        import os
+        import tempfile
+
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        fd, temp_name = tempfile.mkstemp(
+            prefix=f".{self.path.name}.",
+            suffix=".tmp",
+            dir=str(self.path.parent),
+        )
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                yaml.dump(
+                    self.data,
+                    f,
+                    allow_unicode=True,
+                    default_flow_style=False,
+                    sort_keys=False,
+                )
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(temp_name, self.path)
+        except Exception:
+            try:
+                os.unlink(temp_name)
+            except OSError:
+                pass
+            raise
     def save(self):
         if self._batch_depth > 0:
             self._save_pending = True
@@ -239,12 +281,9 @@ class StateManager:
             lines.append("Eventos recientes:\n" + "\n".join(
                 f"  - {item.get('evento')}" for item in events[-5:]
             ))
-        facts = self.data.get("hechos_conocidos", {})
-        if facts:
-            lines.append("Hechos conocidos:\n" + ", ".join(
-                f"{key}={entry.get('valor') if isinstance(entry, dict) else entry}"
-                for key, entry in list(facts.items())[-12:]
-            ))
+        # Legacy hechos_conocidos are intentionally excluded from this
+        # perspective-neutral state context; KnowledgeVisibility decides what
+        # the narrator may actually know.
         combat = self.get_combat_status_text()
         if combat:
             lines.append("Combate: " + combat)
@@ -449,6 +488,22 @@ class StateManager:
             elif not desired and name in present:
                 present.remove(name)
                 changes.append(f"npc:-{name}")
+
+        for item in getattr(proposal, "relations", []) or []:
+            source = str(item.get("source") or "").strip()
+            target = str(item.get("target") or "").strip()
+            relation = str(item.get("relation") or "").strip()
+            if source and target and relation:
+                self.set_relation(
+                    source,
+                    target,
+                    relation,
+                    int(item.get("strength", 0)),
+                    source_type=str(item.get("source_type") or "npc"),
+                    target_type=str(item.get("target_type") or "npc"),
+                    reason=str(item.get("reason") or "narrative_proposal"),
+                )
+                changes.append(f"relation:{source}->{target}:{relation}")
 
         for item in proposal.consequences:
             consequence = str(item.get("text") or item.get("consequence") or "").strip()

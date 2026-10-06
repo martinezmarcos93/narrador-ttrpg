@@ -129,3 +129,111 @@ def test_executor_success_keeps_created_entity(tmp_path):
     assert result.applied
     assert state.get_known_fact("persistent") is True
     assert (tmp_path / "vault" / "NPCs" / "Guardia_Persistente.md").exists()
+
+
+class _CountingState(StateManager):
+    def __init__(self, path):
+        super().__init__(path)
+        self.disk_writes = 0
+
+    def _save_now(self):
+        self.disk_writes += 1
+        super()._save_now()
+
+
+def test_executor_success_persists_state_once(tmp_path):
+    state = _CountingState(str(tmp_path / "estado.yaml"))
+    state.set_known_fact("existing", True)
+    state.disk_writes = 0
+
+    result = ProposalExecutor(state).execute({
+        "facts": {"new_fact": True},
+        "events": ["evento"],
+    })
+
+    assert result.applied
+    assert state.disk_writes == 1
+    assert state.get_known_fact("new_fact") is True
+
+
+def test_executor_failure_restores_existing_file_once(tmp_path):
+    state = _CountingState(str(tmp_path / "estado.yaml"))
+    state.set_known_fact("existing", True)
+    state.disk_writes = 0
+
+    result = ProposalExecutor(
+        state,
+        narrator_agent=_FailingNarrator(),
+        character_schema={"base_sections": [{"fields": [{"key": "hp", "type": "int"}]}]},
+    ).execute(
+        {"facts": {"temporary": True}, "character_changes": [{"field": "hp", "delta": -1}]},
+        character={"hp": 10},
+    )
+
+    assert not result.applied
+    assert result.rolled_back
+    assert state.disk_writes == 1
+    assert state.get_known_fact("temporary") is None
+    assert state.get_known_fact("existing") is True
+
+
+def test_executor_failure_without_existing_file_leaves_no_state_file(tmp_path):
+    state = _CountingState(str(tmp_path / "estado.yaml"))
+
+    result = ProposalExecutor(
+        state,
+        narrator_agent=_FailingNarrator(),
+        character_schema={"base_sections": [{"fields": [{"key": "hp", "type": "int"}]}]},
+    ).execute(
+        {"facts": {"temporary": True}, "character_changes": [{"field": "hp", "delta": -1}]},
+        character={"hp": 10},
+    )
+
+    assert not result.applied
+    assert result.rolled_back
+    assert not state.path.exists()
+
+
+class _PartiallyFailingVault:
+    def __init__(self):
+        self.created = []
+
+    def create_npc(self, data):
+        marker = f"npc:{data['nombre']}"
+        self.created.append(marker)
+        return marker
+
+    def create_locacion(self, data):
+        raise RuntimeError("fallo creando locación")
+
+    def rollback_created_entities(self, paths):
+        self.created = [item for item in self.created if item not in paths]
+
+
+def test_executor_rolls_back_entities_when_entity_creation_fails_mid_batch(tmp_path):
+    state = StateManager(str(tmp_path / "estado.yaml"))
+    vault = _PartiallyFailingVault()
+    executor = ProposalExecutor(state, vault_writer=vault)
+
+    result = executor.execute({
+        "npcs": [{"nombre": "NPC Parcial"}],
+        "locations": [{"nombre": "Locación Fallida"}],
+    })
+
+    assert not result.applied
+    assert result.rolled_back
+    assert vault.created == []
+    assert not state.path.exists()
+
+
+def test_executor_uses_public_batch_api_for_nested_transaction(tmp_path):
+    state = StateManager(str(tmp_path / "estado.yaml"))
+    state.begin_batch()
+    result = ProposalExecutor(state).execute({
+        "facts": {"inside": True},
+    })
+    assert result.applied
+    assert state.batch_depth == 1
+    assert state.get_known_fact("inside") is True
+    state.end_batch()
+    assert state.path.exists()

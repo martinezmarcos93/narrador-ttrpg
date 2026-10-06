@@ -65,6 +65,15 @@ class RecuperadorCerebro:
             return True
         return value in {system.lower(), "universal", "generic", "all"}
 
+    @staticmethod
+    def _wanted_campaign(meta: dict, campaign: str | None) -> bool:
+        if not campaign:
+            return True
+        value = str(meta.get("campaign", meta.get("campaña", ""))).strip().lower()
+        if not value:
+            return True
+        return value in {campaign.lower(), "universal", "all", "generic"}
+
     def _graph_neighbors(self, path: str) -> list[str]:
         meta = self.index.metadata(path)
         values = []
@@ -95,6 +104,7 @@ class RecuperadorCerebro:
         query: str,
         max_results: int = 6,
         system: str | None = None,
+        campaign: str | None = None,
         kind: str | None = None,
         expand_graph: bool = True,
     ) -> list[dict]:
@@ -109,6 +119,8 @@ class RecuperadorCerebro:
         for path in paths:
             meta, body = self._read(path)
             if not self._wanted_system(meta, system):
+                continue
+            if not self._wanted_campaign(meta, campaign):
                 continue
             if kind and str(meta.get("kind", "")) != kind:
                 continue
@@ -170,12 +182,14 @@ class RecuperadorCerebro:
         query: str,
         max_words: int = 700,
         system: str | None = None,
+        campaign: str | None = None,
         kind: str | None = None,
     ) -> str:
         results = self.search(
             query,
             max_results=8,
             system=system,
+            campaign=campaign,
             kind=kind,
             expand_graph=True,
         )

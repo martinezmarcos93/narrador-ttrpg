@@ -1,0 +1,182 @@
+# Ground truth inicial, deliberadamente pequeño.
+# Los IDs son neuronas conceptuales, no texto copiado de manuales.
+cases:
+  - id: universal_investigacion
+    query: "los jugadores investigan una pista y necesitan tratar un fallo"
+    relevant_ids:
+      - universal-investigacion
+      - universal-fallo-y-avance
+    system: generic
+    expected_layers:
+      - universal
+
+  - id: universal_continuidad
+    query: "una consecuencia de una escena anterior debe seguir siendo válida"
+    relevant_ids:
+      - universal-consecuencias
+      - universal-estado-persistente
+      - universal-continuidad-temporal
+    system: generic
+    expected_layers:
+      - universal
+
+  - id: universal_conflicto_social
+    query: "un NPC negocia pero tiene objetivos, límites y una relación previa"
+    relevant_ids:
+      - universal-conflicto-social
+      - universal-npc
+    system: generic
+    expected_layers:
+      - universal
+
+  - id: universal_agencia
+    query: "el jugador declara una acción y el mundo debe responder sin quitarle agencia"
+    relevant_ids:
+      - universal-agencia-jugador
+      - universal-escena
+    graded_relevance:
+      universal-agencia-jugador: 3
+      universal-escena: 1
+    system: generic
+    expected_layers:
+      - universal
+
+  - id: universal_frentes
+    query: "un frente avanza y un reloj amenaza con cambiar la situación"
+    relevant_ids:
+      - universal-frentes-relojes
+      - universal-causalidad
+      - universal-estado-persistente
+    graded_relevance:
+      universal-frentes-relojes: 3
+      universal-causalidad: 2
+      universal-estado-persistente: 1
+    system: generic
+    expected_layers:
+      - universal
+
+  - id: universal_conocimiento
+    query: "el personaje conoce una pista pero no debe recibir secretos que todavía no descubrió"
+    relevant_ids:
+      - universal-informacion-conocimiento
+      - universal-investigacion
+    graded_relevance:
+      universal-informacion-conocimiento: 3
+      universal-investigacion: 2
+    system: generic
+    expected_layers:
+      - universal
+
+  - id: universal_combate
+    query: "una pelea cambia el estado de ficción y las consecuencias deben persistir"
+    relevant_ids:
+      - universal-combate
+      - universal-estado-persistente
+      - universal-causalidad
+    graded_relevance:
+      universal-combate: 3
+      universal-estado-persistente: 2
+      universal-causalidad: 1
+    system: generic
+    expected_layers:
+      - universal
+
+  - id: universal_causalidad
+    query: "una acción produce una consecuencia que se activa en un turno posterior"
+    relevant_ids:
+      - universal-causalidad
+      - universal-consecuencias
+      - universal-continuidad-temporal
+    graded_relevance:
+      universal-causalidad: 3
+      universal-consecuencias: 2
+      universal-continuidad-temporal: 1
+    system: generic
+    expected_layers:
+      - universal
+
+  - id: ambiguous_investigacion_campaign
+    query: "pista encontrada durante una investigación que también afecta una amenaza de campaña"
+    relevant_ids:
+      - universal-investigacion
+      - universal-consecuencias
+    graded_relevance:
+      universal-investigacion: 3
+      universal-consecuencias: 2
+    system: generic
+    expected_layers:
+      - universal
+      - campaign
+
+  - id: ambiguous_combate_estado
+    query: "combate que modifica al personaje y deja consecuencias persistentes"
+    relevant_ids:
+      - universal-combate
+      - universal-estado-persistente
+      - universal-causalidad
+    graded_relevance:
+      universal-combate: 3
+      universal-estado-persistente: 2
+      universal-causalidad: 1
+    system: generic
+    expected_layers:
+      - universal
+      - state
+
+  - id: system_vtm_knowledge
+    query: "Vampiro V20: una pista de la Mascarada que debe respetar las reglas específicas del sistema"
+    relevant_ids:
+      - universal-informacion-conocimiento
+      - universal-investigacion
+    graded_relevance:
+      universal-informacion-conocimiento: 3
+      universal-investigacion: 2
+    system: vtm_v20
+    expected_layers:
+      - system
+      - universal
+
+  - id: system_dnd_resolution
+    query: "D&D 5e: una investigación requiere resolver una acción con las reglas del sistema y conservar sus consecuencias"
+    relevant_ids:
+      - universal-investigacion
+      - universal-causalidad
+      - universal-estado-persistente
+    graded_relevance:
+      universal-investigacion: 3
+      universal-causalidad: 2
+      universal-estado-persistente: 1
+    system: dnd_5e
+    expected_layers:
+      - system
+      - universal
+
+  - id: system_coc_resolution
+    query: "La Llamada de Cthulhu 7e: una investigación debe resolver una acción y conservar las consecuencias sin revelar conocimiento no descubierto"
+    relevant_ids:
+      - universal-investigacion
+      - universal-informacion-conocimiento
+      - universal-causalidad
+    graded_relevance:
+      universal-investigacion: 3
+      universal-informacion-conocimiento: 2
+      universal-causalidad: 1
+    system: coc_7e
+    expected_layers:
+      - system
+      - universal
+
+  - id: system_pathfinder_resolution
+    query: "Pathfinder 2e: una acción durante una escena debe resolverse con reglas específicas y mantener continuidad del estado"
+    relevant_ids:
+      - universal-resolucion-acciones
+      - universal-estado-persistente
+      - universal-continuidad-temporal
+    graded_relevance:
+      universal-resolucion-acciones: 3
+      universal-estado-persistente: 2
+      universal-continuidad-temporal: 1
+    system: pathfinder_2e
+    expected_layers:
+      - system
+      - universal
