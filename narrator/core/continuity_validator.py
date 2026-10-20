@@ -441,6 +441,10 @@ class ContinuityValidator:
                     "invalid_relation_strength", "error",
                     "La fuerza de una relación debe estar entre -100 y 100.",
                 ))
+            from narrator.core.social import valence_warning
+
+            if warning := valence_warning(relation, strength):
+                issues.append(ContinuityIssue("relation_valence", "warning", warning))
             key = (source, target)
             if key in existing_keys or key in seen:
                 issues.append(ContinuityIssue(

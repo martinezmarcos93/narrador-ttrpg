@@ -837,8 +837,12 @@ class StateManager:
 
     # ── Historial de sesiones ─────────────────────────────────
     def start_session(self):
+        from narrator.core.social import session_decay
+
         self.data["meta"]["sesion_actual"] = self.data["meta"].get("sesion_actual", 0) + 1
         self.data["meta"]["ultima_sesion"] = datetime.now().isoformat()
+        # Emociones volátiles (temor, favores) se erosionan entre sesiones.
+        session_decay(self.data.get("relaciones", {}))
         self.save()
 
     def add_session_summary(
