@@ -46,6 +46,11 @@ class ProposalExecutor:
             allowed_fronts=self.allowed_fronts,
         )
 
+    def configure_system_rules(self, rules, system_slug: str = "") -> None:
+        """Activa las reglas de continuidad del System Pack en uso."""
+        self.continuity.system_rules = rules
+        self.continuity.system_slug = system_slug
+
     def configure_front_contract(self, allowed_fronts) -> None:
         self.allowed_fronts = set(allowed_fronts or [])
         self.validator.allowed_fronts = self.allowed_fronts

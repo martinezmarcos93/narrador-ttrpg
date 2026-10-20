@@ -13,6 +13,8 @@ from typing import Any
 
 import yaml
 
+from narrator.core.system_rules import SystemContinuityRules
+
 REQUIRED_FIELDS = (
     "slug",
     "sistema",
@@ -54,6 +56,7 @@ class SystemPack:
     knowledge: KnowledgePolicy = field(
         default_factory=lambda: KnowledgePolicy(brain_system="generic")
     )
+    continuity_rules: SystemContinuityRules = field(default_factory=SystemContinuityRules)
     raw: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
@@ -104,6 +107,7 @@ class SystemPack:
             },
             llm_system_prompt=str(data.get("llm_system_prompt") or ""),
             knowledge=policy,
+            continuity_rules=SystemContinuityRules.from_dict(data.get("continuity_rules")),
             raw=dict(data),
         )
 

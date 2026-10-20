@@ -174,3 +174,16 @@ resolution:
     - {keywords: ["investigo", "biblioteca", "archivo", "consulto"], atributo: "buscar_libros", etiqueta: "Buscar Libros"}
     - {keywords: ["persuado", "convenzo", "negocio"], atributo: "persuasion", etiqueta: "Persuasión"}
     - {keywords: ["psicologia", "intuyo", "leo a"], atributo: "psicologia", etiqueta: "Psicología"}
+
+# Reglas de continuidad verificadas por Python antes de mutar el estado
+# (ver narrator/core/system_rules.py).
+continuity_rules:
+  fact_ranges:
+    cordura: {min: 0, max: 99}
+    suerte: {min: 0, max: 99}
+    puntos_magia: {min: 0}
+  fact_values:
+    locura: [ninguna, temporal, indefinida, permanente]
+  mutually_exclusive:
+    - [inconsciente, persecucion_activa]
+    - [muerto, herida_grave_estabilizada]

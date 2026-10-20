@@ -52,3 +52,24 @@ La autoridad narrativa continúa siendo independiente del orden de consulta:
 `STATE > MANUAL > SYSTEM > CAMPAIGN > UNIVERSAL`.
 
 Esto permite consultar varias fuentes sin permitir que conocimiento general desplace una regla específica.
+
+## Reglas de continuidad (`continuity_rules`, opcional)
+
+Restricciones de dominio que `ContinuityValidator` verifica antes de mutar el estado.
+Se aplican a `facts` de la propuesta, a efectos causales `fact`/`world_fact`/
+`player_fact`/`character_fact` (incluidos los anidados) y, para exclusiones, al
+estado vivo.
+
+```yaml
+continuity_rules:
+  fact_ranges:
+    humanidad: {min: 0, max: 10}      # error system_fact_out_of_range / system_fact_type
+  fact_values:
+    estado_vampiro: [despierto, torpor]  # error system_fact_value
+  mutually_exclusive:
+    - [en_torpor, en_combate]         # error system_exclusive_facts
+  forbidden_effects: [scene_location] # error system_forbidden_effect
+```
+
+Implementación: `narrator/core/system_rules.py`. El Orchestrator activa las reglas
+del pack del sistema en uso en cada `validate_and_apply_proposal`.

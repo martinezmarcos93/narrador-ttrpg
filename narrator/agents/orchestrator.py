@@ -390,10 +390,15 @@ class Orchestrator:
             contract_errors = pack.validate_front_contract()
             if contract_errors:
                 logger.warning("System Pack con contrato de frentes inválido: %s", contract_errors)
-            allowed_fronts = set(pack.fronts) | set(self.state.data.get("frentes", {}))
+            allowed_fronts = (
+                set(pack.fronts)
+                | set(self.state.data.get("frentes", {}))
+                | set(self.entity_registry.names("frente"))
+            )
             self.proposal_executor.configure_front_contract(allowed_fronts)
+            self.proposal_executor.configure_system_rules(pack.continuity_rules, pack.slug)
         except Exception as exc:
-            logger.warning("No se pudo configurar contrato de frentes: %s", exc)
+            logger.warning("No se pudo configurar el contrato del System Pack: %s", exc)
         result = self.proposal_executor.execute(proposal, character=character)
         return {
             "applied": result.applied,

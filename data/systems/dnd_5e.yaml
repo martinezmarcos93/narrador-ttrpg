@@ -193,3 +193,15 @@ resolution:
     - {keywords: ["investigo", "examino", "analizo", "recuerdo", "arcanos", "descifro"], atributo: "inteligencia", etiqueta: "Inteligencia"}
     - {keywords: ["percibo", "observo", "escucho", "busco", "rastreo", "medicina", "intuyo"], atributo: "sabiduria", etiqueta: "Sabiduría"}
     - {keywords: ["persuado", "convenzo", "intimido", "engaño", "negocio", "seduzco", "actúo"], atributo: "carisma", etiqueta: "Carisma"}
+
+# Reglas de continuidad verificadas por Python antes de mutar el estado
+# (ver narrator/core/system_rules.py).
+continuity_rules:
+  fact_ranges:
+    nivel_agotamiento: {min: 0, max: 6}
+    salvaciones_muerte_exitos: {min: 0, max: 3}
+    salvaciones_muerte_fallos: {min: 0, max: 3}
+    inspiracion_heroica: {min: 0, max: 1}
+  mutually_exclusive:
+    - [inconsciente, concentrando]
+    - [muerto, estable]

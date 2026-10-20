@@ -69,6 +69,9 @@ class ContinuityValidator:
         # Registro opcional de entidades del vault (EntityRegistry): amplía lo
         # que se considera "existente" más allá del estado vivo.
         self.registry = entity_registry
+        # Reglas de dominio del System Pack activo (SystemContinuityRules).
+        self.system_rules = None
+        self.system_slug = ""
 
     def _registry_names(self, kind: str) -> NameSet:
         if self.registry is None:
@@ -116,6 +119,8 @@ class ContinuityValidator:
         self._check_clock_aggregate(
             proposal.get("clock_changes", []), proposal.get("consequences", []), issues
         )
+        if self.system_rules is not None:
+            issues.extend(self.system_rules.validate(proposal, self.data, self.system_slug))
 
         return ContinuityReport(not any(i.severity == "error" for i in issues), issues)
 

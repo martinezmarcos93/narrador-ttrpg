@@ -252,3 +252,17 @@ lorebook:
       personaje de su moral mortal. Cae ante actos atroces cometidos sin
       remordimiento; en niveles bajos, el personaje se vuelve más proclive
       al frenesí y más distante de la empatía humana.
+
+# Reglas de continuidad verificadas por Python antes de mutar el estado
+# (ver narrator/core/system_rules.py).
+continuity_rules:
+  fact_ranges:
+    humanidad: {min: 0, max: 10}
+    fuerza_voluntad: {min: 0, max: 10}
+    puntos_sangre: {min: 0, max: 50}
+    generacion: {min: 3, max: 15}
+  fact_values:
+    estado_vampiro: [despierto, letargo, torpor, ceniza]
+  mutually_exclusive:
+    - [en_torpor, en_combate]
+    - [en_torpor, en_frenesi]
