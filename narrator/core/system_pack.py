@@ -28,7 +28,7 @@ REQUIRED_FIELDS = (
 
 @dataclass(frozen=True)
 class KnowledgePolicy:
-    brain_system: str
+    brain_system: str = "generic"
     preferred_sources: tuple[str, ...] = ("manual", "system", "universal")
     universal_fallback: bool = True
 

@@ -65,3 +65,15 @@ def test_system_pack_rejects_front_unknown_faction():
         "llm_system_prompt": "",
     })
     assert any("facción inexistente" in error for error in pack.validate_front_contract())
+
+
+def test_all_bundled_system_packs_satisfy_contract():
+    from pathlib import Path
+
+    systems = Path(__file__).resolve().parent.parent / "data" / "systems"
+    slugs = sorted(p.stem for p in systems.glob("*.yaml"))
+    assert slugs, "no hay System Packs en data/systems"
+    for slug in slugs:
+        pack = SystemPack.load(slug, systems)
+        assert pack.slug == slug
+        assert pack.validate_front_contract() == []

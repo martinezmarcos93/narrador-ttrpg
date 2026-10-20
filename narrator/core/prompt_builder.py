@@ -77,8 +77,9 @@ class PromptBuilder:
                 expected_slug=None if path.name == "generic.yaml" else slug,
             )
         except ValueError as exc:
+            # Fallback graceful: un YAML incompleto no frena la sesión. Los
+            # packs distribuidos en data/systems se validan en los tests.
             logger.error(f"System Pack inválido '{slug}': {exc}")
-            raise
 
         # Validación del bloque resolution (Fase 10): se registra el error
         # apenas se carga el sistema, sin frenar el turno en curso — el
