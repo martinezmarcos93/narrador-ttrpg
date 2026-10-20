@@ -51,3 +51,20 @@ def test_every_pack_declares_detection_block():
     for slug, profile in profiles.items():
         if slug != "generic":
             assert profile["keywords"], slug
+
+
+def test_identify_manual_edition_and_mismatch_warning():
+    from narrator.core.system_detection import identify_manual
+
+    v20 = identify_manual("Vampiro: La Mascarada 20º Aniversario. La Camarilla y el Sabbat.",
+                          "data/systems")
+    assert (v20.slug, v20.edition, v20.edition_mismatch) == ("vtm_v20", "V20", False)
+
+    v5 = identify_manual("Vampiro La Mascarada quinta edición: el Ansia y la Camarilla.",
+                         "data/systems")
+    assert v5.slug == "vtm_v20"
+    assert v5.edition == "V5" and v5.edition_mismatch
+    assert "V5" in v5.warning
+
+    nada = identify_manual("Un juego sobre gatos mágicos.", "data/systems")
+    assert nada.slug == "generic" and nada.confidence == 0.0 and nada.warning == ""

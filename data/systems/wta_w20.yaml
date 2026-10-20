@@ -306,3 +306,7 @@ continuity_rules:
 deteccion:
   nombre_visible: "Mundo de Tinieblas (Hombre Lobo W20)"
   keywords: {hombre lobo: 3, hombres lobo: 3, garou: 3, werewolf: 3, wyrm: 3, gaia: 2, augurio: 2, crinos: 3, umbra: 2, tumulo: 2, letania: 2, fianna: 2, ahroun: 2, ragabash: 2, theurge: 2, philodox: 2, galliard: 2, apocalipsis: 1}
+  ediciones:
+    W20: ["20 aniversario", "20º aniversario", "20th anniversary", "w20"]
+    Revisada: ["edicion revisada", "revised edition"]
+    W5: ["quinta edicion", "5th edition", "w5"]

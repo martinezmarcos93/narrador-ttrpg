@@ -206,3 +206,6 @@ continuity_rules:
 deteccion:
   nombre_visible: "Pathfinder 2e"
   keywords: {pathfinder: 4, golarion: 3, paizo: 3, absalom: 2, starfinder: 2, ancestry: 1, ascendencia: 1}
+  ediciones:
+    2e: ["2e", "segunda edicion", "second edition", "remaster"]
+    1e: ["1e", "primera edicion", "first edition"]

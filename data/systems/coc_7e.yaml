@@ -193,3 +193,6 @@ continuity_rules:
 deteccion:
   nombre_visible: "La Llamada de Cthulhu 7e"
   keywords: {cthulhu: 4, call of cthulhu: 4, mythos: 3, mitos: 2, cordura: 2, investigador: 1, investigadores: 1, guardian: 1, keeper: 2, lovecraft: 2, arkham: 2, d100: 1}
+  ediciones:
+    7e: ["7e", "septima edicion", "7th edition"]
+    6e: ["6e", "sexta edicion", "6th edition"]

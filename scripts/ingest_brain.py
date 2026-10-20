@@ -16,7 +16,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Ingest PDF documents into the AI Narrator brain.")
     parser.add_argument("pdf", nargs="+", type=Path)
     parser.add_argument("--output", default="cerebro/importados")
-    parser.add_argument("--system", default="generic")
+    parser.add_argument(
+        "--system", default="auto",
+        help="slug del System Pack o 'auto' para detectarlo desde el texto del PDF",
+    )
     parser.add_argument("--campaign", default="")
     parser.add_argument("--kind", default="manual")
     parser.add_argument("--layer", default="manual")
@@ -25,9 +28,23 @@ def main() -> int:
 
     total = 0
     for source in args.pdf:
+        system = args.system
+        if system == "auto":
+            import pymupdf
+
+            from narrator.core.system_detection import identify_manual
+
+            with pymupdf.open(source) as doc:
+                sample = "\n".join(page.get_text() for page in list(doc)[:30])
+            identity = identify_manual(sample, "data/systems")
+            system = identity.slug
+            print(f"{source}: sistema {identity.nombre} (confianza {identity.confidence:.0%})"
+                  + (f", edición {identity.edition}" if identity.edition else ""))
+            if identity.warning:
+                print(f"  aviso: {identity.warning}")
         chunks = load_pdf(
             source,
-            system=args.system,
+            system=system,
             campaign=args.campaign,
             kind=args.kind,
             layer=args.layer,

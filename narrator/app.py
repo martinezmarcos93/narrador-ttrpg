@@ -1317,7 +1317,13 @@ def load_pdf_callback(sender, app_data):
             ))
             return
         system_name, system_slug = detect_system(text)
+        from narrator.core.system_detection import identify_manual
+
+        identity = identify_manual(text, resolve_path("data/systems"))
+        if identity.edition:
+            system_name = f"{system_name} — edición del manual: {identity.edition}"
         with state_lock:
+            state["manual_identity"] = identity.to_dict()
             state["manual_text"] = text
             state["manual_name"] = name
             state["manual_names"] = [name]
@@ -1335,10 +1341,12 @@ def load_pdf_callback(sender, app_data):
                 dpg.enable_item("add_pdf_btn")
             except Exception as e:
                 logger.error(f"Error inesperado: {e}", exc_info=True)
+            aviso = identity.warning
             append_to_chat(
                 "system",
-                f"Manual cargado: {n}\nSistema detectado: {sn}\n\n"
-                "Ahora adjuntá la planilla de tu personaje (PDF).",
+                f"Manual cargado: {n}\nSistema detectado: {sn}\n"
+                + (f"⚠ {aviso}\n" if aviso else "")
+                + "\nAhora adjuntá la planilla de tu personaje (PDF).",
             )
             dpg.show_item("sheet_dialog")
 

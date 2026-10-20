@@ -227,3 +227,7 @@ continuity_rules:
 deteccion:
   nombre_visible: "Dungeons & Dragons 5e"
   keywords: {dungeons & dragons: 4, dungeons: 2, d&d: 3, d20: 1, clerigo: 1, cleric: 1, paladin: 1, warlock: 2, tiefling: 2, druida: 1, druid: 1, conjuro: 1, salvacion: 1, competencia: 1}
+  ediciones:
+    5e: ["5e", "quinta edicion", "5th edition", "2014"]
+    2024: ["2024", "dnd one", "one d&d"]
+    3.5: ["3.5", "3.5e", "edicion 3.5"]
