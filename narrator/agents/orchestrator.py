@@ -12,6 +12,7 @@ from narrator.agents.narrator_agent import NarratorAgent
 from narrator.core import lorebook, mention_detector
 from narrator.core.causality_engine import CausalityEngine
 from narrator.core.entity_registry import EntityRegistry
+from narrator.core.intent_classifier import classify_intent
 from narrator.core.knowledge_router import KnowledgeRouter
 from narrator.core.knowledge_visibility import KnowledgeVisibility
 from narrator.core.prompt_builder import PromptBuilder
@@ -442,17 +443,14 @@ class Orchestrator:
         }
 
     # ── Contrato formal de turno ──────────────────────────────
-    @staticmethod
-    def _infer_intent(text: str) -> tuple[str, str]:
-        """Clasificación determinista mínima; no pretende reemplazar al LLM."""
-        t = (text or "").strip().lower()
-        if not t:
-            return "unknown", ""
-        if any(k in t for k in ("quiero", "intento", "voy a", "ataco", "investigo", "busco", "hablo", "pregunto", "huyo", "entro", "salgo")):
-            return "player_action", "acción declarada por el jugador"
-        if any(k in t for k in ("qué pasó", "que paso", "recordame", "recuérdame", "recuerdame")):
-            return "information_request", "consulta sobre ficción/estado"
-        return "dialogue_or_description", "interacción narrativa sin señal mecánica explícita"
+    def classify_intent(self, text: str, system_slug: str = "generic"):
+        """Clasificación determinista de la intención con las acciones del pack."""
+        try:
+            resolution = self.builder.load_system(system_slug).get("resolution") or {}
+        except Exception as exc:
+            logger.error("No se pudo cargar resolution de '%s': %s", system_slug, exc, exc_info=True)
+            resolution = {}
+        return classify_intent(text, resolution)
 
     def prepare_turn(self, app_state: dict) -> TurnContract:
         """Ejecuta las etapas Python del contrato hasta dejar listo el prompt.
@@ -470,8 +468,10 @@ class Orchestrator:
         contract.advance("interpretation")
         contract.interpretation = input_text.strip()
         contract.advance("intent")
-        contract.intent, intent_reason = self._infer_intent(input_text)
-        contract.provenance.append(f"interpretación: {intent_reason}")
+        intent = self.classify_intent(input_text, system_slug)
+        contract.intent = intent.kind
+        contract.intent_details = intent.to_dict()
+        contract.provenance.append(f"interpretación: {intent.reason}")
         contract.causal_metrics = dict(causal_result.get("metrics") or {})
         if causal_result.get("activated"):
             contract.provenance.append(
@@ -489,6 +489,16 @@ class Orchestrator:
             contract.rule_need = "resolver y narrar una tirada ya ejecutada"
         elif app_state.get("pending_roll"):
             contract.rule_need = "hay una tirada pendiente de resolución"
+        elif intent.needs_roll:
+            label = (intent.action or {}).get("etiqueta", "")
+            contract.rule_need = (
+                f"la acción puede requerir tirada ({label})" if label
+                else "la acción puede requerir tirada"
+            )
+        elif intent.kind in {"rules_question", "lore_question"}:
+            contract.rule_need = "responder con reglas/lore recuperados, sin tirada"
+        elif intent.kind == "out_of_character":
+            contract.rule_need = "consulta fuera de personaje: no avanzar la ficción"
         elif contract.intent == "player_action":
             contract.rule_need = "determinar si la acción requiere resolución mecánica"
         else:

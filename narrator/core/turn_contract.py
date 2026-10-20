@@ -38,6 +38,7 @@ class TurnContract:
 
     interpretation: str = ""
     intent: str = ""
+    intent_details: dict[str, Any] = field(default_factory=dict)
     rule_need: str = ""
     retrieved_context: str = ""
     retrieval_metrics: dict[str, Any] = field(default_factory=dict)
@@ -138,6 +139,7 @@ class TurnContract:
             "input": self.input_text,
             "system": self.system_slug,
             "intent": self.intent,
+            "intent_details": dict(self.intent_details),
             "rule_need": self.rule_need,
             "mechanical_resolution": self.mechanical_resolution,
             "retrieval_metrics": self.retrieval_metrics,
