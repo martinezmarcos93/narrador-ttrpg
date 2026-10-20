@@ -1,0 +1,231 @@
+{
+  "k": 5,
+  "case_count": 20,
+  "precision_at_k": 0.3,
+  "recall_at_k": 0.675,
+  "mrr": 0.695833,
+  "ndcg_at_k": 0.641531,
+  "layer_coverage": 0.825,
+  "cases": [
+    {
+      "query_id": "universal_investigacion",
+      "k": 5,
+      "precision_at_k": 0.4,
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "relevant_retrieved": 2,
+      "retrieved_count": 5,
+      "layer_coverage": 1.0
+    },
+    {
+      "query_id": "universal_continuidad",
+      "k": 5,
+      "precision_at_k": 0.4,
+      "recall_at_k": 0.666667,
+      "reciprocal_rank": 0.333333,
+      "ndcg_at_k": 0.416181,
+      "relevant_retrieved": 2,
+      "retrieved_count": 5,
+      "layer_coverage": 1.0
+    },
+    {
+      "query_id": "universal_conflicto_social",
+      "k": 5,
+      "precision_at_k": 0.4,
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "relevant_retrieved": 2,
+      "retrieved_count": 5,
+      "layer_coverage": 1.0
+    },
+    {
+      "query_id": "universal_agencia",
+      "k": 5,
+      "precision_at_k": 0.2,
+      "recall_at_k": 0.5,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 0.826235,
+      "relevant_retrieved": 1,
+      "retrieved_count": 5,
+      "layer_coverage": 1.0
+    },
+    {
+      "query_id": "universal_frentes",
+      "k": 5,
+      "precision_at_k": 0.2,
+      "recall_at_k": 0.333333,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 0.630006,
+      "relevant_retrieved": 1,
+      "retrieved_count": 5,
+      "layer_coverage": 1.0
+    },
+    {
+      "query_id": "universal_conocimiento",
+      "k": 5,
+      "precision_at_k": 0.4,
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "relevant_retrieved": 2,
+      "retrieved_count": 5,
+      "layer_coverage": 1.0
+    },
+    {
+      "query_id": "universal_combate",
+      "k": 5,
+      "precision_at_k": 0.4,
+      "recall_at_k": 0.666667,
+      "reciprocal_rank": 0.333333,
+      "ndcg_at_k": 0.37633,
+      "relevant_retrieved": 2,
+      "retrieved_count": 5,
+      "layer_coverage": 1.0
+    },
+    {
+      "query_id": "universal_causalidad",
+      "k": 5,
+      "precision_at_k": 0.4,
+      "recall_at_k": 0.666667,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 0.894999,
+      "relevant_retrieved": 2,
+      "retrieved_count": 5,
+      "layer_coverage": 1.0
+    },
+    {
+      "query_id": "ambiguous_investigacion_campaign",
+      "k": 5,
+      "precision_at_k": 0.4,
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 0.88546,
+      "relevant_retrieved": 2,
+      "retrieved_count": 5,
+      "layer_coverage": 0.5
+    },
+    {
+      "query_id": "ambiguous_combate_estado",
+      "k": 5,
+      "precision_at_k": 0.4,
+      "recall_at_k": 0.666667,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 0.735007,
+      "relevant_retrieved": 2,
+      "retrieved_count": 5,
+      "layer_coverage": 0.5
+    },
+    {
+      "query_id": "system_vtm_knowledge",
+      "k": 5,
+      "precision_at_k": 0.0,
+      "recall_at_k": 0.0,
+      "reciprocal_rank": 0.0,
+      "ndcg_at_k": 0.0,
+      "relevant_retrieved": 0,
+      "retrieved_count": 5,
+      "layer_coverage": 0.5
+    },
+    {
+      "query_id": "system_dnd_resolution",
+      "k": 5,
+      "precision_at_k": 0.2,
+      "recall_at_k": 0.333333,
+      "reciprocal_rank": 0.25,
+      "ndcg_at_k": 0.271329,
+      "relevant_retrieved": 1,
+      "retrieved_count": 5,
+      "layer_coverage": 0.5
+    },
+    {
+      "query_id": "system_coc_resolution",
+      "k": 5,
+      "precision_at_k": 0.0,
+      "recall_at_k": 0.0,
+      "reciprocal_rank": 0.0,
+      "ndcg_at_k": 0.0,
+      "relevant_retrieved": 0,
+      "retrieved_count": 5,
+      "layer_coverage": 0.5
+    },
+    {
+      "query_id": "system_pathfinder_resolution",
+      "k": 5,
+      "precision_at_k": 0.4,
+      "recall_at_k": 0.666667,
+      "reciprocal_rank": 0.5,
+      "ndcg_at_k": 0.559969,
+      "relevant_retrieved": 2,
+      "retrieved_count": 5,
+      "layer_coverage": 0.5
+    },
+    {
+      "query_id": "universal_facciones",
+      "k": 5,
+      "precision_at_k": 0.4,
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "relevant_retrieved": 2,
+      "retrieved_count": 5,
+      "layer_coverage": 1.0
+    },
+    {
+      "query_id": "universal_downtime",
+      "k": 5,
+      "precision_at_k": 0.4,
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 0.944848,
+      "relevant_retrieved": 2,
+      "retrieved_count": 5,
+      "layer_coverage": 1.0
+    },
+    {
+      "query_id": "universal_dilema",
+      "k": 5,
+      "precision_at_k": 0.4,
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.5,
+      "ndcg_at_k": 0.659002,
+      "relevant_retrieved": 2,
+      "retrieved_count": 5,
+      "layer_coverage": 1.0
+    },
+    {
+      "query_id": "universal_improvisacion",
+      "k": 5,
+      "precision_at_k": 0.2,
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "relevant_retrieved": 1,
+      "retrieved_count": 5,
+      "layer_coverage": 1.0
+    },
+    {
+      "query_id": "universal_seguridad",
+      "k": 5,
+      "precision_at_k": 0.4,
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 0.631251,
+      "relevant_retrieved": 2,
+      "retrieved_count": 5,
+      "layer_coverage": 1.0
+    },
+    {
+      "query_id": "system_wta_knowledge",
+      "k": 5,
+      "precision_at_k": 0.0,
+      "recall_at_k": 0.0,
+      "reciprocal_rank": 0.0,
+      "ndcg_at_k": 0.0,
+      "relevant_retrieved": 0,
+      "retrieved_count": 5,
+      "layer_coverage": 0.5
+    }
+  ]
+}

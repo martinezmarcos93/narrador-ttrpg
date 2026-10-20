@@ -199,6 +199,7 @@ class KnowledgeRouter:
             max_results=limit,
             system=pack.knowledge.brain_system,
             expand_graph=True,
+            layer="system",
         )
         return [
             result["fragment"]
@@ -213,6 +214,7 @@ class KnowledgeRouter:
             max_results=limit,
             system=None,
             expand_graph=True,
+            layer="universal",
         )
         return [
             result["fragment"]

@@ -19,6 +19,10 @@ from pathlib import Path
 from narrator.cerebro.indexador import IndiceCerebro
 from narrator.core.context_contract import ContextFragment
 
+# Peso de la similitud semántica frente a la coincidencia léxica (0..1).
+# Ajustado con scripts/evaluate_retrieval.py; ver docs/RETRIEVAL-BASELINE.md.
+SEMANTIC_WEIGHT = 0.9
+
 _TOKEN_RE = re.compile(r"[\wáéíóúüñÁÉÍÓÚÜÑ]{3,}")
 
 
@@ -60,6 +64,15 @@ class RecuperadorCerebro:
         hits = sum(1 for token in q if token in text)
         title_hits = sum(1 for token in q if token in title)
         return hits / len(q) + (title_hits / len(q)) * 1.5
+
+    @staticmethod
+    def _normalize_layer(meta: dict) -> str:
+        layer = str(meta.get("layer", meta.get("capa", "universal")) or "universal")
+        if layer == "sistema":
+            return "system"
+        if layer not in {"universal", "system", "manual", "campaign", "state"}:
+            return "universal"
+        return layer
 
     @staticmethod
     def _lexical_from_text(query_tokens: set[str], text: str, title: str) -> float:
@@ -120,7 +133,10 @@ class RecuperadorCerebro:
         campaign: str | None = None,
         kind: str | None = None,
         expand_graph: bool = True,
+        layer: str | None = None,
     ) -> list[dict]:
+        """``layer`` filtra por capa normalizada (universal/system/manual/...)
+        ANTES de rankear, para que una capa grande no tape a otra chica."""
         self.index.load()
         paths = self.index.paths()
         if not paths:
@@ -137,6 +153,8 @@ class RecuperadorCerebro:
                 continue
             if kind and str(meta.get("kind", "")) != kind:
                 continue
+            if layer and self._normalize_layer(meta) != layer:
+                continue
             candidates.append(path)
 
         semantic_by_path = self.index.semantic_scores(query_vec, candidates)
@@ -146,7 +164,7 @@ class RecuperadorCerebro:
             semantic = semantic_by_path.get(path, 0.0)
             lexical = self._lexical_from_text(query_tokens, self.index.lexical(path),
                                               _fold(self.index.metadata(path).get("title", "")))
-            score = semantic * 0.72 + min(lexical, 2.5) * 0.28
+            score = semantic * SEMANTIC_WEIGHT + min(lexical, 2.5) * (1 - SEMANTIC_WEIGHT)
             if score > 0:
                 scored.append((score, path))
 
@@ -160,6 +178,8 @@ class RecuperadorCerebro:
                 for neighbor in self._graph_neighbors(root):
                     if neighbor in selected_paths:
                         continue
+                    if layer and self._normalize_layer(self.index.metadata(neighbor)) != layer:
+                        continue
                     root_score = next((score for score, path_ in selected if path_ == root), 0.0)
                     selected.append((max(0.35, root_score * 0.60), neighbor))
                     selected_paths.add(neighbor)
@@ -170,22 +190,18 @@ class RecuperadorCerebro:
         results = []
         for score, path in selected[:max_results]:
             meta, body = self._read(path)
-            layer = str(meta.get("layer", meta.get("capa", "universal")))
-            if layer == "sistema":
-                layer = "system"
-            elif layer not in {"universal", "system", "manual", "campaign", "state"}:
-                layer = "universal"
+            layer_name = self._normalize_layer(meta)
             results.append({
                 "score": round(score, 5),
                 "path": path,
                 "meta": meta,
                 "body": body,
                 "source": "brain",
-                "layer": layer,
+                "layer": layer_name,
                 "fragment": ContextFragment(
                     text=body,
                     source=str(meta.get("source", meta.get("fuente", "cerebro"))),
-                    layer=layer,
+                    layer=layer_name,
                     title=str(meta.get("title", meta.get("titulo", path))),
                     score=round(score, 5),
                     metadata=meta,

@@ -4,7 +4,7 @@ from narrator.core.system_pack import KnowledgePolicy, SystemPack
 
 
 class BrainStub:
-    def search(self, query, max_results, system=None, expand_graph=True):
+    def search(self, query, max_results, system=None, expand_graph=True, **kwargs):
         layer = "system" if system else "universal"
         return [{
             "fragment": ContextFragment(

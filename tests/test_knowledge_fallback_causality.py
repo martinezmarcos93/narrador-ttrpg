@@ -8,7 +8,7 @@ from narrator.core.system_pack import KnowledgePolicy, SystemPack
 
 class _Retriever:
     class _Brain:
-        def search(self, query, max_results, system=None, expand_graph=True):
+        def search(self, query, max_results, system=None, expand_graph=True, **kwargs):
             return []
     def __init__(self):
         self.brain = self._Brain()

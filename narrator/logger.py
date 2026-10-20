@@ -11,7 +11,7 @@ def setup_logger(name: str = "narrator") -> logging.Logger:
         # charset (💡 ⚖ 🎲 🔴...) rompía el proceso con UnicodeEncodeError.
         # errors="replace" evita el crash (sustituye por "?") sin cambiar el
         # encoding real de stdout.
-        stream = sys.stdout
+        stream = sys.stderr
         if hasattr(stream, "reconfigure"):
             try:
                 stream.reconfigure(errors="replace")

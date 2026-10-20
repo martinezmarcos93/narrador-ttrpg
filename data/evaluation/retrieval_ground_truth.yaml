@@ -180,3 +180,73 @@ cases:
     expected_layers:
       - system
       - universal
+
+  # Casos agregados el 2026-10-19 (neuronas universales nuevas y W20).
+  - id: universal_facciones
+    query: "dos grupos de poder compiten por la ciudad y cada uno tiene su propia agenda"
+    relevant_ids:
+      - universal-facciones
+      - universal-frentes-relojes
+    graded_relevance:
+      universal-facciones: 3
+      universal-frentes-relojes: 2
+    system: generic
+    expected_layers:
+      - universal
+
+  - id: universal_downtime
+    query: "pasan dos semanas entre sesiones mientras los personajes se recuperan"
+    relevant_ids:
+      - universal-ritmo-entre-sesiones
+      - universal-continuidad-temporal
+    graded_relevance:
+      universal-ritmo-entre-sesiones: 3
+      universal-continuidad-temporal: 1
+    system: generic
+    expected_layers:
+      - universal
+
+  - id: universal_dilema
+    query: "el personaje debe elegir entre salvar a su hermano o cumplir su juramento"
+    relevant_ids:
+      - universal-dilemas-morales
+      - universal-agencia-jugador
+    graded_relevance:
+      universal-dilemas-morales: 3
+      universal-agencia-jugador: 1
+    system: generic
+    expected_layers:
+      - universal
+
+  - id: universal_improvisacion
+    query: "el jugador hace algo inesperado y el director tiene que inventar sobre la marcha"
+    relevant_ids:
+      - universal-improvisacion
+    system: generic
+    expected_layers:
+      - universal
+
+  - id: universal_seguridad
+    query: "un jugador pidió que ciertos temas no aparezcan en la partida de horror"
+    relevant_ids:
+      - universal-seguridad-mesa
+      - universal-tono-horror
+    graded_relevance:
+      universal-seguridad-mesa: 3
+      universal-tono-horror: 1
+    system: generic
+    expected_layers:
+      - universal
+
+  - id: system_wta_knowledge
+    query: "Hombre Lobo W20: un Garou en forma Crinos frente a humanos que no deberían verlo"
+    relevant_ids:
+      - universal-sobrenatural
+      - universal-informacion-conocimiento
+    graded_relevance:
+      universal-sobrenatural: 2
+      universal-informacion-conocimiento: 1
+    system: wta_w20
+    expected_layers:
+      - system
+      - universal
