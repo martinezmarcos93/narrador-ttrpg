@@ -181,6 +181,8 @@ class NarratorAgent:
         el sistema, el jugador nunca debe verlas en el chat. Normaliza el
         espacio en blanco que dejan al sacarlas (doble espacio inline,
         líneas en blanco de más donde iba un bloque de entidad)."""
+        # Razonamiento interno de modelos "thinking" (qwen3, deepseek-r1).
+        text = re.sub(r"<think>.*?(?:</think>|$)", "", text, flags=re.DOTALL | re.IGNORECASE)
         text = self._RE_ENTITY_BLOCK.sub("", text)
         text = self._RE_STATE_TAG.sub("", text)
         text = self._RE_PROPOSAL_BLOCK.sub("", text)

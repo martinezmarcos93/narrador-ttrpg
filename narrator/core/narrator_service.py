@@ -169,6 +169,53 @@ class NarratorService:
             app_state.get("system_slug", "generic"),
         )
 
+    def run_turn(self, app_state: dict, player_text: str, llm, *, max_tokens: int = 600,
+                 history: int = 8) -> dict:
+        """Turno completo sin interfaz: contrato → LLM → propuesta → fugas → persistencia.
+
+        Lo usan la API web y los scripts headless. ``llm`` expone ``chat(messages,
+        max_tokens)``. Devuelve el texto limpio y el resultado trazable del turno.
+        """
+        from time import perf_counter
+
+        from narrator.core import secrets
+
+        started = perf_counter()
+        app_state.setdefault("messages", []).append({"role": "user", "content": player_text})
+        contract = self.prepare_turn(app_state)
+        recent = [m for m in app_state["messages"] if m.get("role") in {"user", "assistant"}]
+        messages = [{"role": "system", "content": contract.narrative_prompt}, *recent[-history:]]
+        raw = llm.chat(messages, max_tokens=max_tokens) or ""
+        contract.mark_llm_output(raw)
+
+        agent = self.narrator_agent
+        proposal = agent.extract_narrative_proposal(raw)
+        mutations = [] if proposal and proposal.get("character_changes") else (
+            agent.extract_state_mutations(raw))
+        composed = self.compose_postprocessing_proposal(
+            narrative_proposal=proposal, mutations=mutations,
+            new_entities=agent.extract_new_entities(raw), include_entities=True,
+        )
+        proposal_result = None
+        if composed:
+            proposal_result = self.apply_proposal_with_fallback(composed, app_state=app_state)
+            contract.record_proposal_result(proposal_result)
+        text = agent.strip_system_tags(raw)
+        leaks = secrets.find_leaks(text, self.state_manager)
+        if leaks:
+            contract.record_error(f"knowledge_leak:{','.join(leaks)}")
+        app_state["messages"].append({"role": "assistant", "content": text})
+        contract.state_delta["latency_ms"] = round((perf_counter() - started) * 1000, 1)
+        persisted = self.persist_turn(contract)
+        return {
+            "text": text,
+            "intent": contract.intent,
+            "proposal": composed or None,
+            "proposal_result": proposal_result,
+            "leaks": leaks,
+            "contract": persisted,
+        }
+
     # ── Consultas y servicios para la UI ──────────────────────
     # La UI no debe tocar orchestrator.state/retriever/builder directamente:
     # todo acceso pasa por estos métodos (ver docs/architecture/SERVICE-BOUNDARY.md).

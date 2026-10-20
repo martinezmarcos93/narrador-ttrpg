@@ -149,3 +149,50 @@ def test_roll_costs_are_applied_through_proposal():
     )
     assert calls["proposal"] == {"character_changes": [{"field": "fuerza_voluntad_temp", "delta": -1}]}
     assert result["costos_aplicados"] is True
+
+
+def test_run_turn_end_to_end_with_fake_llm(tmp_path, monkeypatch):
+    from pathlib import Path
+
+    from narrator.core import secrets
+
+    root = Path(__file__).resolve().parent.parent
+    monkeypatch.setattr("narrator.core.embedder.Embedder.is_available", lambda self: False)
+    config = tmp_path / "config.yaml"
+    config.write_text(
+        f"systems_path: {root / 'data' / 'systems'}\n"
+        f"vault:\n  path: {tmp_path / 'vault'}\n"
+        f"cerebro:\n  path: {tmp_path / 'cerebro'}\n"
+        f"estado:\n  path: {tmp_path / 'estado.yaml'}\n",
+        encoding="utf-8",
+    )
+    service = NarratorService(config_path=str(config))
+    state = service.state_manager
+    state.data["escena_actual"]["npcs_presentes"] = ["Valerius"]
+    secrets.add_secret(state, "s1", tema="El anillo", verdad="Valerius es un Tremere infiltrado en la corte",
+                       pistas=["un sello hermético en el anillo", "tiza en sus zapatos"],
+                       sobre_tipo="npc", sobre_nombre="Valerius")
+
+    class _LLM:
+        def chat(self, messages, max_tokens=0):
+            assert messages[0]["role"] == "system"
+            return ("<think>razono</think>Notás un sello hermético en el anillo.\n"
+                    "```json-proposal\n{\"events\": [\"Lucía ve el anillo\"], "
+                    "\"discoveries\": [{\"secret\": \"s1\"}]}\n```")
+
+    app_state = {"system_slug": "vtm_v20", "messages": []}
+    result = service.run_turn(app_state, "Miro el anillo de Valerius", _LLM())
+    assert result["text"] == "Notás un sello hermético en el anillo."
+    assert result["proposal_result"]["applied"]
+    assert result["leaks"] == []
+    assert state.data["secretos"]["s1"]["descubiertas"]["jugador"] == 1
+    assert result["contract"]["stage"] == "persist"
+    assert state.get_recent_turns(1)
+
+    class _Leaky:
+        def chat(self, messages, max_tokens=0):
+            return "Sabés que Valerius es un Tremere infiltrado en la corte."
+
+    leaky = service.run_turn(app_state, "Pienso", _Leaky())
+    assert leaky["leaks"] == ["s1"]
+    assert any(e.startswith("knowledge_leak") for e in leaky["contract"]["errors"])
