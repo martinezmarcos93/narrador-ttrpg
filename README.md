@@ -21,19 +21,37 @@ ollama pull gemma3:12b     # ~8GB - excelente
 ollama pull nomic-embed-text
 ```
 
-### 2. Dependencias Python
+### 2. Dependencias Python (Linux)
 
 ```bash
-pip install -e .
-# o manualmente:
-pip install dearpygui requests PyMuPDF pyyaml python-frontmatter jinja2
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev,semantic]"     # editable: los packs y el cerebro viven en el repo
+pytest -q                            # ~600 tests, sin red ni LLM
 ```
 
 ### 3. Ejecutar
 
 ```bash
-python main.py
+python main.py                       # GUI de escritorio (Dear PyGui)
+python -m narrator.web               # GUI web + API en http://127.0.0.1:8765
 ```
+
+### 4. Herramientas
+
+| Comando | Para qué |
+|---|---|
+| `python scripts/load_campaign.py data/campaigns/noches_de_ceniza.yaml` | cargar una campaña declarativa (`--check` solo valida) |
+| `python scripts/play_campaign.py <manifiesto> --turns 5` | partida IA contra IA con métricas (fugas, propuestas, latencia) |
+| `python scripts/evaluate_engine.py` | 16 escenarios TTRPG → métricas del motor |
+| `python scripts/manual_pipeline.py <manual.pdf>` | manual → cerebro (identificar, barrer, indexar, auditar) |
+| `python -m narrator.cerebro.indexador --path cerebro` | índice de embeddings del cerebro (incremental) |
+| `python scripts/evaluate_retrieval.py` / `tools/evaluate_retrieval.py` | benchmark de retrieval contra el ground truth |
+| `python scripts/audit_brain.py` | auditoría del cerebro universal |
+| `python scripts/manage_api_keys.py crear <usuario>` | claves de la API web |
+| `python scripts/smoke_web.py [--llm]` | smoke E2E y pen-test básico de la web |
+| `python scripts/backup.py crear\|listar\|restaurar` | respaldo y recuperación de partidas |
+
+Despliegue con HTTPS y systemd: `docs/DEPLOY-WEB.md`.
 
 ---
 
@@ -151,7 +169,8 @@ narrador-ttrpg/
 │       └── world_agent.py     ← avance autónomo del mundo (downtime)
 ├── data/
 │   └── systems/               ← configs YAML por sistema de juego
-│       ├── vtm_v20.yaml       ← VtM V20 (9 clanes con Disciplinas)
+│       ├── vtm_v20.yaml       ← VtM V20 (13 clanes con Disciplinas)
+│       ├── wta_w20.yaml       ← Hombre Lobo W20
 │       ├── dnd_5e.yaml        ← D&D 5e (7 clases)
 │       ├── coc_7e.yaml        ← La Llamada de Cthulhu 7e
 │       ├── pathfinder_2e.yaml ← Pathfinder 2e
@@ -167,13 +186,14 @@ narrador-ttrpg/
 
 | Sistema | Archivo config | Clanes/Clases con planilla | Estado |
 |---------|---------------|---------------------------|--------|
-| Vampiro: La Mascarada V20 | `data/systems/vtm_v20.yaml` | 9 clanes (Brujah, Malkavian, Nosferatu, Toreador, Tremere, Ventrue, Gangrel, Lasombra, Tzimisce) | Completo |
+| Vampiro: La Mascarada V20 | `data/systems/vtm_v20.yaml` | 13 clanes; ficha V20 completa (habilidades, virtudes, salud, sangre por generación) | Completo |
+| Hombre Lobo: El Apocalipsis W20 | `data/systems/wta_w20.yaml` | raza/augurio/tribu, Renombre, Furia, Gnosis, formas | Completo |
 | Dungeons & Dragons 5e | `data/systems/dnd_5e.yaml` | 7 clases (Mago, Guerrero, Clérigo, Pícaro, Bárbaro, Paladín, Brujo) | Completo |
 | La Llamada de Cthulhu 7e | `data/systems/coc_7e.yaml` | Ocupaciones | Completo |
 | Pathfinder 2e | `data/systems/pathfinder_2e.yaml` | 5 clases | Completo |
 | Genérico (cualquier TTRPG) | `data/systems/generic.yaml` | — | Completo |
 
-La detección de sistema es automática al cargar el PDF. Para cambiarlo manualmente, editá `sistema_activo` en `config/config.yaml`.
+La detección de sistema y edición es automática al cargar el PDF (puntaje por palabras clave declaradas en cada pack; avisa si la edición no coincide). Para cambiarlo manualmente, editá `sistema_activo` en `config/config.yaml`.
 
 ---
 
@@ -223,51 +243,11 @@ vault:
 
 ---
 
-## Roadmap
+## Roadmap y estado
 
-### Fase 0 — Motor de Teoría Rolera Universal ✅ Completado
-
-- 4 agentes implementados y conectados al Orquestador
-- MasterMoveEngine, WorldSimulationEngine, PacingToneAgent, InvestigationEngine
-- YAMLs de configuración universal validados
-- Regla de los 3 indicios activa
-
-### Fase 1 — Narrador con jugador humano 🔄 En progreso
-
-- [x] GUI funcional (Dear PyGui) con dados, log de sesión, hoja de personaje
-- [x] Integración Ollama con streaming
-- [x] Carga y detección automática de sistema desde PDF
-- [x] Arquitectura de agentes (`narrator/core/` + `narrator/agents/`)
-- [x] Sistemas: VtM V20, D&D 5e, CoC 7e, Pathfinder 2e, Genérico
-- [x] Vault compatible con Obsidian
-- [x] Extractor agent (PDF → vault automático)
-- [x] Vault writer (Obsidian live updates)
-- [x] Búsqueda semántica en vault (nomic-embed-text via Ollama)
-- [x] Tab Estado con relojes de frentes
-- [x] Soporte multi-PDF (botón "Añadir suplemento")
-- [x] Integración de los 4 agentes de teoría rolera al Orquestador
-- [x] Detección de tipo de evento por turno (combate/exploración/diálogo/etc.)
-- [x] StateManager extendido para frentes como recurso central
-- [x] World agent — avance autónomo del mundo con sincronización post-downtime
-- [x] Exportar log de sesión a Markdown (con snapshot de personaje y relojes)
-- [x] Auto-export + incremento de sesión en botón "Nueva sesión"
-- [x] Planilla de personaje schema-driven con secciones condicionales por clan/clase
-- [ ] Bug pendiente (a reportar)
-
-### Fase 2 — Soporte multi-sistema avanzado ⏳ Planificado
-
-- Detección automática de sistema desde PDF sin configuración manual
-- Soporte de sistemas adicionales con configs YAML
-
-### Fase 3 — Estadísticas narrativas ⏳ Planificado
-
-- Exportación de métricas: comportamiento del LLM, uso de movimientos del Máster, evolución de frentes
-
-### Fase 4 — IA vs IA ⏳ Futuro
-
-- Agente jugador IA que recibe escena y devuelve acción
-- Loop autónomo narrador/jugador
-- Métricas de coherencia narrativa emergente
+La planificación vive en `docs/ROADMAP-MAESTRO-2026-10-05.md` (actualizado el
+2026-10-20) y el estado operativo en el handoff más reciente de `docs/handoffs/`.
+Mediciones reales: `docs/RETRIEVAL-BASELINE.md` y `docs/PERFORMANCE.md`.
 
 ---
 

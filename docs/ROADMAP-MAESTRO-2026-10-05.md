@@ -48,7 +48,7 @@ Precedencia: STATE > MANUAL > SYSTEM PACK > UNIVERSAL BRAIN > conocimiento gener
 - ADR y handoff del núcleo.
 
 ### 1.2 Rama actual
-feat/retrieval-evaluation. Está 125 commits por delante de main y 2 por detrás; main avanzó externamente y no se realizó rebase. El último commit pertenece a la pasada de consolidación de continuidad/causalidad del 2026-10-05. No mergear sin autorización expresa.
+`feat/retrieval-evaluation` se mergeó a `main` el 2026-10-06. El trabajo posterior está en `claude/barrido-2026-10-19` (ver la actualización del 2026-10-20 al final). No mergear sin autorización expresa.
 
 ## 2. FASE A — Consolidación del núcleo
 
@@ -336,3 +336,39 @@ El objetivo no es construir un chatbot que improvise partidas. Es construir un m
 
 ### Regla de transición
 Esta rama debe ser revisada/pulled localmente antes de iniciar cambios de infraestructura pesados. La siguiente etapa depende de resultados reales del corpus, embeddings, startup Flask y suite de regresión.
+
+
+## Actualización 2026-10-20 — barrido completo (rama `claude/barrido-2026-10-19`)
+
+Suite: 600+ tests en verde; `scripts/evaluate_engine.py`: 16/16 escenarios.
+
+| Fase | Estado | Evidencia |
+|---|---|---|
+| A1 Interfaces Core/Service/UI | HECHO | `docs/architecture/SERVICE-BOUNDARY.md`, test por AST |
+| A3 Registro global de entidades | HECHO | `narrator/core/entity_registry.py` |
+| A3 Agregación de relojes entre consecuencias | HECHO | agregación por paso de cascada + aviso de saturación |
+| A3 Incompatibilidades por System Pack | HECHO | `continuity_rules`, `narrator/core/system_rules.py` |
+| B1 Cobertura, huecos e IDs del cerebro | HECHO | `scripts/audit_brain.py`, 7 neuronas nuevas |
+| B2 Benchmark real y ajuste de pesos | HECHO | `docs/RETRIEVAL-BASELINE.md` |
+| B3 Manuales (pipeline, edición, precedencia, citas, injection) | HECHO | `docs/PIPELINE-MANUALES.md`, `injection_guard.py`, `manual_index.py` |
+| C Clasificador de intención y primitivas mecánicas | HECHO | `intent_classifier.py`, `rule_arbiter.py` |
+| D Frentes (umbrales, interacción, avance) y relaciones | HECHO | `fronts.py`, `social.py`, cursor de eventos causales |
+| E Secretos, conocimiento parcial, fuga E2E | HECHO | `secrets.py`, test E2E con Orchestrator |
+| F Hombre Lobo W20, fichas completas | HECHO (V20/W20) | packs + `character_sheet.py`; CoC/D&D/PF2 con mejoras parciales |
+| G Campaña real | HECHO | `data/campaigns/noches_de_ceniza.yaml`, `scripts/play_campaign.py` |
+| H Suite de regresión TTRPG | HECHO | `data/evaluation/engine_scenarios.yaml` |
+| I Evaluación real | HECHO | retrieval + motor + partidas IA vs IA (`data/evaluation/`) |
+| J Optimización | HECHO (medido) | `docs/PERFORMANCE.md` |
+| K Flask/API | HECHO | SQLite, claves, SSE, límites, turnos reales |
+| L Seguridad | HECHO (local) | `docs/DEPLOY-WEB.md`, `scripts/smoke_web.py` |
+| M GUI web | HECHO (mínima) | `narrator/web/static/` |
+| N Release Candidate | PARCIAL | respaldo, instalación limpia y docs hechos; falta decidir versión y merge |
+
+### Pendiente real
+- Calidad narrativa con modelos más grandes (con `qwen3:1.7b` en CPU no emite propuestas
+  estructuradas); medir con un 7B en GPU.
+- Ground truth de retrieval con neuronas de sistema (IDs locales) y manuales de D&D/PF2.
+- Fichas detalladas de CoC 7e, D&D 5e y Pathfinder 2e al nivel de V20/W20.
+- Fog-of-war (fase 19 del roadmap de julio): opcional y condicionado a tener mapas; no se
+  implementó.
+- Decidir versión (0.7.0 sugerida) y revisar/mergear la rama.

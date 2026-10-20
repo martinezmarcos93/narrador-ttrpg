@@ -6,6 +6,33 @@ versionado [semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Barrido 2026-10-19/20 (rama `claude/barrido-2026-10-19`)
+
+#### Arreglado
+- 28 tests en rojo; detrás había bugs reales: efectos causales propuestos que se
+  descartaban, efectos de reloj aplicados dos veces, triggers por evento que nunca se
+  activaban, estado guardado con tags Python ilegibles, lorebook desconectado.
+- Retrieval: la capa universal quedaba vacía bajo las neuronas de manuales; búsqueda
+  ~33 s → 0,1–0,5 s. API: rutas inexistentes daban 500.
+- Disciplinas de clan Brujah y Malkavian en V20.
+
+#### Añadido
+- Frontera UI → NarratorService; registro de entidades del vault; reglas de
+  continuidad por System Pack; agregación de relojes; frentes con umbrales,
+  interacción y avance por sesión; dinámica social (niveles, historial, decaimiento).
+- Secretos con descubrimiento gradual y detector de fugas; protección ante prompt
+  injection; pasajes del manual con cita de página; reglas de la casa; identificación
+  de sistema y edición del manual; pipeline de manuales; auditoría del cerebro.
+- Pack Hombre Lobo W20; ficha V20 completa (ideas de planillas de Roll20);
+  clasificador de intención; primitivas mecánicas (habilidad, heridas,
+  especialidades, Fuerza de Voluntad, competencia, ventaja).
+- Campañas declarativas con cargador validado y campaña de ejemplo; turno sin GUI
+  (`run_turn`); partida IA contra IA con métricas; evaluación del motor (16 escenarios).
+- API web: sesiones SQLite, claves multiusuario con rotación/revocación, turnos
+  reales, SSE, límite de pedidos; GUI web; despliegue con HTTPS y systemd; respaldo y
+  recuperación.
+
+
 > 21 implementaciones tomadas de un análisis de 7 repos externos afines
 > (ver `docs/INFORME_ANALISIS_REPOS_EXTERNOS_2026-07-24.md` y
 > `docs/ROADMAP_IMPLEMENTACIONES_2026-07-24.md`). Pendiente: decidir
