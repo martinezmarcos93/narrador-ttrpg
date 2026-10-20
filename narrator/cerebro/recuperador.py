@@ -33,7 +33,7 @@ class RecuperadorCerebro:
     def __init__(
         self,
         brain_path: str | Path = "./cerebro",
-        embedding_model: str = "bge-m3",
+        embedding_model: str = "nomic-embed-text",
     ):
         self.index = IndiceCerebro(brain_path, embedding_model=embedding_model)
 

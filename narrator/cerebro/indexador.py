@@ -27,7 +27,7 @@ class IndiceCerebro:
         self,
         brain_path: str | Path = "./cerebro",
         embedder: Embedder | None = None,
-        embedding_model: str = "bge-m3",
+        embedding_model: str = "nomic-embed-text",
     ):
         self.brain_path = Path(brain_path)
         self.embedder = embedder or Embedder(model=embedding_model)
@@ -176,7 +176,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Construye el índice persistente del Cerebro.")
     parser.add_argument("--path", default="cerebro", help="Ruta del vault de neuronas.")
-    parser.add_argument("--model", default="bge-m3", help="Modelo Ollama de embeddings.")
+    parser.add_argument("--model", default="nomic-embed-text", help="Modelo Ollama de embeddings.")
     args = parser.parse_args()
 
     index = IndiceCerebro(args.path, embedding_model=args.model)

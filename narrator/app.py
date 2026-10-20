@@ -16,7 +16,8 @@ import pymupdf as fitz  # PyMuPDF
 import requests
 
 from narrator import PROJECT_ROOT, resolve_path
-from narrator.core import derived_stats, dice_first_guard
+from narrator.core import character_sheet, derived_stats, dice_first_guard
+from narrator.core.entity_registry import fold_name
 from narrator.core.ideas_inbox import IdeasInbox
 from narrator.core.llm_client import LLMClient
 from narrator.core.memory_manager import MemoryManager
@@ -822,6 +823,10 @@ def _render_field(label: str, value, display: str, ftype: str, max_val: int, par
             dpg.add_text("—", color=list(C_TEXT_DARK))
         elif isinstance(value, list):
             dpg.add_text(", ".join(str(x) for x in value), color=list(C_TEXT), wrap=88)
+        elif isinstance(value, dict):
+            dpg.add_text(
+                ", ".join(f"{k} {v}" for k, v in value.items()), color=list(C_TEXT), wrap=88
+            )
         elif display == "dots" and ftype == "int":
             dpg.add_text(_dots(value, max_val), color=list(C_GOLD))
         elif display == "stat_block" and ftype == "int":
@@ -832,6 +837,19 @@ def _render_field(label: str, value, display: str, ftype: str, max_val: int, par
 def _render_section(section: dict, char: dict, parent: str, rendered: set, stat_formula: dict = None):
     display = section.get("display", "default")
     dpg.add_text(section.get("name", "").upper(), color=list(C_GOLD_DIM), parent=parent)
+    if display == "track":
+        # Track de niveles (salud): marca los niveles ocupados y su penalizador.
+        status = character_sheet.track_status(section, char)
+        for field in section.get("fields", []):
+            rendered.add(field.get("key", ""))
+        for index, level in enumerate(section.get("levels", []), start=1):
+            mark = "■" if index <= status["marked"] else "□"
+            penalty = level.get("penalty", 0)
+            suffix = f" ({penalty:+d})" if penalty else ""
+            color = C_GOLD if index <= status["marked"] else C_TEXT_DIM
+            dpg.add_text(f"{mark} {level.get('label')}{suffix}", color=list(color), parent=parent)
+        dpg.add_spacer(height=5, parent=parent)
+        return
     for field in section.get("fields", []):
         key = field.get("key", "")
         rendered.add(key)
@@ -902,10 +920,24 @@ def refresh_character_panel():
     if archetype_val:
         cond = schema.get("conditional_sections", {})
         for cond_key, sections in cond.items():
-            if cond_key.lower() == archetype_val:
+            if fold_name(cond_key) == fold_name(archetype_val):
                 for section in sections:
                     _render_section(section, char, "char_content", rendered, stat_formula)
                 break
+
+    # Derivados (p. ej. sangre máxima por generación): se calculan, no se cargan.
+    derived = character_sheet.compute_derived(schema, char)
+    if derived:
+        labels = {"sangre_max": "Sangre máx", "sangre_por_turno": "Sangre por turno"}
+        dpg.add_text("DERIVADOS", color=list(C_GOLD_DIM), parent="char_content")
+        for key, value in derived.items():
+            rendered.add(key)
+            _render_field(
+                label=labels.get(key, key.replace("_", " ").capitalize()),
+                value=value, display="default", ftype="int", max_val=5,
+                parent="char_content",
+            )
+        dpg.add_spacer(height=4, parent="char_content")
 
     # Extras: campos que el LLM generó fuera del schema
     extras = {k: v for k, v in char.items() if k not in rendered}

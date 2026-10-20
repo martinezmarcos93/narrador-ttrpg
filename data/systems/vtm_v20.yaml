@@ -100,15 +100,19 @@ tags_por_tipo:
 # --- Planilla de personaje (schema dinámico para GUI) ---
 character_sheet_schema:
   archetype_key: clan
+  # Estructura inspirada en la planilla V20 (ver docs/design/IDEAS-PLANILLAS-ROLL20.md).
   base_sections:
     - name: "Identidad"
       fields:
         - {key: nombre,           label: Nombre,             type: string}
         - {key: clan,             label: Clan,               type: string}
-        - {key: generacion,       label: Generación,         type: int}
+        - {key: generacion,       label: Generación,         type: int, min: 3, max: 15}
+        - {key: sire,             label: Sire,               type: string}
         - {key: naturaleza,       label: Naturaleza,         type: string}
-        - {key: comportamiento,   label: Comportamiento,     type: string}
+        - {key: comportamiento,   label: Conducta,           type: string}
+        - {key: concepto,         label: Concepto,           type: string}
         - {key: senda,            label: Senda,              type: string}
+        - {key: secta,            label: Secta,              type: string}
         - {key: cofradia,         label: Cofradía,           type: string}
     - name: "Atributos"
       display: dots
@@ -118,30 +122,99 @@ character_sheet_schema:
         - {key: resistencia,      label: Resistencia,        type: int, min: 1, max: 5}
         - {key: carisma,          label: Carisma,            type: int, min: 1, max: 5}
         - {key: manipulacion,     label: Manipulación,       type: int, min: 1, max: 5}
-        - {key: apariencia,       label: Apariencia,         type: int, min: 1, max: 5}
+        - {key: apariencia,       label: Apariencia,         type: int, min: 0, max: 5}
         - {key: percepcion,       label: Percepción,         type: int, min: 1, max: 5}
         - {key: inteligencia,     label: Inteligencia,       type: int, min: 1, max: 5}
         - {key: astucia,          label: Astucia,            type: int, min: 1, max: 5}
+    - name: "Talentos"
+      display: dots
+      fields:
+        - {key: alerta,           label: Alerta,             type: int, min: 0, max: 5}
+        - {key: atletismo,        label: Atletismo,          type: int, min: 0, max: 5}
+        - {key: consciencia,      label: Consciencia,        type: int, min: 0, max: 5}
+        - {key: pelea,            label: Pelea,              type: int, min: 0, max: 5}
+        - {key: empatia,          label: Empatía,            type: int, min: 0, max: 5}
+        - {key: expresion,        label: Expresión,          type: int, min: 0, max: 5}
+        - {key: intimidacion,     label: Intimidación,       type: int, min: 0, max: 5}
+        - {key: liderazgo,        label: Liderazgo,          type: int, min: 0, max: 5}
+        - {key: callejeo,         label: Callejeo,           type: int, min: 0, max: 5}
+        - {key: subterfugio,      label: Subterfugio,        type: int, min: 0, max: 5}
+    - name: "Técnicas"
+      display: dots
+      fields:
+        - {key: trato_animales,   label: Trato con Animales, type: int, min: 0, max: 5}
+        - {key: artesania,        label: Artesanía,          type: int, min: 0, max: 5}
+        - {key: conducir,         label: Conducir,           type: int, min: 0, max: 5}
+        - {key: etiqueta,         label: Etiqueta,           type: int, min: 0, max: 5}
+        - {key: armas_fuego,      label: Armas de Fuego,     type: int, min: 0, max: 5}
+        - {key: latrocinio,       label: Latrocinio,         type: int, min: 0, max: 5}
+        - {key: pelea_armas,      label: Pelea con Armas,    type: int, min: 0, max: 5}
+        - {key: interpretacion,   label: Interpretación,     type: int, min: 0, max: 5}
+        - {key: sigilo,           label: Sigilo,             type: int, min: 0, max: 5}
+        - {key: supervivencia,    label: Supervivencia,      type: int, min: 0, max: 5}
+    - name: "Conocimientos"
+      display: dots
+      fields:
+        - {key: academicismo,     label: Academicismo,       type: int, min: 0, max: 5}
+        - {key: informatica,      label: Informática,        type: int, min: 0, max: 5}
+        - {key: finanzas,         label: Finanzas,           type: int, min: 0, max: 5}
+        - {key: investigacion,    label: Investigación,      type: int, min: 0, max: 5}
+        - {key: leyes,            label: Leyes,              type: int, min: 0, max: 5}
+        - {key: medicina,         label: Medicina,           type: int, min: 0, max: 5}
+        - {key: ocultismo,        label: Ocultismo,          type: int, min: 0, max: 5}
+        - {key: politica,         label: Política,           type: int, min: 0, max: 5}
+        - {key: ciencia,          label: Ciencia,            type: int, min: 0, max: 5}
+        - {key: tecnologia,       label: Tecnología,         type: int, min: 0, max: 5}
+    - name: "Ventajas"
+      fields:
+        - {key: disciplinas,      label: Disciplinas,        type: map}
+        - {key: trasfondos,       label: Trasfondos,         type: map}
+        - {key: especialidades,   label: Especialidades,     type: map}
+        - {key: meritos,          label: Méritos,            type: list}
+        - {key: defectos,         label: Defectos,           type: list}
+    - name: "Virtudes"
+      display: dots
+      fields:
+        - {key: conciencia,       label: Conciencia/Convicción, type: int, min: 1, max: 5}
+        - {key: autocontrol,      label: Autocontrol/Instinto,  type: int, min: 1, max: 5}
+        - {key: coraje,           label: Coraje,                type: int, min: 1, max: 5}
     - name: "Estado"
       fields:
-        - {key: humanidad,        label: Humanidad,          type: int, min: 0, max: 10}
-        - {key: fuerza_voluntad,  label: Fuerza de Voluntad, type: int, min: 0, max: 10}
-        - {key: sangre,           label: Sangre actual,      type: int}
-        - {key: sangre_max,       label: Sangre máx,         type: int}
+        - {key: humanidad,            label: Humanidad / Senda,       type: int, min: 0, max: 10}
+        - {key: fuerza_voluntad,      label: Fuerza de Voluntad,      type: int, min: 1, max: 10}
+        - {key: fuerza_voluntad_temp, label: Voluntad disponible,     type: int, min: 0, max: 10}
+        - {key: sangre,               label: Reserva de sangre,       type: int, min: 0, max: 100}
+        - {key: experiencia,          label: Experiencia,             type: int, min: 0}
+    - name: "Salud"
+      display: track
+      track_field: salud_danio
+      fields:
+        - {key: salud_danio,      label: Niveles de daño,    type: int, min: 0, max: 7}
+      levels:
+        - {label: Magullado,    penalty: 0}
+        - {label: Lastimado,    penalty: -1}
+        - {label: Lesionado,    penalty: -1}
+        - {label: Herido,       penalty: -2}
+        - {label: Malherido,    penalty: -2}
+        - {label: Tullido,      penalty: -5}
+        - {label: Incapacitado, penalty: 0}
+  derived:
+    sangre_max: {computer: vtm_sangre_max}
+    sangre_por_turno: {computer: vtm_sangre_por_turno}
   conditional_sections:
     brujah:
       - name: "Disciplinas"
         display: dots
         fields:
-          - {key: potencia,       label: Potencia,           type: int, min: 0, max: 5}
           - {key: celeridad,      label: Celeridad,          type: int, min: 0, max: 5}
-          - {key: resistencia_d,  label: Resistencia,        type: int, min: 0, max: 5}
+          - {key: potencia,       label: Potencia,           type: int, min: 0, max: 5}
+          - {key: presencia,      label: Presencia,          type: int, min: 0, max: 5}
     malkavian:
       - name: "Disciplinas"
         display: dots
         fields:
           - {key: auspex,         label: Auspex,             type: int, min: 0, max: 5}
-          - {key: dominacion,     label: Dominación,         type: int, min: 0, max: 5}
+          - {key: dementacion,    label: Dementación,        type: int, min: 0, max: 5}
           - {key: ofuscacion,     label: Ofuscación,         type: int, min: 0, max: 5}
     nosferatu:
       - name: "Disciplinas"
@@ -183,7 +256,7 @@ character_sheet_schema:
         display: dots
         fields:
           - {key: dominacion,     label: Dominación,         type: int, min: 0, max: 5}
-          - {key: obtenebration,  label: Obtenebracion,      type: int, min: 0, max: 5}
+          - {key: obtenebracion,  label: Obtenebración,      type: int, min: 0, max: 5}
           - {key: potencia,       label: Potencia,           type: int, min: 0, max: 5}
     tzimisce:
       - name: "Disciplinas"
@@ -192,6 +265,34 @@ character_sheet_schema:
           - {key: animalismo,     label: Animalismo,         type: int, min: 0, max: 5}
           - {key: auspex,         label: Auspex,             type: int, min: 0, max: 5}
           - {key: vicisitud,      label: Vicisitud,          type: int, min: 0, max: 5}
+    assamita:
+      - name: "Disciplinas"
+        display: dots
+        fields:
+          - {key: celeridad,      label: Celeridad,          type: int, min: 0, max: 5}
+          - {key: extincion,      label: Extinción,          type: int, min: 0, max: 5}
+          - {key: ofuscacion,     label: Ofuscación,         type: int, min: 0, max: 5}
+    giovanni:
+      - name: "Disciplinas"
+        display: dots
+        fields:
+          - {key: dominacion,     label: Dominación,         type: int, min: 0, max: 5}
+          - {key: nigromancia,    label: Nigromancia,        type: int, min: 0, max: 5}
+          - {key: potencia,       label: Potencia,           type: int, min: 0, max: 5}
+    ravnos:
+      - name: "Disciplinas"
+        display: dots
+        fields:
+          - {key: animalismo,     label: Animalismo,         type: int, min: 0, max: 5}
+          - {key: quimerismo,     label: Quimerismo,         type: int, min: 0, max: 5}
+          - {key: fortaleza,      label: Fortaleza,          type: int, min: 0, max: 5}
+    seguidores_de_set:
+      - name: "Disciplinas"
+        display: dots
+        fields:
+          - {key: ofuscacion,     label: Ofuscación,         type: int, min: 0, max: 5}
+          - {key: presencia,      label: Presencia,          type: int, min: 0, max: 5}
+          - {key: serpentis,      label: Serpentis,          type: int, min: 0, max: 5}
 
 # --- Recuperación de conocimiento ---
 knowledge:

@@ -36,7 +36,7 @@ def _parse_file(path: Path) -> tuple[dict, str]:
 
 
 class VaultRetriever:
-    def __init__(self, vault_path: str = "./vault", brain_path: str = "./cerebro", brain_embedding_model: str = "bge-m3"):
+    def __init__(self, vault_path: str = "./vault", brain_path: str = "./cerebro", brain_embedding_model: str = "nomic-embed-text"):
         self.vault_path = Path(vault_path)
         self._embedder = Embedder()
         self._index: Optional[dict[str, list[float]]] = None

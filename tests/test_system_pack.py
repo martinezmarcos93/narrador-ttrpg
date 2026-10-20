@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 
+from narrator.core.character_sheet import validate_schema
 from narrator.core.system_pack import KnowledgePolicy, SystemPack
 
 
@@ -77,3 +78,4 @@ def test_all_bundled_system_packs_satisfy_contract():
         pack = SystemPack.load(slug, systems)
         assert pack.slug == slug
         assert pack.validate_front_contract() == []
+        assert validate_schema(pack.character_sheet_schema) == [], slug

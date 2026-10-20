@@ -42,7 +42,7 @@ class Orchestrator:
         vault_path = str(resolve_path(self.config.get("vault", {}).get("path", "vault")))
         brain_cfg = self.config.get("cerebro", {}) or {}
         brain_path = str(resolve_path(brain_cfg.get("path", "cerebro")))
-        brain_embedding_model = brain_cfg.get("embedding_model", "bge-m3")
+        brain_embedding_model = brain_cfg.get("embedding_model", "nomic-embed-text")
         state_path = str(resolve_path(self.config.get("estado", {}).get("path", "estado_campana.yaml")))
 
         self.builder = PromptBuilder(systems_path=systems_path)
