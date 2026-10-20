@@ -56,12 +56,64 @@ class CausalityEngine:
     def _effects(item: dict) -> list[dict]:
         return [dict(effect) for effect in item.get("effects", []) if isinstance(effect, dict)]
 
-    def _apply_secondary_effects(self, effects: list[dict], *, parent_id: str = "") -> list[str]:
-        """Aplica efectos declarativos y devuelve eventos que pueden propagar causalidad."""
+    _CLOCK_KINDS = {"clock_delta", "front_clock_delta"}
+
+    @classmethod
+    def _clock_deltas(cls, effects: list[dict]) -> dict[str, int]:
+        """Suma los deltas de reloj declarados en una lista de efectos."""
+        totals: dict[str, int] = {}
+        for effect in effects:
+            if str(effect.get("type") or "").strip().lower() not in cls._CLOCK_KINDS:
+                continue
+            name = str(effect.get("name") or "").strip()
+            if not name:
+                continue
+            try:
+                delta = int(effect.get("delta"))
+            except (TypeError, ValueError):
+                continue
+            totals[name] = totals.get(name, 0) + delta
+        return totals
+
+    def _apply_clock_totals(self, totals: dict[str, int]) -> list[str]:
+        """Aplica deltas ya agregados: un único clamp y un único evento de umbral por reloj."""
+        events = []
+        clocks = self.state.data.get("relojes", {})
+        for name in sorted(totals):
+            clock = clocks.get(name)
+            if clock is None:
+                continue
+            before = int(clock.get("llenos", 0))
+            maximum = int(clock.get("segmentos", 6))
+            after = min(max(0, before + totals[name]), maximum)
+            clock["llenos"] = after
+            events.append(f"reloj {name}: {before}->{after}")
+            # El evento de frente lleno solo nace al cruzar el umbral; un reloj
+            # ya lleno no re-dispara infinitamente.
+            if before < maximum <= after:
+                events.append(f"frente {name} lleno")
+        return events
+
+    def _apply_secondary_effects(
+        self,
+        effects: list[dict],
+        *,
+        parent_id: str = "",
+        include_clocks: bool = True,
+    ) -> list[str]:
+        """Aplica efectos declarativos y devuelve eventos que pueden propagar causalidad.
+
+        Con ``include_clocks=False`` los deltas de reloj se omiten porque el
+        llamador ya los aplicó agregados (ver ``_evaluate_impl``).
+        """
         emitted_events = []
         pending = self.state.data.setdefault("consecuencias_pendientes", [])
+        if include_clocks:
+            emitted_events.extend(self._apply_clock_totals(self._clock_deltas(effects)))
         for effect in effects:
             kind = str(effect.get("type") or "").strip().lower()
+            if kind in self._CLOCK_KINDS:
+                continue
 
             if kind == "fact":
                 key = str(effect.get("key") or "").strip()
@@ -89,22 +141,6 @@ class CausalityEngine:
                 location = str(effect.get("value") or "").strip()
                 if location:
                     self.state.set_location(location)
-            elif kind == "clock_delta":
-                name = str(effect.get("name") or "").strip()
-                if name:
-                    try:
-                        delta = int(effect.get("delta"))
-                    except (TypeError, ValueError):
-                        delta = 0
-                    clock = self.state.data.get("relojes", {}).get(name)
-                    if clock is not None:
-                        before = int(clock.get("llenos", 0))
-                        maximum = int(clock.get("segmentos", 6))
-                        after = min(max(0, before + delta), maximum)
-                        clock["llenos"] = after
-                        emitted_events.append(f"reloj {name}: {before}->{after}")
-                        if before < maximum <= after:
-                            emitted_events.append(f"frente {name} lleno")
             elif kind == "event":
                 event = str(effect.get("text") or "").strip()
                 if event:
@@ -143,24 +179,6 @@ class CausalityEngine:
                         target_type=str(effect.get("target_type") or "npc"),
                         reason=str(effect.get("reason") or "causalidad"),
                     )
-            elif kind == "front_clock_delta":
-                name = str(effect.get("name") or "").strip()
-                if name:
-                    try:
-                        delta = int(effect.get("delta"))
-                    except (TypeError, ValueError):
-                        delta = 0
-                    clock = self.state.data.get("relojes", {}).get(name)
-                    if clock is not None:
-                        before = int(clock.get("llenos", 0))
-                        maximum = int(clock.get("segmentos", 6))
-                        after = min(max(0, before + delta), maximum)
-                        clock["llenos"] = after
-                        emitted_events.append(f"reloj {name}: {before}->{after}")
-                        # El evento de frente lleno solo nace al cruzar el
-                        # umbral; un reloj ya lleno no re-dispara infinitamente.
-                        if before < maximum <= after:
-                            emitted_events.append(f"frente {name} lleno")
             elif kind == "queue_consequence":
                 consequence = str(
                     effect.get("consequence") or effect.get("text") or ""
@@ -215,6 +233,14 @@ class CausalityEngine:
                 break
 
             emitted: list[str] = []
+            # Agregación previa a la activación: todos los deltas de reloj de
+            # las consecuencias de este paso se suman y se aplican una sola vez,
+            # así el resultado no depende del orden de las coincidencias.
+            step_effects: list[dict] = []
+            for index, item, reason in matches:
+                step_effects.extend(self._effects(item))
+            emitted.extend(self._apply_clock_totals(self._clock_deltas(step_effects)))
+
             for index, item, reason in reversed(matches):
                 pending = self.state.data.get("consecuencias_pendientes", [])
                 if not (0 <= index < len(pending)) or pending[index].get("estado", "pendiente") != "pendiente":
@@ -240,7 +266,9 @@ class CausalityEngine:
                     index,
                     outcome=f"Activada automáticamente ({reason}, profundidad {depth})",
                 )
-                emitted.extend(self._apply_secondary_effects(effects, parent_id=provenance_id))
+                emitted.extend(self._apply_secondary_effects(
+                    effects, parent_id=provenance_id, include_clocks=False,
+                ))
                 activations.append(activation)
 
             # Una activación solo puede re-disparar por un evento explícito.

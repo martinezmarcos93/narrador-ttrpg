@@ -211,3 +211,20 @@ def test_proposal_validator_passes_entities_to_continuity(tmp_path):
     })
     report = ProposalValidator(ContinuityValidator(state)).validate(proposal)
     assert report.valid
+
+
+def test_cross_consequence_clock_saturation_is_a_warning(tmp_path):
+    state = StateManager(str(tmp_path / "estado.yaml"))
+    state.add_front("Culto", max_stage=4)
+    proposal = NarrativeProposal.from_dict({
+        "consequences": [
+            {"text": "a", "trigger": "x", "effects": [
+                {"type": "clock_delta", "name": "Culto", "delta": 3}]},
+            {"text": "b", "trigger": "y", "effects": [
+                {"type": "queue_consequence", "consequence": "c", "trigger": "z", "effects": [
+                    {"type": "front_clock_delta", "name": "Culto", "delta": 2}]}]},
+        ]
+    })
+    report = ProposalValidator(ContinuityValidator(state)).validate(proposal)
+    assert report.valid
+    assert any(i.code == "clock_aggregate_saturation" for i in report.warnings)

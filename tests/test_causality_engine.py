@@ -141,3 +141,39 @@ def test_causality_executes_state_and_scene_primitives(tmp_path):
     assert state.get_flag("alarma") is True
     assert state.data["escena_actual"]["npcs_presentes"] == []
     assert state.get_location() == "Patio"
+
+
+def test_same_step_clock_deltas_are_aggregated_before_clamp(tmp_path):
+    """+3 y -2 en el mismo paso equivalen a +1, sin importar el orden."""
+    results = []
+    for order in ((3, -2), (-2, 3)):
+        state = StateManager(str(tmp_path / f"estado_{order[0]}.yaml"))
+        state.add_clock("culto", segments=6)
+        state.data["relojes"]["culto"]["llenos"] = 5
+        for delta in order:
+            state.add_pending_consequence(
+                f"cambio {delta}", trigger="señal",
+                effects=[{"type": "clock_delta", "name": "culto", "delta": delta}],
+            )
+        CausalityEngine(state).evaluate("señal")
+        results.append(state.data["relojes"]["culto"]["llenos"])
+    assert results == [6, 6]
+
+
+def test_threshold_event_emitted_once_for_aggregated_step(tmp_path):
+    state = StateManager(str(tmp_path / "estado.yaml"))
+    state.add_clock("culto", segments=4)
+    for _ in range(3):
+        state.add_pending_consequence(
+            "empuje", trigger="ritual",
+            effects=[{"type": "front_clock_delta", "name": "culto", "delta": 2}],
+        )
+    state.add_pending_consequence(
+        "reacción", trigger="frente culto lleno",
+        effects=[{"type": "player_fact", "key": "portal", "value": "abierto"}],
+    )
+    engine = CausalityEngine(state)
+    activations = engine.evaluate("ritual")
+    assert state.data["relojes"]["culto"]["llenos"] == 4
+    assert [a.consequence for a in activations].count("reacción") == 1
+    assert state.get_player_fact("portal") == "abierto"

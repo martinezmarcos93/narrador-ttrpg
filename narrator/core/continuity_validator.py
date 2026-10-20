@@ -113,6 +113,9 @@ class ContinuityValidator:
             issues,
         )
         self._check_temporal(proposal.get("session"), issues)
+        self._check_clock_aggregate(
+            proposal.get("clock_changes", []), proposal.get("consequences", []), issues
+        )
 
         return ContinuityReport(not any(i.severity == "error" for i in issues), issues)
 
@@ -726,6 +729,73 @@ class ContinuityValidator:
                         "invalid_clock_definition", "error",
                         f"El reloj del frente '{name}' tiene una definición inválida.",
                     ))
+
+    @classmethod
+    def _iter_clock_effects(cls, effects: Any, depth: int = 0):
+        if not isinstance(effects, list) or depth > cls.MAX_EFFECT_DEPTH:
+            return
+        for effect in effects:
+            if not isinstance(effect, dict):
+                continue
+            kind = str(effect.get("type") or "").strip()
+            if kind in {"clock_delta", "front_clock_delta"}:
+                yield effect
+            elif kind == "queue_consequence":
+                yield from cls._iter_clock_effects(effect.get("effects"), depth + 1)
+
+    def _check_clock_aggregate(
+        self, clock_changes: Any, consequences: Any, issues: list[ContinuityIssue]
+    ) -> None:
+        """Peor caso de todas las consecuencias de la propuesta sobre cada reloj.
+
+        Las consecuencias son condicionales y CausalityEngine recorta al rango,
+        así que exceder el rango en el peor caso es una advertencia: el máster
+        debe saber que parte del avance se perdería si todas se activan.
+        """
+        clocks = self.data.get("relojes", {})
+        if not clocks or not isinstance(consequences, list):
+            return
+        base: dict[str, int] = {}
+        for item in clock_changes if isinstance(clock_changes, list) else []:
+            if isinstance(item, dict) and str(item.get("name") or "").strip() in clocks:
+                try:
+                    name = str(item["name"]).strip()
+                    base[name] = base.get(name, 0) + int(item.get("delta"))
+                except (TypeError, ValueError):
+                    continue
+        up: dict[str, int] = {}
+        down: dict[str, int] = {}
+        counted: dict[str, int] = {}
+        for consequence in consequences:
+            if not isinstance(consequence, dict):
+                continue
+            for effect in self._iter_clock_effects(consequence.get("effects")):
+                name = str(effect.get("name") or "").strip()
+                if name not in clocks:
+                    continue
+                try:
+                    delta = int(effect.get("delta"))
+                except (TypeError, ValueError):
+                    continue
+                counted[name] = counted.get(name, 0) + 1
+                if delta >= 0:
+                    up[name] = up.get(name, 0) + delta
+                else:
+                    down[name] = down.get(name, 0) + delta
+        for name in sorted(counted):
+            if counted[name] < 2:
+                continue  # un único efecto ya se valida con error en _check_effects
+            try:
+                current = int(clocks[name].get("llenos", 0)) + base.get(name, 0)
+                maximum = int(clocks[name].get("segmentos", 6))
+            except (TypeError, ValueError):
+                continue
+            if current + up.get(name, 0) > maximum or current + down.get(name, 0) < 0:
+                issues.append(ContinuityIssue(
+                    "clock_aggregate_saturation", "warning",
+                    f"Si se activan todas las consecuencias, el reloj '{name}' saldría de "
+                    f"0..{maximum} y se recortaría.",
+                ))
 
     def _check_temporal(self, session: Any, issues: list[ContinuityIssue]) -> None:
         if session is None:
