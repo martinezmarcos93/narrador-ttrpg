@@ -75,6 +75,13 @@ def create_app(
         )
     service = web_service
     limiter = RateLimiter(int(os.getenv("NARRATOR_RATE_LIMIT", "120")))
+    # Detrás de un reverse proxy (Caddy/nginx) la IP real viene en X-Forwarded-For.
+    trusted_proxies = int(os.getenv("NARRATOR_TRUSTED_PROXIES", "0") or 0)
+    if trusted_proxies > 0:
+        from werkzeug.middleware.proxy_fix import ProxyFix
+
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=trusted_proxies, x_proto=trusted_proxies,
+                                x_host=trusted_proxies)
 
     api_key = os.getenv("NARRATOR_API_KEY", "").strip()
     environment = os.getenv("NARRATOR_ENV", "development").strip().lower()
@@ -129,6 +136,10 @@ def create_app(
         response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers.setdefault("Referrer-Policy", "no-referrer")
         response.headers.setdefault("Cache-Control", "no-store")
+        if environment == "production":
+            response.headers.setdefault(
+                "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
+            )
         response.headers.setdefault(
             "Content-Security-Policy",
             "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; "

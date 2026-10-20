@@ -1,0 +1,22 @@
+# Unidad systemd del servidor web del Narrador (ver docs/DEPLOY-WEB.md).
+# Instalación (usuario):  cp deploy/narrador-web.service ~/.config/systemd/user/
+#                         systemctl --user daemon-reload && systemctl --user enable --now narrador-web
+[Unit]
+Description=Narrador TTRPG — API y GUI web
+After=network-online.target ollama.service
+
+[Service]
+Type=simple
+WorkingDirectory=%h/narrador
+EnvironmentFile=%h/narrador/.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=%h/narrador/.venv/bin/python -m narrator.web --host 127.0.0.1 --port 8765
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=%h/narrador
+
+[Install]
+WantedBy=default.target

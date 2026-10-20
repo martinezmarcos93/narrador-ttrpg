@@ -1,0 +1,8 @@
+# Reverse proxy con HTTPS automático (Let's Encrypt) delante del Narrador.
+narrador.example.com {
+    encode gzip
+    # SSE: sin buffering para que el streaming llegue token a token.
+    reverse_proxy 127.0.0.1:8765 {
+        flush_interval -1
+    }
+}

@@ -182,3 +182,18 @@ def test_unknown_route_is_404_not_500_and_oversized_body_is_413(monkeypatch):
     assert missing.status_code == 404
     assert missing.json["error"]["code"] == "not_found"
     assert client.post("/api/v1/turns", data="x" * 5000).status_code == 413
+
+
+def test_production_adds_hsts_and_limits_by_identity_behind_proxy(monkeypatch):
+    monkeypatch.setenv("NARRATOR_ENV", "production")
+    monkeypatch.setenv("NARRATOR_API_KEY", "k")
+    monkeypatch.setenv("NARRATOR_TRUSTED_PROXIES", "1")
+    monkeypatch.setenv("NARRATOR_RATE_LIMIT", "1")
+    client = _app().test_client()
+    health = client.get("/api/v1/health")
+    assert "Strict-Transport-Security" in health.headers
+    # Con clave, el límite se cuenta por identidad aunque cambie la IP reenviada.
+    h1 = {"X-Forwarded-For": "10.0.0.1", "Authorization": "Bearer k"}
+    h2 = {"X-Forwarded-For": "10.0.0.2", "Authorization": "Bearer k"}
+    assert client.get("/api/v1/sessions", headers=h1).status_code == 200
+    assert client.get("/api/v1/sessions", headers=h2).status_code == 429  # admin: misma identidad
