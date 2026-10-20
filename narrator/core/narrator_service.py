@@ -6,6 +6,8 @@ Dear PyGui, Flask, CLI o una futura API. No importa widgets ni framework web.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from narrator.agents.orchestrator import Orchestrator
 from narrator.core.rule_arbiter import RuleArbiter
 
@@ -134,3 +136,61 @@ class NarratorService:
             rolls=rolls,
             sides=sides,
         )
+
+    # ── Consultas y servicios para la UI ──────────────────────
+    # La UI no debe tocar orchestrator.state/retriever/builder directamente:
+    # todo acceso pasa por estos métodos (ver docs/architecture/SERVICE-BOUNDARY.md).
+
+    @property
+    def vault_path(self) -> Path:
+        return Path(self.orchestrator.retriever.vault_path)
+
+    @property
+    def vault_template_path(self) -> Path:
+        from narrator import resolve_path
+
+        cfg = self.orchestrator.config.get("vault", {}) or {}
+        return Path(resolve_path(cfg.get("template_path", "data/vault_template")))
+
+    @property
+    def live_vault_updates(self) -> bool:
+        return bool((self.orchestrator.config.get("vault", {}) or {}).get("live_updates", True))
+
+    @property
+    def sessions_dir(self) -> Path:
+        return self.vault_path / "Sesiones"
+
+    def system_data(self, system_slug: str) -> dict:
+        return self.orchestrator.builder.load_system(system_slug)
+
+    def character_sheet_schema(self, system_slug: str) -> dict:
+        return self.system_data(system_slug).get("character_sheet_schema") or {}
+
+    def clocks_summary(self) -> str:
+        return self.orchestrator.state.get_clocks_summary()
+
+    def fronts_with_clocks(self) -> list:
+        return self.orchestrator.retriever.get_fronts_with_clocks()
+
+    def scenes_status(self) -> str:
+        return self.orchestrator.scenes.get_status_summary()
+
+    def reset_session_pacing(self) -> None:
+        self.orchestrator.pacing_agent.reset_session()
+
+    def invalidate_retrieval_cache(self) -> None:
+        self.orchestrator.retriever.invalidate_cache()
+
+    def create_world_agent(self, llm):
+        from narrator.agents.world_agent import WorldAgent
+
+        return WorldAgent(
+            llm=llm,
+            retriever=self.orchestrator.retriever,
+            state=self.orchestrator.state,
+        )
+
+    def create_extractor(self, llm):
+        from narrator.agents.extractor_agent import ExtractorAgent
+
+        return ExtractorAgent(llm=llm, builder=self.orchestrator.builder)

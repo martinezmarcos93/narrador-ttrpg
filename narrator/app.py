@@ -30,21 +30,17 @@ _memory = MemoryManager()
 # ── Backend de agentes ────────────────────────────────────
 # Carga con fallback: si el package no está listo, usa modo legacy.
 try:
-    from narrator.agents.extractor_agent import ExtractorAgent
-    from narrator.agents.world_agent import WorldAgent
     from narrator.core.narrator_service import NarratorService
     from narrator.core.vault_writer import VaultWriter
 
     _CONFIG_PATH = str(PROJECT_ROOT / "config" / "config.yaml")
     _narrator_service = NarratorService(config_path=_CONFIG_PATH)
-    _orchestrator = _narrator_service.orchestrator
     _narrator_agent = _narrator_service.narrator_agent
     _rule_arbiter = _narrator_service.rule_arbiter
     _vault_writer: "VaultWriter | None" = None
     _AGENT_MODE = True
 except Exception as _agent_err:
     _narrator_service = None
-    _orchestrator = None
     _narrator_agent = None
     _rule_arbiter = None
     _vault_writer = None
@@ -209,7 +205,7 @@ def extract_pdf_text(path: str, max_chars: int = 12000) -> str | None:
 
 def detect_system(text: str) -> tuple[str, str]:
     """Detecta el sistema de juego. Devuelve (display_name, slug)."""
-    if _AGENT_MODE and _orchestrator:
+    if _AGENT_MODE and _narrator_service:
         slug = _narrator_service.detect_system(text, state)
         names = {
             "vtm_v20": "Mundo de Tinieblas (Vampiro V20)",
@@ -488,7 +484,7 @@ def finish_streaming(full_text: str):
         ).start()
 
     # Cierre determinista del contrato: persistimos solo el resumen técnico.
-    if _active_turn_contract is not None and _orchestrator is not None:
+    if _active_turn_contract is not None and _narrator_service is not None:
         try:
             _narrator_service.persist_turn(_active_turn_contract)
         except Exception as e:
@@ -625,7 +621,7 @@ def send_message(user_text: str = None):
     state["messages"].append({"role": "user", "content": user_text})
     append_to_chat("user", user_text)
 
-    if _AGENT_MODE and _orchestrator:
+    if _AGENT_MODE and _narrator_service:
         event_type, intensity = _detect_event_type(user_text)
         state["ultimo_evento"] = event_type
         _narrator_service.record_event(event_type, intensity)
@@ -645,7 +641,7 @@ def send_message(user_text: str = None):
         # Construcción del contexto EN EL WORKER: lee todo el vault y puede
         # hacer un POST de embeddings a Ollama — antes congelaba la GUI.
         global _active_turn_contract
-        if _AGENT_MODE and _orchestrator:
+        if _AGENT_MODE and _narrator_service:
             try:
                 contract = _narrator_service.prepare_turn(state)
                 _active_turn_contract = contract
@@ -870,10 +866,11 @@ def refresh_character_panel():
 
     # Intentar cargar schema del sistema activo
     schema = None
-    if _AGENT_MODE and _orchestrator:
+    if _AGENT_MODE and _narrator_service:
         try:
-            sys_data = _orchestrator.builder.load_system(state.get("system_slug", "generic"))
-            schema = sys_data.get("character_sheet_schema")
+            schema = _narrator_service.character_sheet_schema(
+                state.get("system_slug", "generic")
+            )
         except Exception as e:
             logger.error(f"Error inesperado: {e}", exc_info=True)
 
@@ -947,7 +944,7 @@ def _clock_bar(tick: int, max_ticks: int) -> str:
     return f"[{bar}] {filled}/{max_ticks}"
 
 def _get_ideas_inbox() -> IdeasInbox:
-    vault_path = str(_orchestrator.retriever.vault_path) if (_AGENT_MODE and _orchestrator) \
+    vault_path = str(_narrator_service.vault_path) if (_AGENT_MODE and _narrator_service) \
         else str(resolve_path("vault"))
     return IdeasInbox(vault_path=vault_path)
 
@@ -1000,9 +997,9 @@ def refresh_estado_panel():
     dpg.add_spacer(height=6, parent="estado_content")
 
     # Relojes de frentes
-    if _AGENT_MODE and _orchestrator:
+    if _AGENT_MODE and _narrator_service:
         try:
-            fronts = _orchestrator.retriever.get_fronts_with_clocks()
+            fronts = _narrator_service.fronts_with_clocks()
         except Exception as e:
             logger.error("No se pudieron leer los frentes del vault: %s", e, exc_info=True)
             fronts = []
@@ -1027,9 +1024,9 @@ def refresh_estado_panel():
                      color=list(C_TEXT_DIM), wrap=155)
 
     # Escenas (C2)
-    if _AGENT_MODE and _orchestrator:
+    if _AGENT_MODE and _narrator_service:
         try:
-            escenas = _orchestrator.scenes.get_status_summary()
+            escenas = _narrator_service.scenes_status()
         except Exception as e:
             logger.error("No se pudo resumir el estado de escenas: %s", e, exc_info=True)
             escenas = ""
@@ -1146,15 +1143,15 @@ def export_session_log(silent: bool = False) -> str:
             "```",
         ]
 
-    if _AGENT_MODE and _orchestrator:
-        clocks = _orchestrator.state.get_clocks_summary()
+    if _AGENT_MODE and _narrator_service:
+        clocks = _narrator_service.clocks_summary()
         if clocks:
             lines += ["", "---", "", "## Estado de Frentes", "", "```", clocks, "```"]
 
     export_path.write_text("\n".join(lines), encoding="utf-8")
 
-    if _AGENT_MODE and _orchestrator:
-        sessions_dir = _orchestrator.retriever.vault_path / "Sesiones"
+    if _AGENT_MODE and _narrator_service:
+        sessions_dir = _narrator_service.sessions_dir
         if sessions_dir.exists():
             import shutil
             shutil.copy(export_path, sessions_dir / filename)
@@ -1209,8 +1206,8 @@ def new_session_callback():
                   "tirada_sugerida": None,
                   "session_number": state.get("session_number", 1) + 1})
     _memory.reset()
-    if _AGENT_MODE and _orchestrator:
-        _orchestrator.pacing_agent.reset_session()
+    if _AGENT_MODE and _narrator_service:
+        _narrator_service.reset_session_pacing()
     # delete_item borra TAMBIÉN streaming_group (vive dentro de chat_scroll):
     # hay que recrearlo o el próximo mensaje rompe el streaming.
     dpg.delete_item("chat_scroll", children_only=True)
@@ -1241,7 +1238,7 @@ def new_session_callback():
 # ─────────────────────────────────────────────
 def run_world_agent():
     """Lanza el WorldAgent en un hilo secundario."""
-    if not _AGENT_MODE or not _orchestrator:
+    if not _AGENT_MODE or not _narrator_service:
         append_to_chat("system", "⚠ Modo agentes no disponible.")
         return
 
@@ -1257,11 +1254,7 @@ def run_world_agent():
     def run():
         try:
             llm = LLMClient(model=state["model"])
-            agent = WorldAgent(
-                llm=llm,
-                retriever=_orchestrator.retriever,
-                state=_orchestrator.state,
-            )
+            agent = _narrator_service.create_world_agent(llm)
             result = agent.run(
                 system_slug=state.get("system_slug", "generic"),
                 session_number=state.get("session_number", 1),
@@ -1408,17 +1401,10 @@ def build_vault_callback():
     def run():
         try:
             llm = LLMClient(model=state["model"])
-            from narrator.core.prompt_builder import PromptBuilder
-
-            pb = _orchestrator.builder if _orchestrator else PromptBuilder()
-            extractor = ExtractorAgent(llm=llm, builder=pb)
-
-            config = _orchestrator.config if _orchestrator else {}
+            extractor = _narrator_service.create_extractor(llm)
             # Rutas ya resueltas contra PROJECT_ROOT
-            vault_path = str(_orchestrator.retriever.vault_path) if _orchestrator \
-                else str(resolve_path("vault"))
-            template_path = str(resolve_path(
-                config.get("vault", {}).get("template_path", "data/vault_template")))
+            vault_path = str(_narrator_service.vault_path)
+            template_path = str(_narrator_service.vault_template_path)
 
             result = extractor.run(
                 pdf_text=state["manual_text"],
@@ -1431,7 +1417,7 @@ def build_vault_callback():
             # El retriever cacheó un índice vacío antes de que existiera
             # el vault: sin esto, la búsqueda semántica queda muerta
             # hasta reiniciar la app.
-            _orchestrator.retriever.invalidate_cache()
+            _narrator_service.invalidate_retrieval_cache()
             summary = (
                 f"Vault construido: {result['npcs']} NPCs, "
                 f"{result['locaciones']} locaciones, "
@@ -1862,11 +1848,10 @@ def _init_vault_writer():
     if not _AGENT_MODE:
         return
     try:
-        config = _orchestrator.config if _orchestrator else {}
-        vault_path = str(_orchestrator.retriever.vault_path) if _orchestrator \
-            else str(resolve_path("vault"))
-        live = config.get("vault", {}).get("live_updates", True)
-        if not live:
+        if not _narrator_service:
+            return
+        vault_path = str(_narrator_service.vault_path)
+        if not _narrator_service.live_vault_updates:
             return
         _vault_writer = VaultWriter(vault_path=vault_path)
         session_n = state.get("session_number", 1)
