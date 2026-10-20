@@ -1,0 +1,61 @@
+# Escenarios TTRPG del roadmap (Fase H) -> tests que los verifican, agrupados
+# por métrica de evaluación del motor (Fase I). Lo ejecuta scripts/evaluate_engine.py.
+scenarios:
+  investigacion_exito:
+    metric: state_correctness
+    tests: ["tests/test_ttrpg_regression_scenarios.py::test_investigation_success_reveals_clue_and_grants_player_knowledge"]
+  investigacion_fallo_consecuencia:
+    metric: causal_correctness
+    tests: ["tests/test_ttrpg_regression_scenarios.py::test_investigation_failure_creates_next_turn_consequence"]
+  consecuencia_turno_posterior:
+    metric: causal_correctness
+    tests: ["tests/test_causality_engine.py::test_prepare_turn_activates_trigger_from_previous_proposal"]
+  conflicto_social_relacion:
+    metric: state_correctness
+    tests: ["tests/test_ttrpg_regression_scenarios.py::test_social_conflict_proposal_persists_relation_and_event",
+            "tests/test_social_dynamics.py::test_history_and_tier_events"]
+  combate_danio_personaje:
+    metric: state_correctness
+    tests: ["tests/test_ttrpg_regression_scenarios.py::test_combat_turn_updates_character_and_initiative_without_narrative_authority"]
+  faccion_frente:
+    metric: causal_correctness
+    tests: ["tests/test_ttrpg_regression_scenarios.py::test_front_clock_progression_is_persistent_and_bounded",
+            "tests/test_front_dynamics.py::test_full_front_pushes_linked_front_with_bounded_cycle"]
+  secreto_no_visible:
+    metric: knowledge_leakage
+    tests: ["tests/test_secrets.py::test_end_to_end_prompt_never_contains_hidden_truth",
+            "tests/test_synthetic_scenarios.py::test_synthetic_secret_does_not_leak_into_narrator_context",
+            "tests/test_knowledge_fallback_causality.py::test_visibility_survives_router_to_final_prompt"]
+  propuesta_invalida:
+    metric: proposal_validity
+    tests: ["tests/test_ttrpg_regression_scenarios.py::test_invalid_proposal_does_not_mutate_state",
+            "tests/test_synthetic_scenarios.py::test_synthetic_conflicting_fact_is_blocked_before_state_mutation"]
+  rollback:
+    metric: rollback_correctness
+    tests: ["tests/test_proposal_executor.py::test_executor_rolls_back_state_character_and_entities",
+            "tests/test_state_persistence_batch.py::test_atomic_save_preserves_previous_file_when_replace_fails"]
+  precedencia_manual_system_universal:
+    metric: state_correctness
+    tests: ["tests/test_retrieval_context_integration.py::test_retrieval_precedence_keeps_state_and_manual_above_campaign_and_universal",
+            "tests/test_retrieval_context_integration.py::test_house_rule_outranks_manual_but_not_state"]
+  continuidad_temporal:
+    metric: proposal_validity
+    tests: ["tests/test_continuity_validator.py::test_continuity_rejects_temporal_regression"]
+  cadena_causal:
+    metric: causal_correctness
+    tests: ["tests/test_ttrpg_regression_scenarios.py::test_causal_chain_updates_world_relation_and_front_clock",
+            "tests/test_knowledge_fallback_causality.py::test_long_causal_chain_stops_at_configured_depth"]
+  multiples_consecuencias:
+    metric: causal_correctness
+    tests: ["tests/test_knowledge_fallback_causality.py::test_cross_front_consequences_progress_multiple_clocks_and_persist",
+            "tests/test_causality_engine.py::test_same_step_clock_deltas_are_aggregated_before_clamp"]
+  creacion_entidades:
+    metric: state_correctness
+    tests: ["tests/test_proposal_executor.py::test_executor_creates_structured_entities"]
+  fallo_durante_creacion:
+    metric: rollback_correctness
+    tests: ["tests/test_proposal_executor.py::test_executor_rolls_back_entities_when_entity_creation_fails_mid_batch"]
+  recuperacion_tras_reinicio:
+    metric: state_correctness
+    tests: ["tests/test_knowledge_fallback_causality.py::test_restart_preserves_relations_consequences_and_perspective",
+            "tests/test_state_persistence_batch.py::test_corrupt_state_is_quarantined_on_load"]

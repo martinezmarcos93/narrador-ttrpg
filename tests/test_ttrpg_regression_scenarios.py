@@ -263,3 +263,19 @@ def test_front_clock_progression_is_persistent_and_bounded(tmp_path):
     reloaded = StateManager(str(tmp_path / "estado.yaml"))
     assert reloaded.load()
     assert reloaded.data["relojes"]["Culto"]["llenos"] == 4
+
+
+def test_investigation_success_reveals_clue_and_grants_player_knowledge(tmp_path):
+    from narrator.core import secrets
+
+    state = StateManager(str(tmp_path / "estado.yaml"))
+    secrets.add_secret(state, "archivo", tema="El expediente perdido",
+                       verdad="El comisario quemó el expediente",
+                       pistas=["Ceniza fresca en la estufa del comisario", "Un recibo de nafta"])
+    result = ProposalExecutor(state).execute({
+        "events": ["Lucía revisa la estufa con éxito"],
+        "discoveries": [{"secret": "archivo"}],
+    })
+    assert result.applied
+    assert state.get_player_fact("pista:archivo:1") == "Ceniza fresca en la estufa del comisario"
+    assert secrets.status(state.data["secretos"]["archivo"]) == "parcial"
