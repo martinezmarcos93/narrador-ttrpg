@@ -142,6 +142,10 @@ class StateManager:
         try:
             with open(self.path, encoding="utf-8") as f:
                 loaded = yaml.safe_load(f) or {}
+            if not isinstance(loaded, dict):
+                raise ValueError(
+                    f"la raíz del estado debe ser un mapa, no {type(loaded).__name__}"
+                )
             # Merge recursivo: un estado antiguo puede carecer de subclaves
             # nuevas sin destruir los defaults anidados.
             merged = self._default()
@@ -214,7 +218,9 @@ class StateManager:
         )
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as f:
-                yaml.dump(
+                # safe_dump: el estado se relee con safe_load; un objeto Python
+                # serializado con tags !!python/* dejaría el archivo ilegible.
+                yaml.safe_dump(
                     self.data,
                     f,
                     allow_unicode=True,

@@ -64,7 +64,8 @@ def test_atomic_save_preserves_previous_file_when_replace_fails(tmp_path, monkey
     state.set_known_fact("original", True)
     original = path.read_text(encoding="utf-8")
 
-    state.set_known_fact("nuevo", True)
+    # Mutación solo en memoria: set_known_fact() ya persistiría por sí misma.
+    state.data["hechos_conocidos"]["nuevo"] = {"valor": True, "fuente": "", "sesion": 0}
 
     real_replace = os.replace
 
@@ -93,15 +94,16 @@ def test_atomic_save_removes_temp_after_yaml_serialization_failure(tmp_path):
     state.set_known_fact("original", True)
     original = state.path.read_text(encoding="utf-8")
 
+    import yaml
+
     class Broken:
-        def __repr__(self):
-            raise RuntimeError("serialization failure")
+        """Objeto no representable por safe_dump."""
 
     state.data["hechos_conocidos"]["broken"] = {"valor": Broken()}
 
     try:
         state.save()
-    except RuntimeError:
+    except yaml.YAMLError:
         pass
     else:
         raise AssertionError("se esperaba fallo de serialización")
@@ -112,10 +114,20 @@ def test_atomic_save_removes_temp_after_yaml_serialization_failure(tmp_path):
 
 def test_corrupt_state_is_quarantined_on_load(tmp_path):
     path = tmp_path / "estado.yaml"
-    path.write_text("::: yaml roto [", encoding="utf-8")
+    path.write_text("meta: {sistema: [sin cerrar\n  - : :", encoding="utf-8")
     state = StateManager(str(path))
 
     assert state.load() is False
     backups = list(tmp_path.glob("estado.corrupto-*.yaml"))
     assert len(backups) == 1
+    assert not path.exists()
+
+
+def test_non_mapping_state_is_quarantined_on_load(tmp_path):
+    path = tmp_path / "estado.yaml"
+    path.write_text("- solo\n- una lista\n", encoding="utf-8")
+    state = StateManager(str(path))
+
+    assert state.load() is False
+    assert len(list(tmp_path.glob("estado.corrupto-*.yaml"))) == 1
     assert not path.exists()
