@@ -47,7 +47,7 @@ def extract_form_fields(pdf_path: str) -> dict:
     PyMuPDF (Fase 17) — vía alternativa a texto+LLM cuando el jugador tiene
     la ficha oficial en PDF rellenable: más rápida y sin depender del LLM.
     Devuelve {} si el PDF no tiene campos (no es un formulario) o falla."""
-    import fitz
+    import pymupdf as fitz
 
     fields: dict = {}
     try:

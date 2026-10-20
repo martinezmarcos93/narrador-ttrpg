@@ -12,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 
 import dearpygui.dearpygui as dpg
-import fitz  # PyMuPDF
+import pymupdf as fitz  # PyMuPDF
 import requests
 
 from narrator import PROJECT_ROOT, resolve_path

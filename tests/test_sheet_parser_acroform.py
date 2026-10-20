@@ -1,7 +1,7 @@
 """Test Fase 17: extracción de fichas PDF vía campos de formulario
 (AcroForm) con PyMuPDF — vía alternativa a texto+LLM."""
 
-import fitz
+import pymupdf as fitz
 
 from narrator.core.sheet_parser import extract_form_fields, map_form_fields
 
