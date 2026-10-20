@@ -130,3 +130,22 @@ def test_service_world_advances_delegate_to_orchestrator():
 
     service.orchestrator = StubOrchestrator()
     assert service.apply_world_advances([{"nombre": "Culto", "ticks": 2}]) == ["Culto"]
+
+
+def test_roll_costs_are_applied_through_proposal():
+    service = NarratorService.__new__(NarratorService)
+    calls = {}
+
+    class _Arbiter:
+        def resolve(self, **kwargs):
+            return {"detalle": "ok", "banda": "7-9", "costos": [
+                {"field": "fuerza_voluntad_temp", "delta": -1}]}
+
+    service.rule_arbiter = _Arbiter()
+    service.apply_proposal = lambda proposal, app_state=None: calls.setdefault(
+        "proposal", proposal) and {"applied": True}
+    result = service.resolve_roll_with_costs(
+        action_text="gasto fuerza de voluntad", app_state={"character": {}}, rolls=[5], sides=10,
+    )
+    assert calls["proposal"] == {"character_changes": [{"field": "fuerza_voluntad_temp", "delta": -1}]}
+    assert result["costos_aplicados"] is True

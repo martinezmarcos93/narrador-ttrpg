@@ -137,6 +137,38 @@ class NarratorService:
             sides=sides,
         )
 
+    def resolve_roll_with_costs(
+        self,
+        *,
+        action_text: str,
+        app_state: dict,
+        rolls: list[int],
+        sides: int,
+    ) -> dict | None:
+        """Resuelve la tirada y aplica sus costos (p. ej. Fuerza de Voluntad)
+        como propuesta validada; la UI nunca muta la ficha directamente."""
+        result = self.resolve_roll(
+            action_text=action_text,
+            character=app_state.get("character") or {},
+            system_slug=app_state.get("system_slug", "generic"),
+            rolls=rolls,
+            sides=sides,
+        )
+        if result and result.get("costos"):
+            applied = self.apply_proposal(
+                {"character_changes": [dict(c) for c in result["costos"]]},
+                app_state=app_state,
+            )
+            result["costos_aplicados"] = bool(applied.get("applied"))
+        return result
+
+    def suggest_roll(self, action_text: str, app_state: dict) -> dict | None:
+        return self.rule_arbiter.suggest_roll(
+            action_text,
+            app_state.get("character") or {},
+            app_state.get("system_slug", "generic"),
+        )
+
     # ── Consultas y servicios para la UI ──────────────────────
     # La UI no debe tocar orchestrator.state/retriever/builder directamente:
     # todo acceso pasa por estos métodos (ver docs/architecture/SERVICE-BOUNDARY.md).

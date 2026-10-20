@@ -37,13 +37,11 @@ try:
     _CONFIG_PATH = str(PROJECT_ROOT / "config" / "config.yaml")
     _narrator_service = NarratorService(config_path=_CONFIG_PATH)
     _narrator_agent = _narrator_service.narrator_agent
-    _rule_arbiter = _narrator_service.rule_arbiter
     _vault_writer: "VaultWriter | None" = None
     _AGENT_MODE = True
 except Exception as _agent_err:
     _narrator_service = None
     _narrator_agent = None
-    _rule_arbiter = None
     _vault_writer = None
     _AGENT_MODE = False
     print(f"⚠ Modo legacy (sin agentes): {_agent_err}")
@@ -587,14 +585,13 @@ def send_message(user_text: str = None):
         # Rule Arbiter: resolver la tirada en Python puro contra la planilla.
         # El contexto es el pedido del narrador + la acción del jugador.
         pending = state.pop("pending_roll", None)
-        if pending and _rule_arbiter is not None:
+        if pending and _narrator_service is not None:
             last_narrator = next(
                 (m["content"] for m in reversed(state["messages"])
                  if m.get("role") == "assistant"), "")
-            resultado = _rule_arbiter.resolve(
+            resultado = _narrator_service.resolve_roll_with_costs(
                 action_text=f"{last_narrator}\n{user_text}",
-                character=state.get("character") or {},
-                system_slug=state.get("system_slug", "generic"),
+                app_state=state,
                 rolls=pending["rolls"],
                 sides=pending["sides"],
             )
@@ -602,6 +599,10 @@ def send_message(user_text: str = None):
                 state["resolucion_mecanica"] = resultado["detalle"]
                 state["tirada_banda"] = resultado["banda"]
                 append_to_chat("system", f"⚖ {resultado['detalle']}")
+                for aviso in resultado.get("advertencias", []):
+                    append_to_chat("system", f"⚠ {aviso}")
+                if resultado.get("costos_aplicados"):
+                    refresh_character_panel()
 
     state["messages"].append({"role": "user", "content": user_text})
     append_to_chat("user", user_text)

@@ -36,6 +36,8 @@ def _validate_acciones(acciones, path: str) -> None:
         for campo in ("keywords", "atributo", "etiqueta"):
             if campo not in accion:
                 raise ResolutionSchemaError(f"{path}.acciones[{i}]: falta '{campo}'")
+        if "habilidad" in accion and not isinstance(accion["habilidad"], str):
+            raise ResolutionSchemaError(f"{path}.acciones[{i}].habilidad: esperado texto")
         if not isinstance(accion["keywords"], list) or not accion["keywords"]:
             raise ResolutionSchemaError(
                 f"{path}.acciones[{i}].keywords: esperado una lista no vacía"

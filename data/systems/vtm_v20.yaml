@@ -313,14 +313,25 @@ resolution:
     dificil: ["difícil", "dificil", "arriesgado", "complicado", "casi imposible", "extremo"]
   atributo_default: "destreza"
   acciones:
-    - {keywords: ["ataco", "golpeo", "peleo", "embisto", "derribo", "fuerzo"], atributo: "fuerza", etiqueta: "Fuerza"}
-    - {keywords: ["disparo", "apunto", "sigilo", "me escondo", "esquivo", "trepo", "robo"], atributo: "destreza", etiqueta: "Destreza"}
+    - {keywords: ["ataco", "golpeo", "peleo", "embisto", "derribo", "pelear", "golpear"], atributo: "fuerza", habilidad: "pelea", etiqueta: "Fuerza + Pelea"}
+    - {keywords: ["cuchillo", "espada", "machete", "estaca", "bate", "con mi arma"], atributo: "destreza", habilidad: "pelea_armas", etiqueta: "Destreza + Pelea con Armas"}
+    - {keywords: ["disparo", "apunto", "disparar"], atributo: "destreza", habilidad: "armas_fuego", etiqueta: "Destreza + Armas de Fuego"}
+    - {keywords: ["sigilo", "me escondo", "me oculto", "sin ser visto", "esconderme"], atributo: "destreza", habilidad: "sigilo", etiqueta: "Destreza + Sigilo"}
+    - {keywords: ["esquivo", "trepo", "salto", "corro", "escalo", "huyo"], atributo: "destreza", habilidad: "atletismo", etiqueta: "Destreza + Atletismo"}
+    - {keywords: ["robo", "abro la cerradura", "forzar la cerradura", "carterista"], atributo: "destreza", habilidad: "latrocinio", etiqueta: "Destreza + Latrocinio"}
+    - {keywords: ["fuerzo", "levanto", "rompo", "derribo la puerta"], atributo: "fuerza", habilidad: "atletismo", etiqueta: "Fuerza + Atletismo"}
     - {keywords: ["resisto", "aguanto", "soporto"], atributo: "resistencia", etiqueta: "Resistencia"}
-    - {keywords: ["persuado", "convenzo", "seduzco", "lidero", "presencia"], atributo: "carisma", etiqueta: "Carisma"}
-    - {keywords: ["engaño", "manipulo", "intimido", "negocio"], atributo: "manipulacion", etiqueta: "Manipulación"}
-    - {keywords: ["percibo", "observo", "escucho", "busco", "rastreo", "auspex"], atributo: "percepcion", etiqueta: "Percepción"}
-    - {keywords: ["investigo", "examino", "analizo", "recuerdo", "descifro"], atributo: "inteligencia", etiqueta: "Inteligencia"}
-    - {keywords: ["reacciono", "improviso", "astucia"], atributo: "astucia", etiqueta: "Astucia"}
+    - {keywords: ["persuado", "convenzo", "convencer", "seduzco", "inspiro"], atributo: "carisma", habilidad: "expresion", etiqueta: "Carisma + Expresión"}
+    - {keywords: ["lidero", "ordeno", "arengo"], atributo: "carisma", habilidad: "liderazgo", etiqueta: "Carisma + Liderazgo"}
+    - {keywords: ["intimido", "amenazo", "intimidar"], atributo: "manipulacion", habilidad: "intimidacion", etiqueta: "Manipulación + Intimidación"}
+    - {keywords: ["engaño", "miento", "manipulo", "negocio", "engañar"], atributo: "manipulacion", habilidad: "subterfugio", etiqueta: "Manipulación + Subterfugio"}
+    - {keywords: ["auspex", "aura"], atributo: "percepcion", habilidad: "consciencia", etiqueta: "Percepción + Consciencia"}
+    - {keywords: ["percibo", "observo", "escucho", "noto", "vigilo"], atributo: "percepcion", habilidad: "alerta", etiqueta: "Percepción + Alerta"}
+    - {keywords: ["busco", "examino", "inspecciono", "registro"], atributo: "percepcion", habilidad: "investigacion", etiqueta: "Percepción + Investigación"}
+    - {keywords: ["investigo", "analizo", "recuerdo", "descifro", "investigar"], atributo: "inteligencia", habilidad: "investigacion", etiqueta: "Inteligencia + Investigación"}
+    - {keywords: ["ritual", "oculto", "sobrenatural", "tradición"], atributo: "inteligencia", habilidad: "ocultismo", etiqueta: "Inteligencia + Ocultismo"}
+    - {keywords: ["empatizo", "leo sus intenciones", "intuyo", "le creo"], atributo: "percepcion", habilidad: "empatia", etiqueta: "Percepción + Empatía"}
+    - {keywords: ["reacciono", "improviso", "astucia"], atributo: "astucia", habilidad: "alerta", etiqueta: "Astucia + Alerta"}
 
 # --- Lorebook (Fase 5): reglas puntuales indexadas por keyword ---
 # RAG liviano sin embeddings — complementa la búsqueda del vault cuando

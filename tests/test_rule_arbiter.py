@@ -57,7 +57,7 @@ def test_dnd_pifia_natural():
 
 def test_dnd_dificultad_explicita():
     char = {"atributos": {"destreza": 14}}  # +2
-    r = _arbiter().resolve("trepo el muro, CD 18", char, "dnd_5e", rolls=[15], sides=20)
+    r = _arbiter().resolve("me escondo tras el muro, CD 18", char, "dnd_5e", rolls=[15], sides=20)
     assert "CD 18" in r["detalle"]           # 15+2=17 vs 18 → fallo por poco
     assert r["veredicto"] == "FALLO POR POCO"
 
@@ -155,7 +155,7 @@ def test_slug_desconocido_cae_a_generic():
 
 def test_resultado_arbiter_incluye_trazabilidad_estructurada():
     r = _arbiter().resolve(
-        "trepo el muro, CD 18",
+        "me escondo tras el muro, CD 18",
         {"atributos": {"destreza": 14}},
         "dnd_5e",
         rolls=[15],
@@ -186,3 +186,78 @@ def test_arbiter_expone_validacion_de_tirada():
         "sides_compatible": True,
         "count": 1,
     }
+
+
+# ── Primitivas mecánicas por System Pack (Fase C) ─────────────
+V20_CHAR = {
+    "destreza": 3, "armas_fuego": 2, "fuerza_voluntad_temp": 4,
+    "especialidades": {"armas_fuego": "pistolas"}, "salud_danio": 0,
+}
+
+
+def test_v20_pool_includes_ability_and_reports_expected_size():
+    r = _arbiter().resolve("disparo al guardia", dict(V20_CHAR), "vtm_v20",
+                           rolls=[7, 3, 8, 2, 9], sides=10)
+    assert r["habilidad"] == "armas_fuego"
+    assert r["pool_esperado"] == 5
+    assert "advertencias" not in r
+
+
+def test_v20_wound_penalty_reduces_expected_pool():
+    char = dict(V20_CHAR, salud_danio=4)  # Herido: -2
+    r = _arbiter().resolve("disparo", char, "vtm_v20", rolls=[7, 8, 9], sides=10)
+    assert r["pool_esperado"] == 3
+    assert "heridas -2" in r["detalle"]
+
+
+def test_v20_specialty_counts_tens_twice():
+    r = _arbiter().resolve("disparo", dict(V20_CHAR), "vtm_v20",
+                           rolls=[10, 10, 2, 3, 4], sides=10)
+    assert "4 éxitos" in r["detalle"]
+
+
+def test_v20_willpower_adds_success_and_returns_cost():
+    r = _arbiter().resolve("disparo y gasto fuerza de voluntad", dict(V20_CHAR), "vtm_v20",
+                           rolls=[1, 2, 3, 4, 5], sides=10)
+    assert r["veredicto"].startswith("ÉXITO PARCIAL")
+    assert r["costos"] == [{
+        "field": "fuerza_voluntad_temp", "delta": -1,
+        "reason": "gasto de Fuerza de Voluntad en una tirada",
+    }]
+
+
+def test_v20_willpower_without_points_still_botches():
+    char = dict(V20_CHAR, fuerza_voluntad_temp=0)
+    r = _arbiter().resolve("disparo y uso mi fuerza de voluntad", char, "vtm_v20",
+                           rolls=[1, 2, 3, 4, 5], sides=10)
+    assert r["veredicto"] == "FRACASO (botch)"
+    assert "costos" not in r
+
+
+def test_dnd_proficiency_bonus_applies_to_declared_skill():
+    char = {"destreza": 14, "nivel": 5, "competencias": ["Sigilo"]}
+    r = _arbiter().resolve("me escondo entre las sombras", char, "dnd_5e", rolls=[10], sides=20)
+    assert "+3 (competencia sigilo)" in r["detalle"]  # +2 DES +3 competencia
+    assert "= 15" in r["detalle"]
+
+
+def test_dnd_advantage_and_disadvantage_use_two_dice():
+    adv = _arbiter().resolve("ataco con ventaja", {"fuerza": 10}, "dnd_5e", rolls=[4, 17], sides=20)
+    dis = _arbiter().resolve("ataco con desventaja", {"fuerza": 10}, "dnd_5e", rolls=[4, 17], sides=20)
+    assert "con ventaja: 17" in adv["detalle"]
+    assert "con desventaja: 4" in dis["detalle"]
+    assert _arbiter().resolve("ataco", {}, "dnd_5e", rolls=[4, 17], sides=20) is None
+
+
+def test_suggest_roll_per_mechanic():
+    arb = _arbiter()
+    assert arb.suggest_roll("disparo", dict(V20_CHAR), "vtm_v20") == {
+        "dados": 5, "lados": 10, "accion": "Destreza + Armas de Fuego"}
+    assert arb.suggest_roll("ataco con ventaja", {}, "dnd_5e")["dados"] == 2
+    assert arb.suggest_roll("busco pistas", {}, "coc_7e")["lados"] == 100
+
+
+def test_action_keywords_match_without_accents():
+    r = _arbiter().resolve("engano al portero", {"manipulacion": 3, "subterfugio": 2},
+                           "vtm_v20", rolls=[8, 8, 8, 8, 8], sides=10)
+    assert r["habilidad"] == "subterfugio"

@@ -124,6 +124,10 @@ character_sheet_schema:
         - {key: ca,               label: CA,                 type: int}
         - {key: velocidad,        label: Velocidad,          type: string}
         - {key: dado_golpe,       label: Dado de Golpe,      type: string}
+    - name: "Competencias"
+      fields:
+        - {key: competencias,     label: Habilidades competentes, type: list}
+        - {key: salvaciones,      label: Salvaciones competentes, type: list}
   conditional_sections:
     mago:
       - name: "Arcana"
@@ -187,12 +191,24 @@ resolution:
     dificil: ["difícil", "dificil", "arriesgado", "complicado", "casi imposible", "extremo"]
   atributo_default: "destreza"
   acciones:
-    - {keywords: ["ataco", "golpeo", "peleo", "embisto", "derribo", "fuerzo"], atributo: "fuerza", etiqueta: "Ataque / Fuerza"}
-    - {keywords: ["disparo", "apunto", "sigilo", "me escondo", "esquivo", "acrobacia", "trepo", "robo"], atributo: "destreza", etiqueta: "Destreza"}
+    - {keywords: ["ataco", "golpeo", "peleo", "embisto", "derribo"], atributo: "fuerza", etiqueta: "Ataque / Fuerza"}
+    - {keywords: ["trepo", "salto", "nado", "fuerzo", "levanto", "escalo"], atributo: "fuerza", habilidad: "atletismo", etiqueta: "Fuerza (Atletismo)"}
+    - {keywords: ["disparo", "apunto"], atributo: "destreza", etiqueta: "Ataque a distancia"}
+    - {keywords: ["sigilo", "me escondo", "me oculto"], atributo: "destreza", habilidad: "sigilo", etiqueta: "Destreza (Sigilo)"}
+    - {keywords: ["esquivo", "acrobacia", "equilibrio", "ruedo"], atributo: "destreza", habilidad: "acrobacias", etiqueta: "Destreza (Acrobacias)"}
+    - {keywords: ["robo", "carterista", "cerradura", "juego de manos"], atributo: "destreza", habilidad: "juego_de_manos", etiqueta: "Destreza (Juego de Manos)"}
     - {keywords: ["resisto", "aguanto", "soporto", "toxina", "veneno"], atributo: "constitucion", etiqueta: "Constitución"}
-    - {keywords: ["investigo", "examino", "analizo", "recuerdo", "arcanos", "descifro"], atributo: "inteligencia", etiqueta: "Inteligencia"}
-    - {keywords: ["percibo", "observo", "escucho", "busco", "rastreo", "medicina", "intuyo"], atributo: "sabiduria", etiqueta: "Sabiduría"}
-    - {keywords: ["persuado", "convenzo", "intimido", "engaño", "negocio", "seduzco", "actúo"], atributo: "carisma", etiqueta: "Carisma"}
+    - {keywords: ["investigo", "examino", "analizo", "descifro"], atributo: "inteligencia", habilidad: "investigacion", etiqueta: "Inteligencia (Investigación)"}
+    - {keywords: ["arcanos", "magia", "conjuro", "hechizo"], atributo: "inteligencia", habilidad: "arcanos", etiqueta: "Inteligencia (Arcanos)"}
+    - {keywords: ["recuerdo", "historia"], atributo: "inteligencia", habilidad: "historia", etiqueta: "Inteligencia (Historia)"}
+    - {keywords: ["percibo", "observo", "escucho", "busco"], atributo: "sabiduria", habilidad: "percepcion", etiqueta: "Sabiduría (Percepción)"}
+    - {keywords: ["rastreo", "sobrevivo", "orientarme"], atributo: "sabiduria", habilidad: "supervivencia", etiqueta: "Sabiduría (Supervivencia)"}
+    - {keywords: ["medicina", "curo", "estabilizo"], atributo: "sabiduria", habilidad: "medicina", etiqueta: "Sabiduría (Medicina)"}
+    - {keywords: ["intuyo", "le creo", "leo sus intenciones"], atributo: "sabiduria", habilidad: "perspicacia", etiqueta: "Sabiduría (Perspicacia)"}
+    - {keywords: ["persuado", "convenzo", "negocio"], atributo: "carisma", habilidad: "persuasion", etiqueta: "Carisma (Persuasión)"}
+    - {keywords: ["intimido", "amenazo"], atributo: "carisma", habilidad: "intimidacion", etiqueta: "Carisma (Intimidación)"}
+    - {keywords: ["engaño", "miento", "seduzco"], atributo: "carisma", habilidad: "engano", etiqueta: "Carisma (Engaño)"}
+    - {keywords: ["actúo", "canto", "toco", "interpreto"], atributo: "carisma", habilidad: "interpretacion", etiqueta: "Carisma (Interpretación)"}
 
 # Reglas de continuidad verificadas por Python antes de mutar el estado
 # (ver narrator/core/system_rules.py).
