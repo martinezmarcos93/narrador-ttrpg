@@ -1,0 +1,98 @@
+# Campaña de ejemplo (contenido original) para probar el motor de punta a punta.
+meta:
+  nombre: "Noches de Ceniza"
+  sistema: vtm_v20
+  ciudad: "Buenos Aires"
+
+personajes:
+  - nombre: "Lucía Ferro"
+    clan: Brujah
+    generacion: 12
+    naturaleza: Rebelde
+    comportamiento: Idealista
+    fuerza: 3
+    destreza: 3
+    resistencia: 2
+    carisma: 3
+    manipulacion: 2
+    apariencia: 2
+    percepcion: 3
+    inteligencia: 2
+    astucia: 3
+    pelea: 2
+    alerta: 2
+    investigacion: 2
+    armas_fuego: 1
+    sigilo: 1
+    humanidad: 7
+    fuerza_voluntad: 5
+    fuerza_voluntad_temp: 5
+    sangre: 10
+    salud_danio: 0
+    especialidades: {pelea: "puños"}
+
+npcs:
+  - {nombre: "Valerius", rol: "Príncipe de la ciudad", amenaza: alta, faccion: "Camarilla",
+     descripcion: "Anciano cortés, nunca se lo ve comer."}
+  - {nombre: "Mara Quiroga", rol: "Sheriff", amenaza: alta, faccion: "Camarilla",
+     descripcion: "Pragmática, leal a quien gane."}
+  - {nombre: "El Tuerto", rol: "Informante Nosferatu", amenaza: baja,
+     descripcion: "Vende secretos en los túneles del subte."}
+  - {nombre: "Hermana Clara", rol: "Ghoul que regenta un comedor", amenaza: baja,
+     descripcion: "Protege a los indigentes del barrio."}
+
+locaciones:
+  - {nombre: "Elíseo del Colón", distrito: "Centro", descripcion: "Terreno neutral bajo el teatro."}
+  - {nombre: "Túneles de la Línea A", distrito: "Subte", descripcion: "Dominio Nosferatu."}
+  - {nombre: "Comedor San Roque", distrito: "Constitución", descripcion: "Refugio de indigentes."}
+
+facciones:
+  - {slug: camarilla, nombre: "Camarilla", agenda: "Mantener la Mascarada y el poder de Valerius."}
+  - {slug: anarquistas, nombre: "Anarquistas", agenda: "Echar al Príncipe de la ciudad."}
+
+frentes:
+  - nombre: "Desapariciones en Constitución"
+    faccion: camarilla
+    objetivo: "Ocultar la cacería de vagabundos"
+    segmentos: 4
+    umbrales: {2: "La prensa publica una nota sobre los desaparecidos"}
+    al_llenarse: [{frente: "Revuelta anarquista", delta: 2}]
+    avance_por_sesion: 1
+  - nombre: "Revuelta anarquista"
+    faccion: anarquistas
+    objetivo: "Tomar el Elíseo"
+    segmentos: 6
+    umbrales: {3: "Los anarquistas atacan a un ghoul de la Camarilla"}
+
+relaciones:
+  - {source: "Lucía Ferro", target: "Hermana Clara", relation: amistad, strength: 50}
+  - {source: "Mara Quiroga", target: "Lucía Ferro", relation: desconfianza, strength: -30}
+  - {source: "Valerius", target: "Anarquistas", relation: enemigo, strength: -70}
+
+secretos:
+  - id: cacería-valerius
+    tema: "Quién está detrás de las desapariciones"
+    verdad: "Valerius ordenó a sus ghouls secuestrar indigentes para un ritual de diablerie"
+    sobre: {tipo: npc, nombre: "Valerius"}
+    pistas:
+      - "Una camioneta sin patente con el logo de una fundación ligada al Elíseo"
+      - "El Tuerto vio a ghouls del Príncipe en los túneles con bolsas de cal"
+      - "Un libro de cuentas del Elíseo registra compras de sangre de origen desconocido"
+
+consecuencias:
+  - texto: "Mara Quiroga empieza a seguir a Lucía"
+    trigger: "Elíseo"
+    effects:
+      - {type: relation, source: "Mara Quiroga", target: "Lucía Ferro", relation: desconfianza, strength: -60}
+  - texto: "La Hermana Clara pide ayuda desesperada"
+    trigger: "prensa publica una nota"
+    effects:
+      - {type: npc_presence, name: "Hermana Clara", present: true}
+
+escena_inicial:
+  locacion: "Comedor San Roque"
+  npcs_presentes: ["Hermana Clara"]
+
+reglas_casa:
+  - nombre: "Fuerza de Voluntad generosa"
+    texto: "En esta crónica la Fuerza de Voluntad temporal se recupera completa al inicio de cada sesión."
