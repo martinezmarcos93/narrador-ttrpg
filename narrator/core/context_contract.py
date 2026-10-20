@@ -39,11 +39,27 @@ class ContextFragment:
 
         return sanitize_document_text(self.text).findings
 
+    @property
+    def citation(self) -> str:
+        """Cita verificable del fragmento ('' si no tiene ubicación precisa)."""
+        meta = self.metadata or {}
+        if meta.get("citation"):
+            return str(meta["citation"])
+        book = meta.get("libro") or meta.get("book")
+        pages = meta.get("paginas") or meta.get("pages") or meta.get("page")
+        if book and pages:
+            return f"{book}, pág. {pages}"
+        if self.layer in {"universal", "state"} and meta.get("id"):
+            return f"cerebro:{meta['id']}"
+        return ""
+
     def render(self) -> str:
         label = self.layer.upper()
         title = f" | {self.title}" if self.title else ""
         source = f" | fuente: {self.source}" if self.source else ""
-        return f"[{label}{title}{source}]\n{self.safe_text()}"
+        cite = self.citation
+        cite_txt = f" | cita: {cite}" if cite and cite not in (self.title or "") else ""
+        return f"[{label}{title}{source}{cite_txt}]\n{self.safe_text()}"
 
 
 def render_context(fragments: list[ContextFragment], max_words: int) -> str:

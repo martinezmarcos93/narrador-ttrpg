@@ -193,7 +193,8 @@ def extract_pdf_text(path: str, max_chars: int = 12000) -> str | None:
         doc = fitz.open(path)
         text = ""
         for page in doc:
-            text += page.get_text()
+            # \f separa páginas: el índice del manual cita "pág. N".
+            text += page.get_text() + "\n\f"
             if len(text) > max_chars:
                 break
         doc.close()

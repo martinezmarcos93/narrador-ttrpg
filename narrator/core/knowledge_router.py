@@ -12,6 +12,7 @@ from time import perf_counter
 from typing import TYPE_CHECKING
 
 from narrator.core.context_contract import ContextFragment
+from narrator.core.manual_index import ManualIndex
 from narrator.core.system_pack import SystemPack
 
 if TYPE_CHECKING:
@@ -40,6 +41,7 @@ class RetrievalMetrics:
     provenance_coverage: float = 0.0
     context_utilization: float = 0.0
     sanitized_fragments: int = 0
+    citation_coverage: float = 0.0
 
     def to_dict(self) -> dict:
         return {
@@ -54,9 +56,18 @@ class RetrievalMetrics:
             "relevance_max": self.relevance_max,
             "diversity_ratio": self.diversity_ratio,
             "sanitized_fragments": self.sanitized_fragments,
+            "citation_coverage": self.citation_coverage,
             "provenance_coverage": self.provenance_coverage,
             "context_utilization": self.context_utilization,
         }
+
+
+def _citation_coverage(fragments: list[ContextFragment]) -> float:
+    """Fracción de fragmentos documentales (no estado) con cita verificable."""
+    documents = [f for f in fragments if f.layer != "state"]
+    if not documents:
+        return 0.0
+    return round(sum(1 for f in documents if f.citation) / len(documents), 4)
 
 
 class KnowledgeRouter:
@@ -64,11 +75,12 @@ class KnowledgeRouter:
 
     def __init__(self, retriever: "VaultRetriever"):
         self.retriever = retriever
+        self.manual_index = ManualIndex()
 
     def routes(self, pack: SystemPack, manual_available: bool = False) -> tuple[KnowledgeRoute, ...]:
         preferred = pack.knowledge.preferred_sources
         result = []
-        budgets = {"manual": 1, "system": 3, "campaign": 4, "state": 4, "universal": 4}
+        budgets = {"manual": 2, "system": 3, "campaign": 4, "state": 4, "universal": 4}
         for source in preferred:
             if source == "manual" and not manual_available:
                 continue
@@ -101,7 +113,7 @@ class KnowledgeRouter:
 
         for route in routes:
             if route.source == "manual":
-                fragments.extend(self._manual(manual_text))
+                fragments.extend(self._manual_fragments(query, manual_text, route.budget))
             elif route.source == "system":
                 fragments.extend(self._system_fragments(query, pack, route.budget))
             elif route.source == "campaign":
@@ -180,21 +192,36 @@ class KnowledgeRouter:
                 rendered_words / source_words, 4
             ) if source_words else 0.0,
             sanitized_fragments=sum(1 for f in fragments if f.injection_findings()),
+            citation_coverage=_citation_coverage(fragments),
         )
         return rendered, metrics
 
-    @staticmethod
-    def _manual(text: str) -> list[ContextFragment]:
+    def _manual_fragments(self, query: str, text: str, limit: int) -> list[ContextFragment]:
+        """Pasajes del manual adjunto relevantes para la consulta, citables por página."""
         if not text.strip():
             return []
-        return [ContextFragment(
-            text=text.strip(),
-            source="manual adjunto",
-            layer="manual",
-            title="Manual cargado en la sesión",
-            score=1.0,
-            metadata={"origen": "manual", "session_attached": True},
-        )]
+        self.manual_index.build(text)
+        passages = self.manual_index.passages
+        if len(passages) <= 1:
+            # Manual corto: entra completo.
+            hits = [(passages[0], 1.0)] if passages else []
+        else:
+            hits = self.manual_index.search(query, k=limit)
+        return [
+            ContextFragment(
+                text=passage.text,
+                source="manual adjunto",
+                layer="manual",
+                title=f"Manual de la sesión, pág. {passage.page}",
+                score=score,
+                metadata={
+                    "origen": "manual", "session_attached": True,
+                    "page": passage.page, "passage": passage.index,
+                    "citation": f"manual adjunto, pág. {passage.page}",
+                },
+            )
+            for passage, score in hits
+        ]
 
     def _system_fragments(self, query: str, pack: SystemPack, limit: int) -> list[ContextFragment]:
         results = self.retriever.brain.search(
