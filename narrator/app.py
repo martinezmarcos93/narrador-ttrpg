@@ -4,17 +4,16 @@ AI NARRATOR — Motor de Rol con Ollama
 GUI: Dear PyGui  |  Backend: narrator/core/ + narrator/agents/
 """
 
+import json
+import queue as _queue_mod
+import random
+import threading
+from datetime import datetime
+from pathlib import Path
+
 import dearpygui.dearpygui as dpg
-from narrator.logger import logger
 import fitz  # PyMuPDF
 import requests
-import threading
-import queue as _queue_mod
-import json
-import random
-import re
-from pathlib import Path
-from datetime import datetime
 
 from narrator import PROJECT_ROOT, resolve_path
 from narrator.core import derived_stats, dice_first_guard
@@ -23,6 +22,8 @@ from narrator.core.llm_client import LLMClient
 from narrator.core.memory_manager import MemoryManager
 from narrator.core.session_manager import SessionManager
 from narrator.core.sheet_parser import parse_character_sheet
+from narrator.logger import logger
+
 session_manager = SessionManager()
 _memory = MemoryManager()
 
@@ -49,6 +50,7 @@ except Exception as _agent_err:
     _vault_writer = None
     _AGENT_MODE = False
     print(f"⚠ Modo legacy (sin agentes): {_agent_err}")
+    logger.error("No se pudo iniciar el backend de agentes: %s", _agent_err, exc_info=True)
 
 # ─────────────────────────────────────────────
 #  CONFIGURACIÓN GLOBAL
@@ -687,6 +689,7 @@ def do_roll(sides: int):
     try:
         n = int(dpg.get_value(f"dice_count_{sides}"))
     except Exception as e:
+        logger.debug("Cantidad de dados inválida para d%s, uso 1: %s", sides, e)
         n = 1
     n = max(1, min(n, 20))
 
@@ -854,6 +857,7 @@ def refresh_character_panel():
     try:
         dpg.delete_item("char_content", children_only=True)
     except Exception as e:
+        logger.debug("Panel de personaje aún no creado: %s", e)
         return
 
     char = state["character"]
@@ -977,6 +981,7 @@ def refresh_estado_panel():
     try:
         dpg.delete_item("estado_content", children_only=True)
     except Exception as e:
+        logger.debug("Panel de estado aún no creado: %s", e)
         return
 
     # Número de sesión
@@ -990,7 +995,7 @@ def refresh_estado_panel():
 
     # Sistema
     sys_name = state.get("system_name", "") or "—"
-    dpg.add_text(f"Sistema:", parent="estado_content", color=list(C_TEXT_DIM))
+    dpg.add_text("Sistema:", parent="estado_content", color=list(C_TEXT_DIM))
     dpg.add_text(sys_name, parent="estado_content", color=list(C_TEXT), wrap=155)
     dpg.add_spacer(height=6, parent="estado_content")
 
@@ -999,6 +1004,7 @@ def refresh_estado_panel():
         try:
             fronts = _orchestrator.retriever.get_fronts_with_clocks()
         except Exception as e:
+            logger.error("No se pudieron leer los frentes del vault: %s", e, exc_info=True)
             fronts = []
     else:
         fronts = []
@@ -1024,7 +1030,8 @@ def refresh_estado_panel():
     if _AGENT_MODE and _orchestrator:
         try:
             escenas = _orchestrator.scenes.get_status_summary()
-        except Exception:
+        except Exception as e:
+            logger.error("No se pudo resumir el estado de escenas: %s", e, exc_info=True)
             escenas = ""
         if escenas:
             dpg.add_spacer(height=6, parent="estado_content")
@@ -1401,7 +1408,9 @@ def build_vault_callback():
     def run():
         try:
             llm = LLMClient(model=state["model"])
-            pb = PromptBuilder()
+            from narrator.core.prompt_builder import PromptBuilder
+
+            pb = _orchestrator.builder if _orchestrator else PromptBuilder()
             extractor = ExtractorAgent(llm=llm, builder=pb)
 
             config = _orchestrator.config if _orchestrator else {}
@@ -1885,6 +1894,7 @@ def main():
         if models:
             state["model"] = models[0]
     except Exception as e:
+        logger.warning("Ollama no disponible en localhost:11434: %s", e)
         print("⚠ No se encontró Ollama en localhost:11434")
         print("  Instalar: https://ollama.com")
         print("  Luego: ollama pull llama3.2")

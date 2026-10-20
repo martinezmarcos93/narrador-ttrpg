@@ -3,24 +3,31 @@ Orchestrator — coordina agentes y construye el contexto correcto para cada lla
 Es Python puro: no hace llamadas al LLM, solo decide QUÉ contexto armar y QUIÉN habla.
 """
 
-import yaml
-from narrator.logger import logger
-from narrator.core.system_pack import SystemPack
-from narrator.core.knowledge_router import KnowledgeRouter
 from pathlib import Path
+
+import yaml
+
 from narrator import resolve_path
-from narrator.core import mention_detector
+from narrator.agents.narrator_agent import NarratorAgent
+from narrator.core import lorebook, mention_detector
+from narrator.core.causality_engine import CausalityEngine
+from narrator.core.knowledge_router import KnowledgeRouter
+from narrator.core.knowledge_visibility import KnowledgeVisibility
 from narrator.core.prompt_builder import PromptBuilder
+from narrator.core.proposal_executor import ProposalExecutor
 from narrator.core.retriever import VaultRetriever
 from narrator.core.scene_manager import SceneManager
 from narrator.core.state_manager import StateManager
+from narrator.core.system_pack import SystemPack
+from narrator.core.theory_engine import (
+    InvestigationEngine,
+    MasterMoveEngine,
+    PacingToneAgent,
+    WorldSimulationEngine,
+)
 from narrator.core.turn_contract import TurnContract
-from narrator.core.proposal_executor import ProposalExecutor
-from narrator.core.causality_engine import CausalityEngine
-from narrator.core.knowledge_visibility import KnowledgeVisibility
 from narrator.core.vault_writer import VaultWriter
-from narrator.agents.narrator_agent import NarratorAgent
-from narrator.core.theory_engine import MasterMoveEngine, PacingToneAgent, WorldSimulationEngine, InvestigationEngine
+from narrator.logger import logger
 
 _THEORY_ENGINE_PATH = Path(__file__).parent.parent / "core" / "theory_engine"
 
@@ -78,7 +85,11 @@ class Orchestrator:
         try:
             with open(path, encoding="utf-8") as f:
                 return yaml.safe_load(f) or {}
+        except FileNotFoundError:
+            logger.warning("Config no encontrada en %s; uso valores por defecto", path)
+            return {}
         except Exception as e:
+            logger.error("Config ilegible en %s: %s", path, e, exc_info=True)
             return {}
 
     # ── Theory engine ─────────────────────────────────────────
@@ -285,6 +296,15 @@ class Orchestrator:
                     if extra_ctx and extra_ctx not in vault_ctx:
                         vault_ctx = f"{vault_ctx}\n---\n[CAMPAIGN | mención explícita]\n{extra_ctx}"
 
+        # Lorebook (Fase 5): reglas puntuales del System Pack disparadas por
+        # keyword. Es texto explícito del pack, así que entra como capa system.
+        if last_user_msg and lorebook_entries:
+            lore_text = lorebook.get_matching_content(
+                lorebook_entries, last_user_msg, max_words=150
+            )
+            if lore_text and lore_text not in vault_ctx:
+                vault_ctx = f"{vault_ctx}\n---\n[SYSTEM | lorebook]\n{lore_text}".strip()
+
 
         active_npcs = self.retriever.get_active_npcs_summary(max_npcs=6)
         active_fronts = self.retriever.get_active_fronts_summary()
@@ -355,7 +375,8 @@ class Orchestrator:
         system_slug = self.get_active_system(app_state or {})
         try:
             schema = self.builder.load_system(system_slug).get("character_sheet_schema", {})
-        except Exception:
+        except Exception as e:
+            logger.error("No se pudo cargar el schema de ficha de '%s': %s", system_slug, e, exc_info=True)
             schema = {}
         self.proposal_executor.character_schema = schema
         try:
