@@ -18,10 +18,23 @@ import yaml
 from narrator.core.embedder import Embedder
 from narrator.logger import logger
 
+_YAML_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+_YAML_DUMPER = getattr(yaml, "CSafeDumper", yaml.SafeDumper)
+
+
+def lexical_text(meta: dict, body: str) -> str:
+    """Texto normalizado (sin tildes, minúsculas) para la coincidencia léxica."""
+    from narrator.core.entity_registry import fold_name
+
+    tags = " ".join(map(str, meta.get("tags", []) or []))
+    return fold_name(f"{meta.get('title', '')} {tags} {body[:5000]}")
+
 
 class IndiceCerebro:
     INDEX_FILENAME = ".brain_embeddings.json"
     META_FILENAME = ".brain_index.yaml"
+    META_JSON_FILENAME = ".brain_index.json"
+    LEXICAL_FILENAME = ".brain_lexical.json"
 
     def __init__(
         self,
@@ -33,6 +46,8 @@ class IndiceCerebro:
         self.embedder = embedder or Embedder(model=embedding_model)
         self._index: dict[str, list[float]] | None = None
         self._metadata: dict[str, dict] | None = None
+        self._lexical: dict[str, str] | None = None
+        self._matrix = None  # (paths, matriz normalizada) si numpy está disponible
 
     @property
     def index_path(self) -> Path:
@@ -41,6 +56,14 @@ class IndiceCerebro:
     @property
     def metadata_path(self) -> Path:
         return self.brain_path / self.META_FILENAME
+
+    @property
+    def metadata_json_path(self) -> Path:
+        return self.brain_path / self.META_JSON_FILENAME
+
+    @property
+    def lexical_path(self) -> Path:
+        return self.brain_path / self.LEXICAL_FILENAME
 
     def _files(self) -> list[Path]:
         if not self.brain_path.exists():
@@ -59,7 +82,7 @@ class IndiceCerebro:
         if len(parts) != 3:
             return {}, raw
         try:
-            meta = yaml.safe_load(parts[1]) or {}
+            meta = yaml.load(parts[1], Loader=_YAML_LOADER) or {}
         except yaml.YAMLError as e:
             logger.warning("Frontmatter inválido en neurona: %s", e)
             meta = {}
@@ -76,9 +99,17 @@ class IndiceCerebro:
                 self._index = {}
         if self._metadata is None:
             try:
-                self._metadata = yaml.safe_load(
-                    self.metadata_path.read_text(encoding="utf-8")
-                ) or {}
+                if self.metadata_json_path.exists():
+                    self._metadata = json.loads(
+                        self.metadata_json_path.read_text(encoding="utf-8")
+                    ) or {}
+                elif self.metadata_path.exists():
+                    # Índices anteriores solo tenían YAML (lento de cargar).
+                    self._metadata = yaml.load(
+                        self.metadata_path.read_text(encoding="utf-8"), Loader=_YAML_LOADER
+                    ) or {}
+                else:
+                    self._metadata = {}
             except Exception as e:
                 logger.error("Metadata del cerebro ilegible (%s): %s", self.metadata_path, e, exc_info=True)
                 self._metadata = {}
@@ -90,6 +121,7 @@ class IndiceCerebro:
         self.brain_path.mkdir(parents=True, exist_ok=True)
 
         changed = 0
+        lexical: dict[str, str] = {}
         current = {str(p) for p in self._files()}
         for path_str in list(self._index):
             if path_str not in current:
@@ -128,6 +160,8 @@ class IndiceCerebro:
                 "content_hash": content_hash,
             }
 
+            lexical[key] = lexical_text(self._metadata[key], body)
+
             if key in self._index and previous_hash == content_hash:
                 continue
 
@@ -151,10 +185,19 @@ class IndiceCerebro:
             json.dumps(self._index, ensure_ascii=False),
             encoding="utf-8",
         )
+        self.metadata_json_path.write_text(
+            json.dumps(self._metadata, ensure_ascii=False), encoding="utf-8"
+        )
+        # Copia YAML legible para inspección humana (no se usa para cargar).
         self.metadata_path.write_text(
-            yaml.safe_dump(self._metadata, allow_unicode=True, sort_keys=True),
+            yaml.dump(self._metadata, Dumper=_YAML_DUMPER, allow_unicode=True, sort_keys=True),
             encoding="utf-8",
         )
+        self.lexical_path.write_text(
+            json.dumps(lexical, ensure_ascii=False), encoding="utf-8"
+        )
+        self._lexical = lexical
+        self._matrix = None
         logger.info("Índice del cerebro: %d nuevas neuronas, %d totales", changed, len(self._index))
         return changed
 
@@ -169,6 +212,52 @@ class IndiceCerebro:
     def paths(self) -> list[str]:
         self.load()
         return list(self._index or {})
+
+    def lexical(self, path: str) -> str:
+        """Texto léxico precalculado; si falta (índice viejo) lo calcula una vez."""
+        if self._lexical is None:
+            try:
+                self._lexical = json.loads(
+                    self.lexical_path.read_text(encoding="utf-8")
+                ) if self.lexical_path.exists() else {}
+            except Exception as e:
+                logger.error("Caché léxica ilegible (%s): %s", self.lexical_path, e, exc_info=True)
+                self._lexical = {}
+        if path not in self._lexical:
+            p = Path(path)
+            meta, body = self._parse_neuron(p) if p.exists() else ({}, "")
+            merged = dict(self.metadata(path))
+            merged.setdefault("title", meta.get("title", meta.get("titulo", "")))
+            self._lexical[path] = lexical_text(merged, body)
+        return self._lexical[path]
+
+    def semantic_scores(self, query_vec: list[float], paths: list[str]) -> dict[str, float]:
+        """Coseno de la consulta contra ``paths`` (vectorizado si hay numpy)."""
+        self.load()
+        index = self._index or {}
+        if not query_vec:
+            return {}
+        try:
+            import numpy as np
+        except ImportError:  # extra opcional 'semantic'
+            np = None
+        if np is None:
+            return {
+                p: Embedder.cosine_similarity(query_vec, index[p]) for p in paths if index.get(p)
+            }
+        if self._matrix is None:
+            keys = [p for p, v in index.items() if v and len(v) == len(query_vec)]
+            if not keys:
+                return {}
+            matrix = np.asarray([index[p] for p in keys], dtype=np.float32)
+            norms = np.linalg.norm(matrix, axis=1, keepdims=True)
+            matrix /= np.maximum(norms, 1e-9)
+            self._matrix = ({p: i for i, p in enumerate(keys)}, matrix)
+        positions, matrix = self._matrix
+        q = np.asarray(query_vec, dtype=np.float32)
+        q /= max(float(np.linalg.norm(q)), 1e-9)
+        sims = matrix @ q
+        return {p: float(sims[positions[p]]) for p in paths if p in positions}
 
 
 if __name__ == "__main__":

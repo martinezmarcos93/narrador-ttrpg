@@ -18,7 +18,6 @@ from pathlib import Path
 
 from narrator.cerebro.indexador import IndiceCerebro
 from narrator.core.context_contract import ContextFragment
-from narrator.core.embedder import Embedder
 
 _TOKEN_RE = re.compile(r"[\wáéíóúüñÁÉÍÓÚÜÑ]{3,}")
 
@@ -61,6 +60,14 @@ class RecuperadorCerebro:
         hits = sum(1 for token in q if token in text)
         title_hits = sum(1 for token in q if token in title)
         return hits / len(q) + (title_hits / len(q)) * 1.5
+
+    @staticmethod
+    def _lexical_from_text(query_tokens: set[str], text: str, title: str) -> float:
+        if not query_tokens:
+            return 0.0
+        hits = sum(1 for token in query_tokens if token in text)
+        title_hits = sum(1 for token in query_tokens if token in title)
+        return hits / len(query_tokens) + (title_hits / len(query_tokens)) * 1.5
 
     @staticmethod
     def _wanted_system(meta: dict, system: str | None) -> bool:
@@ -120,23 +127,25 @@ class RecuperadorCerebro:
             return []
 
         query_vec = self.index.embedder.embed(query)
-        scored: list[tuple[float, str]] = []
-
+        candidates = []
         for path in paths:
-            meta, body = self._read(path)
+            # Filtros con la metadata del índice: no se relee cada archivo.
+            meta = self.index.metadata(path)
             if not self._wanted_system(meta, system):
                 continue
             if not self._wanted_campaign(meta, campaign):
                 continue
             if kind and str(meta.get("kind", "")) != kind:
                 continue
+            candidates.append(path)
 
-            semantic = 0.0
-            vector = (self.index._index or {}).get(path, [])
-            if query_vec and vector:
-                semantic = Embedder.cosine_similarity(query_vec, vector)
-
-            lexical = self._lexical_score(query, meta, body)
+        semantic_by_path = self.index.semantic_scores(query_vec, candidates)
+        query_tokens = {_fold(t) for t in _TOKEN_RE.findall(query)}
+        scored: list[tuple[float, str]] = []
+        for path in candidates:
+            semantic = semantic_by_path.get(path, 0.0)
+            lexical = self._lexical_from_text(query_tokens, self.index.lexical(path),
+                                              _fold(self.index.metadata(path).get("title", "")))
             score = semantic * 0.72 + min(lexical, 2.5) * 0.28
             if score > 0:
                 scored.append((score, path))
