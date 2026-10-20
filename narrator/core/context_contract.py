@@ -24,11 +24,26 @@ class ContextFragment:
     def authority(self) -> int:
         return {"state": 50, "manual": 40, "system": 30, "campaign": 20, "universal": 10}[self.layer]
 
+    def safe_text(self) -> str:
+        """Texto apto para el prompt: los documentos se sanean, el estado no."""
+        if self.layer == "state":
+            return self.text.strip()
+        from narrator.core.injection_guard import sanitize_document_text
+
+        return sanitize_document_text(self.text).text
+
+    def injection_findings(self) -> list[str]:
+        if self.layer == "state":
+            return []
+        from narrator.core.injection_guard import sanitize_document_text
+
+        return sanitize_document_text(self.text).findings
+
     def render(self) -> str:
         label = self.layer.upper()
         title = f" | {self.title}" if self.title else ""
         source = f" | fuente: {self.source}" if self.source else ""
-        return f"[{label}{title}{source}]\n{self.text.strip()}"
+        return f"[{label}{title}{source}]\n{self.safe_text()}"
 
 
 def render_context(fragments: list[ContextFragment], max_words: int) -> str:

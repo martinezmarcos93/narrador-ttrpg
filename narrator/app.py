@@ -216,7 +216,10 @@ def detect_system(text: str) -> tuple[str, str]:
 def _build_legacy_context() -> str:
     content = _SYSTEM_PROMPT_LEGACY
     if state["manual_text"]:
-        content += f"\n\n=== MANUAL: {state['manual_name']} ===\n{state['manual_text'][:6000]}"
+        from narrator.core.injection_guard import sanitize_document_text
+
+        manual = sanitize_document_text(state["manual_text"][:6000]).text
+        content += f"\n\n=== MANUAL: {state['manual_name']} ===\n{manual}"
     if state["character"]:
         content += f"\n\n=== PERSONAJE ===\n{json.dumps(state['character'], ensure_ascii=False, indent=2)}"
     if state.get("resolucion_mecanica"):

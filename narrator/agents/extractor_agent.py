@@ -430,6 +430,10 @@ class ExtractorAgent:
         )
 
     def _chunk_text(self, text: str, chunk_size: int = 3000, overlap: int = 200) -> list[str]:
+        # El texto del manual es dato, no instrucciones (ver injection_guard).
+        from narrator.core.injection_guard import sanitize_document_text
+
+        text = sanitize_document_text(text).text
         chunks = []
         start = 0
         while start < len(text):

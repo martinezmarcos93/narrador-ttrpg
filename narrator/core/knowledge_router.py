@@ -39,6 +39,7 @@ class RetrievalMetrics:
     diversity_ratio: float = 0.0
     provenance_coverage: float = 0.0
     context_utilization: float = 0.0
+    sanitized_fragments: int = 0
 
     def to_dict(self) -> dict:
         return {
@@ -52,6 +53,7 @@ class RetrievalMetrics:
             "relevance_mean": self.relevance_mean,
             "relevance_max": self.relevance_max,
             "diversity_ratio": self.diversity_ratio,
+            "sanitized_fragments": self.sanitized_fragments,
             "provenance_coverage": self.provenance_coverage,
             "context_utilization": self.context_utilization,
         }
@@ -177,6 +179,7 @@ class KnowledgeRouter:
             context_utilization=round(
                 rendered_words / source_words, 4
             ) if source_words else 0.0,
+            sanitized_fragments=sum(1 for f in fragments if f.injection_findings()),
         )
         return rendered, metrics
 

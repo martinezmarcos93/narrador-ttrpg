@@ -83,7 +83,10 @@ def parse_character_sheet(sheet_text: str, llm, system_name: str = "") -> "dict 
     Devuelve None si el LLM falla o la respuesta no contiene JSON válido.
     """
     hint = f" ({system_name})" if system_name else ""
-    prompt = _PROMPT_TEMPLATE.format(system_hint=hint, sheet_text=sheet_text[:12000])
+    from narrator.core.injection_guard import sanitize_document_text
+
+    clean = sanitize_document_text(sheet_text[:12000]).text
+    prompt = _PROMPT_TEMPLATE.format(system_hint=hint, sheet_text=clean)
     try:
         raw = llm.chat([{"role": "user", "content": prompt}])
     except Exception as e:
