@@ -84,3 +84,14 @@ def test_executor_applies_pack_rules(tmp_path):
     rejected = executor.execute({"facts": {"nivel_agotamiento": 7}})
     assert not rejected.applied
     assert executor.execute({"facts": {"nivel_agotamiento": 2}}).applied
+
+
+def test_prompt_lists_canonical_facts_for_pack():
+    from narrator.core.prompt_builder import PromptBuilder
+
+    builder = PromptBuilder(systems_path="data/systems")
+    prompt = builder.build_narrator_prompt(system_slug="vtm_v20")
+    assert "HECHOS CANÓNICOS DEL SISTEMA" in prompt
+    assert "humanidad: número 0..10" in prompt
+    generic = builder.build_narrator_prompt(system_slug="generic")
+    assert "HECHOS CANÓNICOS DEL SISTEMA" not in generic

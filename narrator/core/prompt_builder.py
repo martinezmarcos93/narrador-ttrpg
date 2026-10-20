@@ -33,7 +33,7 @@ NARRATIVE_PROPOSAL_RULES = """PROPUESTAS ESTRUCTURADAS DE ESTADO (bloque técnic
 - Omití claves vacías.
 - facts contiene hechos persistentes como pares clave/valor.
 - events contiene eventos ya ocurridos, no intenciones futuras.
-- consequences contiene objetos con text y opcionalmente trigger/due/effects. Los effects permitidos son fact, flag, npc_presence, scene_location, clock_delta, event, queue_consequence, world_fact, character_fact y player_fact.
+- consequences contiene objetos con text y opcionalmente trigger/due/effects. Los effects permitidos son fact, flag, npc_presence, scene_location, clock_delta, event, queue_consequence, world_fact, character_fact, player_fact, relation y front_clock_delta.
 - character_changes contiene field + delta o value + reason opcional.
 - clock_changes contiene name + delta.
 - scene_changes puede contener locacion o turno_narrativo_delta.
@@ -93,6 +93,32 @@ class PromptBuilder:
 
         self._cache[slug] = data
         return data
+
+    @staticmethod
+    def canonical_facts_text(system_data: dict) -> str:
+        """Describe al LLM las claves de hechos que el sistema valida."""
+        from narrator.core.system_rules import SystemContinuityRules
+
+        try:
+            rules = SystemContinuityRules.from_dict(system_data.get("continuity_rules"))
+        except ValueError as exc:
+            logger.error("continuity_rules inválidas: %s", exc)
+            return ""
+        lines = []
+        for key, (low, high) in rules.fact_ranges.items():
+            low_txt = "" if low is None else str(low)
+            high_txt = "" if high is None else str(high)
+            lines.append(f"- {key}: número {low_txt}..{high_txt}")
+        for key, allowed in rules.fact_values.items():
+            lines.append(f"- {key}: uno de {', '.join(map(str, allowed))}")
+        for group in rules.mutually_exclusive:
+            lines.append(f"- No pueden ser verdaderos a la vez: {', '.join(group)}")
+        if not lines:
+            return ""
+        return (
+            "HECHOS CANÓNICOS DEL SISTEMA (usá exactamente estas claves en facts/effects; "
+            "Python rechaza valores fuera de regla):\n" + "\n".join(lines)
+        )
 
     def detect_system_from_text(self, text: str) -> str:
         """Auto-detecta el sistema desde texto de PDF/manual."""
@@ -159,6 +185,10 @@ class PromptBuilder:
                 voc_lines.append(f"- Mecánica moral: {voc['mecanica_moral']}")
             if voc_lines:
                 sections.append("VOCABULARIO DEL SISTEMA:\n" + "\n".join(voc_lines))
+
+        canonical_facts = self.canonical_facts_text(sys)
+        if canonical_facts:
+            sections.append(canonical_facts)
 
         if state_context:
             sections.append(
