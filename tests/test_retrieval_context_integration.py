@@ -182,3 +182,21 @@ def test_retrieval_precedence_keeps_state_and_manual_above_campaign_and_universa
     assert rendered.index("STATE-CANON") < rendered.index("MANUAL-OVERRIDE")
     assert rendered.index("MANUAL-OVERRIDE") < rendered.index("campaign evidence")
     assert rendered.index("campaign evidence") < rendered.index("universal evidence")
+
+
+def test_house_rule_outranks_manual_but_not_state():
+    from narrator.core.context_contract import ContextFragment, render_context
+
+    fragments = [
+        ContextFragment("CANON-ESTADO", "StateManager", "state"),
+        ContextFragment("REGLA-MANUAL", "manual adjunto", "manual"),
+        ContextFragment("REGLA-CASA", "vault", "campaign", title="Iniciativa simple",
+                        metadata={"tipo": "regla_casa"}),
+        ContextFragment("NOTA-CAMPANA", "vault", "campaign"),
+    ]
+    rendered = render_context(fragments, max_words=300)
+    assert rendered.index("CANON-ESTADO") < rendered.index("REGLA-CASA")
+    assert rendered.index("REGLA-CASA") < rendered.index("REGLA-MANUAL")
+    assert rendered.index("REGLA-MANUAL") < rendered.index("NOTA-CAMPANA")
+    assert rendered.startswith("PRECEDENCIA")
+    assert "REGLA DE LA CASA" in rendered

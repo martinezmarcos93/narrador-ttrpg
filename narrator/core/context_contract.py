@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 VALID_LAYERS = {"universal", "system", "manual", "campaign", "state"}
+HOUSE_RULE_TYPES = {"regla_casa", "regla_de_la_casa", "house_rule"}
 
 
 @dataclass(frozen=True)
@@ -21,7 +22,17 @@ class ContextFragment:
             raise ValueError(f"Capa de contexto inválida: {self.layer}")
 
     @property
+    def is_house_rule(self) -> bool:
+        """Excepción formal a la precedencia: una regla de la casa de la campaña
+        prevalece sobre el manual (pero nunca sobre el estado)."""
+        meta = self.metadata or {}
+        kind = str(meta.get("tipo", meta.get("kind", ""))).strip().lower()
+        return self.layer == "campaign" and (kind in HOUSE_RULE_TYPES or meta.get("house_rule") is True)
+
+    @property
     def authority(self) -> int:
+        if self.is_house_rule:
+            return 45
         return {"state": 50, "manual": 40, "system": 30, "campaign": 20, "universal": 10}[self.layer]
 
     def safe_text(self) -> str:
@@ -54,7 +65,7 @@ class ContextFragment:
         return ""
 
     def render(self) -> str:
-        label = self.layer.upper()
+        label = "CAMPAIGN · REGLA DE LA CASA" if self.is_house_rule else self.layer.upper()
         title = f" | {self.title}" if self.title else ""
         source = f" | fuente: {self.source}" if self.source else ""
         cite = self.citation
@@ -65,6 +76,11 @@ class ContextFragment:
 def render_context(fragments: list[ContextFragment], max_words: int) -> str:
     ordered = sorted(fragments, key=lambda f: (f.authority, f.score), reverse=True)
     output, total = [], 0
+    if any(f.is_house_rule for f in fragments) and any(f.layer == "manual" for f in fragments):
+        notice = ("PRECEDENCIA: si una REGLA DE LA CASA contradice al manual, "
+                  "vale la regla de la casa.")
+        output.append(notice)
+        total += len(notice.split())
     for fragment in ordered:
         block = fragment.render()
         words = len(block.split())
