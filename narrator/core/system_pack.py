@@ -28,6 +28,9 @@ REQUIRED_FIELDS = (
 )
 
 
+_PACK_CACHE: dict[tuple, "SystemPack"] = {}
+
+
 @dataclass(frozen=True)
 class KnowledgePolicy:
     brain_system: str = "generic"
@@ -116,9 +119,17 @@ class SystemPack:
         path = Path(systems_path) / f"{slug}.yaml"
         if not path.exists():
             path = Path(systems_path) / "generic.yaml"
+        # Caché por ruta + mtime: el pack se carga en cada turno y es inmutable
+        # salvo que se edite el YAML (en ese caso el mtime cambia).
+        key = (str(path.resolve()), path.stat().st_mtime_ns, slug)
+        cached = _PACK_CACHE.get(key)
+        if cached is not None:
+            return cached
         with path.open(encoding="utf-8") as handle:
             data = yaml.safe_load(handle) or {}
-        return cls.from_dict(data, expected_slug=None if path.name == "generic.yaml" else slug)
+        pack = cls.from_dict(data, expected_slug=None if path.name == "generic.yaml" else slug)
+        _PACK_CACHE[key] = pack
+        return pack
 
 
     def validate_front_contract(self) -> list[str]:

@@ -79,3 +79,16 @@ def test_all_bundled_system_packs_satisfy_contract():
         assert pack.slug == slug
         assert pack.validate_front_contract() == []
         assert validate_schema(pack.character_sheet_schema) == [], slug
+
+
+def test_pack_load_is_cached_until_file_changes(tmp_path):
+    import shutil
+    import time
+
+    shutil.copy(Path("data/systems/generic.yaml"), tmp_path / "generic.yaml")
+    first = SystemPack.load("generic", tmp_path)
+    assert SystemPack.load("generic", tmp_path) is first
+    time.sleep(0.01)
+    (tmp_path / "generic.yaml").write_text(
+        (tmp_path / "generic.yaml").read_text(encoding="utf-8") + "\n# cambio\n", encoding="utf-8")
+    assert SystemPack.load("generic", tmp_path) is not first
