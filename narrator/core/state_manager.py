@@ -76,17 +76,37 @@ class StateManager:
         relation = str(relation).strip()
         if not source or not target or not relation:
             return
+        from narrator.core import social
+
         key = f"{source}::{target}"
-        self.data.setdefault("relaciones", {})[key] = {
+        previous = self.data.setdefault("relaciones", {}).get(key)
+        before = int(previous.get("strength", 0)) if isinstance(previous, dict) else None
+        after = max(-100, min(100, int(strength)))
+        history = list(previous.get("historial", [])) if isinstance(previous, dict) else []
+        history.append({
+            "sesion": self.get_session_number(),
+            "turno": self.data.get("escena_actual", {}).get("turno_narrativo", 0),
+            "relation": relation,
+            "strength": after,
+            "reason": reason,
+        })
+        del history[:-social.HISTORY_LIMIT]
+        self.data["relaciones"][key] = {
             "source": source,
             "target": target,
             "source_type": source_type,
             "target_type": target_type,
             "relation": relation,
-            "strength": max(-100, min(100, int(strength))),
+            "strength": after,
+            "tier": social.tier(after),
             "reason": reason,
             "sesion": self.get_session_number(),
+            "historial": history,
         }
+        # Consecuencia social: cruzar de nivel es un hecho que la causalidad ve.
+        event = social.tier_change_event(source, target, before, after)
+        if event:
+            self._append_event(event, actor="social")
         self.save()
 
     def get_relations(self, entity: str = "", *, relation: str = "") -> list[dict]:
@@ -107,8 +127,12 @@ class StateManager:
             # ausente no es contexto relevante para este turno.
             if allowed and not (item.get("source") in allowed and item.get("target") in allowed):
                 continue
+            strength = int(item.get("strength", 0) or 0)
+            from narrator.core.social import tier
+
             edges.append(
-                f"{item.get('source')} --[{item.get('relation')}, {item.get('strength', 0)}]--> {item.get('target')}"
+                f"{item.get('source')} --[{item.get('relation')}, {strength} · {tier(strength)}]--> "
+                f"{item.get('target')}"
             )
         return "\n".join(edges[:max_edges])
 

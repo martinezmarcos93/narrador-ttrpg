@@ -232,7 +232,10 @@ def test_social_conflict_proposal_persists_relation_and_event(tmp_path):
     assert result.applied
     relation = state.get_relations("Alicia")[0]
     assert relation["strength"] == -60
-    assert state.data["eventos"][-1]["evento"] == "Alicia rompe la negociación con Bruno."
+    recientes = [e["evento"] for e in state.data["eventos"][-3:]]
+    assert "Alicia rompe la negociación con Bruno." in recientes
+    # Consecuencia social: cruzar a hostil queda registrado como hecho.
+    assert "relación Alicia -> Bruno pasa a hostil" in recientes
 
 
 def test_front_clock_progression_is_persistent_and_bounded(tmp_path):
