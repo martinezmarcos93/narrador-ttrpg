@@ -36,6 +36,18 @@ class ContinuityReport:
         }
 
 
+class _NullState:
+    """Estado vacío para validación puramente estructural."""
+
+    data: dict[str, Any] = {}
+
+    def get_known_fact(self, key: str, default: Any = None) -> Any:
+        return default
+
+    def get_session_number(self) -> int:
+        return 0
+
+
 class ContinuityValidator:
     """Comprueba referencias y coherencia estructural sin interpretar narrativa libre.
 
@@ -45,8 +57,17 @@ class ContinuityValidator:
     inventa una autoridad alternativa.
     """
 
-    def __init__(self, state_manager):
-        self.state = state_manager
+    MAX_EFFECT_DEPTH = 5
+
+    def __init__(self, state_manager=None):
+        # Sin estado, el validador solo comprueba la forma de la propuesta:
+        # no puede afirmar que un NPC, reloj o frente "no existe".
+        self.state = state_manager if state_manager is not None else _NullState()
+        self.stateful = state_manager is not None
+
+    @property
+    def data(self) -> dict[str, Any]:
+        return getattr(self.state, "data", {}) or {}
 
     def validate(self, proposal: dict[str, Any]) -> ContinuityReport:
         issues: list[ContinuityIssue] = []
@@ -90,13 +111,13 @@ class ContinuityValidator:
         }
 
     def _known_npcs(self) -> set[str]:
-        scene = self.state.data.get("escena_actual", {})
+        scene = self.data.get("escena_actual", {})
         known = {
             str(name).strip()
             for name in scene.get("npcs_presentes", [])
             if str(name).strip()
         }
-        for relation in self.state.data.get("relaciones", {}).values():
+        for relation in self.data.get("relaciones", {}).values():
             if isinstance(relation, dict):
                 for key in ("source", "target"):
                     value = str(relation.get(key) or "").strip()
@@ -105,9 +126,9 @@ class ContinuityValidator:
         return known
 
     def _known_locations(self) -> set[str]:
-        current = str(self.state.data.get("escena_actual", {}).get("locacion") or "").strip()
+        current = str(self.data.get("escena_actual", {}).get("locacion") or "").strip()
         known = {current} if current else set()
-        scenes = self.state.data.get("escenas", {})
+        scenes = self.data.get("escenas", {})
         if isinstance(scenes, dict):
             known.update(str(name).strip() for name in scenes if str(name).strip())
         return known
@@ -131,7 +152,7 @@ class ContinuityValidator:
             return
         recent = {
             str(item.get("evento", "")).strip()
-            for item in self.state.data.get("eventos", [])[-50:]
+            for item in self.data.get("eventos", [])[-50:]
             if isinstance(item, dict)
         }
         for event in events:
@@ -156,7 +177,7 @@ class ContinuityValidator:
             return
         current = {
             str(name).strip()
-            for name in self.state.data.get("escena_actual", {}).get("npcs_presentes", [])
+            for name in self.data.get("escena_actual", {}).get("npcs_presentes", [])
         }
         for name, desired in presence.items():
             normalized = str(name).strip()
@@ -171,13 +192,13 @@ class ContinuityValidator:
                     f"La presencia de '{normalized}' debe ser booleana.",
                 ))
                 continue
-            if normalized not in known_npcs:
+            if self.stateful and normalized not in known_npcs:
                 issues.append(ContinuityIssue(
                     "unknown_npc",
                     "error",
                     f"El NPC '{normalized}' no existe en el estado visible ni fue creado en la propuesta.",
                 ))
-            elif desired is False and normalized not in current:
+            elif self.stateful and desired is False and normalized not in current:
                 issues.append(ContinuityIssue(
                     "npc_not_present",
                     "warning",
@@ -268,7 +289,7 @@ class ContinuityValidator:
             ))
             return
 
-        clocks = self.state.data.get("relojes", {})
+        clocks = self.data.get("relojes", {})
         aggregate: dict[str, int] = {}
         for item in changes:
             if not isinstance(item, dict):
@@ -284,7 +305,7 @@ class ContinuityValidator:
                     "Cada cambio de reloj debe declarar name.",
                 ))
                 continue
-            if name not in clocks:
+            if self.stateful and name not in clocks:
                 issues.append(ContinuityIssue(
                     "unknown_clock", "error",
                     f"El reloj '{name}' no existe en el estado de campaña.",
@@ -308,6 +329,8 @@ class ContinuityValidator:
             aggregate[name] = aggregate.get(name, 0) + delta
 
         for name, delta in aggregate.items():
+            if name not in clocks:
+                continue
             clock = clocks[name]
             try:
                 current = int(clock.get("llenos", 0))
@@ -340,7 +363,7 @@ class ContinuityValidator:
             return
         existing_keys = {
             (str(item.get("source") or "").strip(), str(item.get("target") or "").strip())
-            for item in self.state.data.get("relaciones", {}).values()
+            for item in self.data.get("relaciones", {}).values()
             if isinstance(item, dict)
         }
         seen = set()
@@ -365,7 +388,11 @@ class ContinuityValidator:
                     f"La relación '{source}' -> '{target}' no puede apuntar a sí misma.",
                 ))
             for endpoint in (source, target):
-                if endpoint not in known_npcs and endpoint not in self._known_factions():
+                if (
+                    self.stateful
+                    and endpoint not in known_npcs
+                    and endpoint not in self._known_factions()
+                ):
                     issues.append(ContinuityIssue(
                         "unknown_relation_entity", "error",
                         f"La entidad '{endpoint}' de la relación no existe en el estado ni en la propuesta.",
@@ -394,7 +421,7 @@ class ContinuityValidator:
     def _known_factions(self) -> set[str]:
         return {
             str(name).strip()
-            for name in self.state.data.get("facciones", {})
+            for name in self.data.get("facciones", {})
             if str(name).strip()
         }
 
@@ -448,6 +475,7 @@ class ContinuityValidator:
         known_npcs: set[str],
         known_locations: set[str],
         issues: list[ContinuityIssue],
+        _depth: int = 0,
     ) -> None:
         allowed = {
             "fact", "flag", "npc_presence", "scene_location", "clock_delta",
@@ -497,7 +525,7 @@ class ContinuityValidator:
                         "invalid_npc_presence_effect", "error",
                         "npc_presence requiere name no vacío y present booleano.",
                     ))
-                elif name not in known_npcs:
+                elif self.stateful and name not in known_npcs:
                     issues.append(ContinuityIssue(
                         "unknown_npc", "error",
                         f"El NPC '{name}' del efecto causal no existe en el estado ni en la propuesta.",
@@ -516,7 +544,7 @@ class ContinuityValidator:
                     ))
             elif kind == "clock_delta":
                 name = str(effect.get("name") or "").strip()
-                if name not in self.state.data.get("relojes", {}):
+                if self.stateful and name not in self.data.get("relojes", {}):
                     issues.append(ContinuityIssue(
                         "unknown_clock", "error",
                         f"El reloj '{name}' del efecto causal no existe en el estado.",
@@ -564,9 +592,27 @@ class ContinuityValidator:
                         "untriggered_consequence", "error",
                         "queue_consequence requiere trigger o due.",
                     ))
+                nested = effect.get("effects")
+                if nested is not None:
+                    if not isinstance(nested, list):
+                        issues.append(ContinuityIssue(
+                            "invalid_consequence_effects", "error",
+                            "Los effects de queue_consequence deben ser una lista.",
+                        ))
+                    elif _depth >= self.MAX_EFFECT_DEPTH:
+                        issues.append(ContinuityIssue(
+                            "causal_nesting_too_deep", "error",
+                            f"Los efectos causales anidados superan {self.MAX_EFFECT_DEPTH} niveles.",
+                        ))
+                    else:
+                        self._check_effects(
+                            nested, known_npcs, known_locations, issues, _depth + 1
+                        )
 
         for name, delta in seen_clock_deltas.items():
-            clock = self.state.data.get("relojes", {}).get(name, {})
+            clock = self.data.get("relojes", {}).get(name)
+            if clock is None:
+                continue
             try:
                 target = int(clock.get("llenos", 0)) + delta
                 maximum = int(clock.get("segmentos", 6))
@@ -600,7 +646,11 @@ class ContinuityValidator:
                 ))
                 return
             for endpoint in (source, target):
-                if endpoint not in known_npcs and endpoint not in self._known_factions():
+                if (
+                    self.stateful
+                    and endpoint not in known_npcs
+                    and endpoint not in self._known_factions()
+                ):
                     issues.append(ContinuityIssue(
                         "unknown_relation_entity", "error",
                         f"La entidad '{endpoint}' de la relación causal no existe.",
@@ -626,7 +676,7 @@ class ContinuityValidator:
                     "front_clock_delta requiere name.",
                 ))
                 return
-            if name not in self.state.data.get("frentes", {}):
+            if self.stateful and name not in self.data.get("frentes", {}):
                 issues.append(ContinuityIssue(
                     "unknown_front", "error",
                     f"El frente '{name}' no existe en el estado de campaña.",
@@ -639,7 +689,7 @@ class ContinuityValidator:
                     "El delta de un frente debe ser entero.",
                 ))
                 return
-            clock = self.state.data.get("relojes", {}).get(name)
+            clock = self.data.get("relojes", {}).get(name)
             if clock is not None:
                 try:
                     target = int(clock.get("llenos", 0)) + delta

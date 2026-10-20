@@ -146,22 +146,12 @@ class ProposalValidator:
                 "Cada cambio de personaje debe declarar un field.",
             ))
 
-        allowed_effects = {
-            "fact", "flag", "npc_presence", "scene_location", "clock_delta",
-            "event", "queue_consequence", "world_fact", "character_fact",
-            "player_fact", "relation", "front_clock_delta",
-        }
-        for consequence in proposal.consequences:
-            for effect in consequence.get("effects", []) or []:
-                if not isinstance(effect, dict) or effect.get("type") not in allowed_effects:
-                    report.issues.append(ContinuityIssue(
-                        "invalid_causal_effect", "error",
-                        f"Efecto causal no permitido: "
-                        f"{effect.get('type') if isinstance(effect, dict) else '<inválido>'}.",
-                    ))
-
+        # Los tipos de efecto causal los valida ContinuityValidator (incluidos
+        # los anidados en queue_consequence); acá solo se agregan reglas del contrato.
         front_deltas: dict[str, int] = {}
-        clocks = self.continuity.state.data.get("relojes", {})
+        stateful = getattr(self.continuity, "stateful", True)
+        state_data = getattr(getattr(self.continuity, "state", None), "data", {}) or {}
+        clocks = state_data.get("relojes", {})
         for consequence in proposal.consequences:
             for effect in consequence.get("effects", []) or []:
                 if not isinstance(effect, dict) or effect.get("type") != "front_clock_delta":
@@ -174,6 +164,8 @@ class ProposalValidator:
                     ))
                     continue
                 if name not in clocks:
+                    if not stateful:
+                        continue
                     report.issues.append(ContinuityIssue(
                         "unknown_front_clock", "error",
                         f"El reloj del frente '{name}' no existe en el estado.",
