@@ -200,3 +200,9 @@ continuity_rules:
     puntos_heroe: {min: 0, max: 3}
   mutually_exclusive:
     - [inconsciente, concentrando]
+
+# Detección automática del sistema desde el texto del manual
+# (ver narrator/core/system_detection.py).
+deteccion:
+  nombre_visible: "Pathfinder 2e"
+  keywords: {pathfinder: 4, golarion: 3, paizo: 3, absalom: 2, starfinder: 2, ancestry: 1, ascendencia: 1}

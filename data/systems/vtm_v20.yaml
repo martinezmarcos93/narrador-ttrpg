@@ -367,3 +367,9 @@ continuity_rules:
   mutually_exclusive:
     - [en_torpor, en_combate]
     - [en_torpor, en_frenesi]
+
+# Detección automática del sistema desde el texto del manual
+# (ver narrator/core/system_detection.py).
+deteccion:
+  nombre_visible: "Mundo de Tinieblas (Vampiro V20)"
+  keywords: {vampiro: 3, vampiros: 3, mascarada: 3, camarilla: 2, sabbat: 2, brujah: 2, toreador: 2, malkavian: 2, nosferatu: 2, ventrue: 2, tremere: 2, disciplinas: 1, chiquillo: 2, vitae: 2, cainita: 2, vampire: 3}

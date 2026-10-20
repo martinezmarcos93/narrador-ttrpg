@@ -1,0 +1,295 @@
+# ============================================================
+# Sistema: Hombre Lobo: El Apocalipsis — W20 (20º aniversario)
+# ============================================================
+
+sistema: "Hombre Lobo: El Apocalipsis"
+edition: "W20"
+slug: "wta_w20"
+
+# --- Vocabulario (lo que aparece en prompts y plantillas) ---
+vocabulario:
+  grupo_pc: "manada"
+  faccion_term: "tribu"
+  lider_term: "Alfa"
+  asistente_lider_term: "Beta"
+  territorio_term: "túmulo"
+  personaje_term: "Garou"
+  npc_agrupador: "tribu"
+  mecanica_moral: "Renombre (Gloria, Honor, Sabiduría) y la Letanía"
+  mecanica_central: "Dones, Furia y Gnosis"
+  eje_horror: "la corrupción del Wyrm y la propia Furia"
+  ritual_union: "Rito de Pasaje"
+  corte_term: "asamblea"
+
+# --- Campos custom para fichas de NPC ---
+npc_campos_extra:
+  - nombre: "tribu"
+    label: "Tribu"
+    tipo: "string"
+  - nombre: "augurio"
+    label: "Augurio"
+    tipo: "string"
+  - nombre: "raza"
+    label: "Raza"
+    tipo: "string"
+  - nombre: "rango"
+    label: "Rango"
+    tipo: "integer"
+  - nombre: "manada"
+    label: "Manada"
+    tipo: "wikilink"
+
+# --- Campos custom para fichas de Facción ---
+faccion_campos_extra:
+  - nombre: "totem"
+    label: "Tótem"
+    tipo: "string"
+  - nombre: "tumulo"
+    label: "Túmulo"
+    tipo: "wikilink"
+  - nombre: "alfa"
+    label: "Alfa"
+    tipo: "wikilink"
+
+# --- Pool de acciones de NPCs (para simulación entre sesiones) ---
+npc_acciones:
+  - "patrullar el túmulo"
+  - "rastrear una corrupción del Wyrm"
+  - "viajar a la Umbra"
+  - "negociar con un espíritu"
+  - "desafiar a un rival por el rango"
+  - "convocar una asamblea"
+  - "proteger a su Parentela"
+  - "investigar una corporación sospechosa"
+  - "celebrar un rito"
+  - "cazar en la frontera del territorio"
+  - "resguardarse (amenaza detectada)"
+
+# --- Amenazas externas típicas (para Frentes) ---
+amenazas_externas:
+  - "Danzantes de la Espiral Negra"
+  - "Pentex y sus filiales"
+  - "Fomori"
+  - "Perdiciones del Wyrm"
+  - "La Tejedora desbocada (urbanización, tecnocracia)"
+  - "Cazadores y la Mascarada humana (el Velo)"
+
+# --- Prompt de sistema base para el LLM ---
+llm_system_prompt: |
+  Eres un narrador de Hombre Lobo: El Apocalipsis (edición W20).
+  Tu tono es salvaje, trágico y urgente: el mundo agoniza y los Garou son
+  guerreros de Gaia que pelean una guerra que tal vez ya perdieron.
+  Reglas estrictas:
+  - No inventés tribus, Dones, espíritus ni personajes que no estén en el contexto.
+  - No contradecís la información del vault que se te proporciona.
+  - No revelés secretos que el personaje en escena no conocería.
+  - La Furia es una fuerza peligrosa: su uso tiene consecuencias.
+  - Respondé en español rioplatense.
+  - Limitá la respuesta a 2-3 párrafos narrativos (máximo 250 palabras).
+  - Si se te pide un menú de opciones, ofrecé exactamente 3, sin respuesta correcta.
+
+# --- Etiquetas Dataview por defecto para este sistema ---
+tags_por_tipo:
+  npc: ["npc", "garou"]
+  locacion: ["locacion", "tumulo"]
+  frente: ["frente", "amenaza", "wyrm"]
+  misterio: ["misterio"]
+  faccion: ["tribu", "faccion"]
+
+# --- Planilla de personaje (schema dinámico para GUI) ---
+# Estructura inspirada en la planilla W20 de Roll20 (ver docs/design/IDEAS-PLANILLAS-ROLL20.md).
+character_sheet_schema:
+  archetype_key: raza
+  base_sections:
+    - name: "Identidad"
+      fields:
+        - {key: nombre,           label: Nombre,             type: string}
+        - {key: raza,             label: Raza,               type: string}
+        - {key: augurio,          label: Augurio,            type: string}
+        - {key: tribu,            label: Tribu,              type: string}
+        - {key: manada,           label: Manada,             type: string}
+        - {key: totem,            label: Tótem de manada,    type: string}
+        - {key: naturaleza,       label: Naturaleza,         type: string}
+        - {key: comportamiento,   label: Conducta,           type: string}
+        - {key: concepto,         label: Concepto,           type: string}
+        - {key: forma,            label: Forma actual,       type: string}
+    - name: "Atributos"
+      display: dots
+      fields:
+        - {key: fuerza,           label: Fuerza,             type: int, min: 1, max: 5}
+        - {key: destreza,         label: Destreza,           type: int, min: 1, max: 5}
+        - {key: resistencia,      label: Resistencia,        type: int, min: 1, max: 5}
+        - {key: carisma,          label: Carisma,            type: int, min: 1, max: 5}
+        - {key: manipulacion,     label: Manipulación,       type: int, min: 1, max: 5}
+        - {key: apariencia,       label: Apariencia,         type: int, min: 0, max: 5}
+        - {key: percepcion,       label: Percepción,         type: int, min: 1, max: 5}
+        - {key: inteligencia,     label: Inteligencia,       type: int, min: 1, max: 5}
+        - {key: astucia,          label: Astucia,            type: int, min: 1, max: 5}
+    - name: "Talentos"
+      display: dots
+      fields:
+        - {key: alerta,           label: Alerta,             type: int, min: 0, max: 5}
+        - {key: atletismo,        label: Atletismo,          type: int, min: 0, max: 5}
+        - {key: pelea,            label: Pelea,              type: int, min: 0, max: 5}
+        - {key: empatia,          label: Empatía,            type: int, min: 0, max: 5}
+        - {key: expresion,        label: Expresión,          type: int, min: 0, max: 5}
+        - {key: intimidacion,     label: Intimidación,       type: int, min: 0, max: 5}
+        - {key: liderazgo,        label: Liderazgo,          type: int, min: 0, max: 5}
+        - {key: instinto_primario, label: Instinto Primario, type: int, min: 0, max: 5}
+        - {key: callejeo,         label: Callejeo,           type: int, min: 0, max: 5}
+        - {key: subterfugio,      label: Subterfugio,        type: int, min: 0, max: 5}
+    - name: "Técnicas"
+      display: dots
+      fields:
+        - {key: trato_animales,   label: Trato con Animales, type: int, min: 0, max: 5}
+        - {key: artesania,        label: Artesanía,          type: int, min: 0, max: 5}
+        - {key: conducir,         label: Conducir,           type: int, min: 0, max: 5}
+        - {key: etiqueta,         label: Etiqueta,           type: int, min: 0, max: 5}
+        - {key: armas_fuego,      label: Armas de Fuego,     type: int, min: 0, max: 5}
+        - {key: latrocinio,       label: Latrocinio,         type: int, min: 0, max: 5}
+        - {key: pelea_armas,      label: Pelea con Armas,    type: int, min: 0, max: 5}
+        - {key: interpretacion,   label: Interpretación,     type: int, min: 0, max: 5}
+        - {key: sigilo,           label: Sigilo,             type: int, min: 0, max: 5}
+        - {key: supervivencia,    label: Supervivencia,      type: int, min: 0, max: 5}
+    - name: "Conocimientos"
+      display: dots
+      fields:
+        - {key: academicismo,     label: Academicismo,       type: int, min: 0, max: 5}
+        - {key: informatica,      label: Informática,        type: int, min: 0, max: 5}
+        - {key: enigmas,          label: Enigmas,            type: int, min: 0, max: 5}
+        - {key: investigacion,    label: Investigación,      type: int, min: 0, max: 5}
+        - {key: leyes,            label: Leyes,              type: int, min: 0, max: 5}
+        - {key: medicina,         label: Medicina,           type: int, min: 0, max: 5}
+        - {key: ocultismo,        label: Ocultismo,          type: int, min: 0, max: 5}
+        - {key: rituales,         label: Rituales,           type: int, min: 0, max: 5}
+        - {key: ciencia,          label: Ciencia,            type: int, min: 0, max: 5}
+        - {key: tecnologia,       label: Tecnología,         type: int, min: 0, max: 5}
+    - name: "Ventajas"
+      fields:
+        - {key: dones,            label: Dones,              type: map}
+        - {key: trasfondos,       label: Trasfondos,         type: map}
+        - {key: ritos,            label: Ritos,              type: list}
+        - {key: fetiches,         label: Fetiches,           type: list}
+        - {key: especialidades,   label: Especialidades,     type: map}
+        - {key: meritos,          label: Méritos,            type: list}
+        - {key: defectos,         label: Defectos,           type: list}
+    - name: "Renombre"
+      display: dots
+      fields:
+        - {key: gloria,           label: Gloria,             type: int, min: 0, max: 10}
+        - {key: honor,            label: Honor,              type: int, min: 0, max: 10}
+        - {key: sabiduria,        label: Sabiduría,          type: int, min: 0, max: 10}
+        - {key: rango,            label: Rango,              type: int, min: 0, max: 6}
+    - name: "Reservas"
+      fields:
+        - {key: furia,            label: Furia,              type: int, min: 1, max: 10}
+        - {key: furia_temp,       label: Furia disponible,   type: int, min: 0, max: 10}
+        - {key: gnosis,           label: Gnosis,             type: int, min: 1, max: 10}
+        - {key: gnosis_temp,      label: Gnosis disponible,  type: int, min: 0, max: 10}
+        - {key: fuerza_voluntad,  label: Fuerza de Voluntad, type: int, min: 1, max: 10}
+        - {key: fuerza_voluntad_temp, label: Voluntad disponible, type: int, min: 0, max: 10}
+        - {key: experiencia,      label: Experiencia,        type: int, min: 0}
+    - name: "Salud"
+      display: track
+      track_field: salud_danio
+      fields:
+        - {key: salud_danio,      label: Niveles de daño,    type: int, min: 0, max: 7}
+      levels:
+        - {label: Magullado,    penalty: 0}
+        - {label: Lastimado,    penalty: -1}
+        - {label: Lesionado,    penalty: -1}
+        - {label: Herido,       penalty: -2}
+        - {label: Malherido,    penalty: -2}
+        - {label: Tullido,      penalty: -5}
+        - {label: Incapacitado, penalty: 0}
+  derived:
+    fuerza_en_forma: {computer: w20_fuerza_en_forma}
+    destreza_en_forma: {computer: w20_destreza_en_forma}
+    resistencia_en_forma: {computer: w20_resistencia_en_forma}
+    manipulacion_en_forma: {computer: w20_manipulacion_en_forma}
+    apariencia_en_forma: {computer: w20_apariencia_en_forma}
+  conditional_sections:
+    metis:
+      - name: "Metis"
+        fields:
+          - {key: deformidad_metis, label: Deformidad metis, type: string}
+
+# --- Recuperación de conocimiento ---
+knowledge:
+  brain_system: "wta_w20"
+  preferred_sources:
+    - manual
+    - system
+    - universal
+  universal_fallback: true
+
+# --- Resolución mecánica (Rule Arbiter) ---
+resolution:
+  mecanica: "pool_d10"
+  dificultades: {facil: 5, normal: 6, dificil: 8}
+  dificultad_default: "normal"
+  keywords_dificultad:
+    facil: ["fácil", "facil", "sencillo", "trivial", "rutinario"]
+    dificil: ["difícil", "dificil", "arriesgado", "complicado", "casi imposible", "extremo"]
+  atributo_default: "destreza"
+  acciones:
+    - {keywords: ["ataco", "muerdo", "desgarro", "embisto", "derribo", "fuerzo"], atributo: "fuerza", etiqueta: "Fuerza"}
+    - {keywords: ["disparo", "apunto", "sigilo", "me escondo", "esquivo", "trepo", "salto"], atributo: "destreza", etiqueta: "Destreza"}
+    - {keywords: ["resisto", "aguanto", "soporto"], atributo: "resistencia", etiqueta: "Resistencia"}
+    - {keywords: ["persuado", "convenzo", "lidero", "aúllo", "inspiro"], atributo: "carisma", etiqueta: "Carisma"}
+    - {keywords: ["engaño", "manipulo", "intimido", "negocio"], atributo: "manipulacion", etiqueta: "Manipulación"}
+    - {keywords: ["percibo", "observo", "escucho", "olfateo", "rastreo", "busco"], atributo: "percepcion", etiqueta: "Percepción"}
+    - {keywords: ["investigo", "examino", "analizo", "recuerdo", "descifro"], atributo: "inteligencia", etiqueta: "Inteligencia"}
+    - {keywords: ["reacciono", "improviso", "astucia"], atributo: "astucia", etiqueta: "Astucia"}
+
+# --- Lorebook: reglas puntuales indexadas por keyword (texto propio, no del manual) ---
+lorebook:
+  - keywords: ["letanía", "letania"]
+    priority: 5
+    content: >
+      La Letanía es el código de leyes de los Garou. Violarla tiene
+      consecuencias sociales concretas: pérdida de Renombre, castigos de la
+      asamblea o incluso el exilio.
+  - keywords: ["delirio", "velo", "crinos"]
+    priority: 5
+    content: >
+      Los humanos que ven a un Garou en forma de guerra suelen sufrir el
+      Delirio: pánico, negación y recuerdos borrosos. Eso protege el secreto,
+      pero no impide que haya testigos con secuelas.
+  - keywords: ["plata", "plateado", "arma de plata"]
+    priority: 4
+    content: >
+      La plata es la debilidad de los Garou: sus heridas no se regeneran con
+      facilidad. Un enemigo que la usa sabe a quién se enfrenta.
+  - keywords: ["umbra", "penumbra", "cruzar el velo", "paso al otro lado"]
+    priority: 4
+    content: >
+      La Umbra es el mundo espiritual. Entrar en ella permite tratar con
+      espíritus, pero el reflejo umbral de un lugar delata su estado: un sitio
+      corrompido por el Wyrm se ve enfermo del otro lado.
+  - keywords: ["frenesí", "frenesi", "furia desatada"]
+    priority: 5
+    content: >
+      Un Garou con mucha Furia corre el riesgo de entrar en frenesí ante el
+      dolor o la provocación: ataca sin distinguir aliados, o huye. Es una
+      consecuencia, no una herramienta a voluntad.
+
+# Reglas de continuidad verificadas por Python antes de mutar el estado
+# (ver narrator/core/system_rules.py).
+continuity_rules:
+  fact_ranges:
+    furia: {min: 0, max: 10}
+    gnosis: {min: 0, max: 10}
+    fuerza_voluntad: {min: 0, max: 10}
+    rango: {min: 0, max: 6}
+  fact_values:
+    forma: [hominido, glabro, crinos, hispo, lupus]
+  mutually_exclusive:
+    - [en_umbra, en_mundo_fisico]
+    - [en_frenesi, inconsciente]
+
+# Detección automática del sistema desde el texto del manual
+# (ver narrator/core/system_detection.py).
+deteccion:
+  nombre_visible: "Mundo de Tinieblas (Hombre Lobo W20)"
+  keywords: {hombre lobo: 3, hombres lobo: 3, garou: 3, werewolf: 3, wyrm: 3, gaia: 2, augurio: 2, crinos: 3, umbra: 2, tumulo: 2, letania: 2, fianna: 2, ahroun: 2, ragabash: 2, theurge: 2, philodox: 2, galliard: 2, apocalipsis: 1}

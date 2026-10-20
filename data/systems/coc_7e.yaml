@@ -187,3 +187,9 @@ continuity_rules:
   mutually_exclusive:
     - [inconsciente, persecucion_activa]
     - [muerto, herida_grave_estabilizada]
+
+# Detección automática del sistema desde el texto del manual
+# (ver narrator/core/system_detection.py).
+deteccion:
+  nombre_visible: "La Llamada de Cthulhu 7e"
+  keywords: {cthulhu: 4, call of cthulhu: 4, mythos: 3, mitos: 2, cordura: 2, investigador: 1, investigadores: 1, guardian: 1, keeper: 2, lovecraft: 2, arkham: 2, d100: 1}

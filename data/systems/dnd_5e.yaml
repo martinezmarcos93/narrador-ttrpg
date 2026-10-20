@@ -205,3 +205,9 @@ continuity_rules:
   mutually_exclusive:
     - [inconsciente, concentrando]
     - [muerto, estable]
+
+# Detección automática del sistema desde el texto del manual
+# (ver narrator/core/system_detection.py).
+deteccion:
+  nombre_visible: "Dungeons & Dragons 5e"
+  keywords: {dungeons & dragons: 4, dungeons: 2, d&d: 3, d20: 1, clerigo: 1, cleric: 1, paladin: 1, warlock: 2, tiefling: 2, druida: 1, druid: 1, conjuro: 1, salvacion: 1, competencia: 1}

@@ -206,29 +206,13 @@ def extract_pdf_text(path: str, max_chars: int = 12000) -> str | None:
 
 def detect_system(text: str) -> tuple[str, str]:
     """Detecta el sistema de juego. Devuelve (display_name, slug)."""
-    if _AGENT_MODE and _narrator_service:
-        slug = _narrator_service.detect_system(text, state)
-        names = {
-            "vtm_v20": "Mundo de Tinieblas (Vampiro V20)",
-            "dnd_5e": "Dungeons & Dragons 5e",
-            "pathfinder_2e": "Pathfinder 2e",
-            "coc_7e": "La Llamada de Cthulhu 7e",
-            "generic": "Sistema Genérico",
-        }
-        return names.get(slug, "Sistema Desconocido"), slug
+    from narrator.core.system_detection import detect_system as _detect
 
-    t = text.lower()
-    if any(w in t for w in ["vampiro", "mascarada", "brujah", "toreador", "camarilla", "malkavian"]):
-        return "Mundo de Tinieblas (Vampiro V20)", "vtm_v20"
-    if any(w in t for w in ["hombre lobo", "garou", "apocalipsis", "tribus"]):
-        return "Mundo de Tinieblas (Hombre Lobo)", "vtm_v20"
-    if any(w in t for w in ["pathfinder", "golarion", "paizo"]):
-        return "Pathfinder 2e", "pathfinder_2e"
-    if any(w in t for w in ["dungeon", "d&d", "dungeons", "cleric", "paladin", "tiefling"]):
-        return "Dungeons & Dragons 5e", "dnd_5e"
-    if any(w in t for w in ["call of cthulhu", "investigador", "cordura", "mythos"]):
-        return "La Llamada de Cthulhu 7e", "coc_7e"
-    return "Sistema Desconocido", "generic"
+    name, slug = _detect(text, resolve_path("data/systems"))
+    if _AGENT_MODE and _narrator_service:
+        # Mantiene el slug activo de la sesión sincronizado con el servicio.
+        state["system_slug"] = slug
+    return name, slug
 
 
 def _build_legacy_context() -> str:

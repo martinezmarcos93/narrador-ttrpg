@@ -121,21 +121,10 @@ class PromptBuilder:
         )
 
     def detect_system_from_text(self, text: str) -> str:
-        """Auto-detecta el sistema desde texto de PDF/manual."""
-        t = text.lower()
-        if any(w in t for w in ["vampiro", "mascarada", "brujah", "camarilla", "malkavian", "sabbat", "toreador", "nosferatu"]):
-            return "vtm_v20"
-        if any(w in t for w in ["hombre lobo", "garou", "apocalipsis", "tribus garou", "werewolf"]):
-            return "vtm_v20"  # WtA usa base VtM por ahora
-        if any(w in t for w in ["pathfinder", "golarion", "paizo", "starfinder", "absalom"]):
-            return "pathfinder_2e"
-        if any(w in t for w in ["dungeon", "dungeons & dragons", "d&d", "cleric", "paladin", "warlock", "tiefling", "druid"]):
-            return "dnd_5e"
-        if any(w in t for w in ["call of cthulhu", "investigador", "cordura", "mythos", "cthulhu", "keeper", "lovecraft"]):
-            return "coc_7e"
-        if any(w in t for w in ["apocalypse world", "pbta", "powered by the apocalypse", "maestro de ceremonias", "movimientos"]):
-            return "generic"
-        return "generic"
+        """Auto-detecta el sistema desde texto de PDF/manual (por puntaje)."""
+        from narrator.core.system_detection import detect_system
+
+        return detect_system(text, self.systems_path)[1]
 
     # ── Prompt principal del narrador ─────────────────────────
     def build_narrator_prompt(

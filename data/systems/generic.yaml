@@ -116,3 +116,9 @@ resolution:
   mecanica: "ratio"
   # Bandas PbtA-like por ratio del máximo posible de la tirada
   bandas: {exito: 0.8, parcial: 0.5}
+
+# Detección automática del sistema desde el texto del manual
+# (ver narrator/core/system_detection.py).
+deteccion:
+  nombre_visible: "Sistema Genérico"
+  keywords: {}

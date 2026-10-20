@@ -79,6 +79,42 @@ def _coc_puntos_vida(data: dict) -> int:
         raise derived_stats.DerivedStatError("constitucion/tamano ausentes")
 
 
+# Hombre Lobo W20: modificadores de atributos por forma.
+_W20_FORMS = {
+    "hominido": {},
+    "glabro": {"fuerza": 2, "resistencia": 2, "manipulacion": -2, "apariencia": -1},
+    "crinos": {"fuerza": 4, "destreza": 1, "resistencia": 3, "manipulacion": -3},
+    "hispo": {"fuerza": 3, "destreza": 2, "resistencia": 3, "manipulacion": -3},
+    "lupus": {"fuerza": 1, "destreza": 2, "resistencia": 2, "manipulacion": -3},
+}
+
+
+def _w20_form(data: dict) -> str:
+    from narrator.core.entity_registry import fold_name
+
+    return fold_name(data.get("forma") or "hominido")
+
+
+def _register_w20_attribute(attribute: str) -> None:
+    @derived_stats.register_computer(f"w20_{attribute}_en_forma")
+    def _compute(data: dict) -> int:
+        try:
+            base = int(data[attribute])
+        except (KeyError, TypeError, ValueError):
+            raise derived_stats.DerivedStatError(f"{attribute} ausente")
+        form = _w20_form(data)
+        if form not in _W20_FORMS:
+            raise derived_stats.DerivedStatError(f"forma desconocida: {form}")
+        # En Crinos la Apariencia es 0 (los humanos no la soportan).
+        if attribute == "apariencia" and form == "crinos":
+            return 0
+        return max(0, base + _W20_FORMS[form].get(attribute, 0))
+
+
+for _attr in ("fuerza", "destreza", "resistencia", "manipulacion", "apariencia"):
+    _register_w20_attribute(_attr)
+
+
 # ── Utilidades de schema ──────────────────────────────────────────────
 def iter_sections(schema: dict):
     """Todas las secciones (base y condicionales) con su origen."""

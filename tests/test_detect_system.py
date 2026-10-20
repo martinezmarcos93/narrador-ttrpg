@@ -24,3 +24,30 @@ def test_detect_generic():
     name, slug = detect_system(text)
     assert name == "Sistema Genérico"
     assert slug == "generic"
+
+
+def test_detect_werewolf_even_if_vampires_are_mentioned():
+    text = (
+        "Los Garou de la tribu Fianna defienden el túmulo del Wyrm. "
+        "En forma Crinos, el Ahroun recuerda la Letanía. Los vampiros son enemigos menores."
+    )
+    name, slug = detect_system(text)
+    assert slug == "wta_w20"
+    assert "Hombre Lobo" in name
+
+
+def test_detection_is_accent_insensitive_and_word_bounded():
+    from narrator.core.system_detection import detect_system as detect
+
+    assert detect("Las reglas de CORDURA y los Mitos de Cthulhu", "data/systems")[1] == "coc_7e"
+    # 'clan' no debe contar dentro de 'clandestino'
+    assert detect("Una reunión clandestina", "data/systems")[1] == "generic"
+
+
+def test_every_pack_declares_detection_block():
+    from narrator.core.system_detection import load_detection_profiles
+
+    profiles = load_detection_profiles("data/systems")
+    for slug, profile in profiles.items():
+        if slug != "generic":
+            assert profile["keywords"], slug
