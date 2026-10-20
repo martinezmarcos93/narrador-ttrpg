@@ -614,10 +614,11 @@ class StateManager:
                 delta = int(item.get("delta", 0))
             except (TypeError, ValueError):
                 continue
-            clock = self.data["relojes"][name]
-            before = clock.get("llenos", 0)
-            clock["llenos"] = min(max(0, before + delta), clock.get("segmentos", 6))
-            changes.append(f"clock:{name} {before} -> {clock['llenos']}")
+            from narrator.core.fronts import change_clock
+
+            before = self.data["relojes"][name].get("llenos", 0)
+            change_clock(self, name, delta)
+            changes.append(f"clock:{name} {before} -> {self.data['relojes'][name]['llenos']}")
 
         for key, value in proposal.scene_changes.items():
             if key == "locacion":
@@ -784,7 +785,9 @@ class StateManager:
         clock = self.data["relojes"].get(name)
         if not clock:
             return {}
-        clock["llenos"] = min(clock["llenos"] + n, clock["segmentos"])
+        from narrator.core.fronts import change_clock
+
+        change_clock(self, name, n)
         self.save()
         return clock
 
@@ -843,6 +846,10 @@ class StateManager:
         self.data["meta"]["ultima_sesion"] = datetime.now().isoformat()
         # Emociones volátiles (temor, favores) se erosionan entre sesiones.
         session_decay(self.data.get("relaciones", {}))
+        # Frentes con avance propio: el mundo se mueve aunque nadie lo empuje.
+        from narrator.core.fronts import session_advance
+
+        session_advance(self)
         self.save()
 
     def add_session_summary(
@@ -912,6 +919,9 @@ class StateManager:
         goal: str = "",
         status: str = "activo",
         priority: int = 0,
+        thresholds: dict | None = None,
+        on_full: list | None = None,
+        advance_per_session: int = 0,
     ) -> None:
         """Registra un frente formal y mantiene compatibilidad con relojes antiguos."""
         name = str(name).strip()
@@ -926,6 +936,13 @@ class StateManager:
             "descripcion": str(description).strip(),
             "reloj": name,
         })
+        front = self.data["frentes"][name]
+        if thresholds:
+            front["umbrales"] = {int(k): str(v) for k, v in thresholds.items()}
+        if on_full:
+            front["al_llenarse"] = [dict(x) for x in on_full if isinstance(x, dict)]
+        if advance_per_session:
+            front["avance_por_sesion"] = int(advance_per_session)
         if name not in self.data.setdefault("relojes", {}):
             self.data["relojes"][name] = {
                 "segmentos": max(1, int(max_stage)),
@@ -951,12 +968,10 @@ class StateManager:
 
     def advance_front_clock(self, name: str, ticks: int = 1) -> None:
         """Avanza el reloj de un frente registrado."""
-        clock = self.data.setdefault("relojes", {}).get(name)
-        if clock:
-            clock["llenos"] = min(
-                max(0, int(clock.get("llenos", 0)) + int(ticks)),
-                int(clock.get("segmentos", 6)),
-            )
+        from narrator.core.fronts import change_clock
+
+        if name in self.data.setdefault("relojes", {}):
+            change_clock(self, name, int(ticks))
             self.save()
 
     # ── Downtime entre sesiones ───────────────────────────────

@@ -77,21 +77,12 @@ class CausalityEngine:
 
     def _apply_clock_totals(self, totals: dict[str, int]) -> list[str]:
         """Aplica deltas ya agregados: un único clamp y un único evento de umbral por reloj."""
+        from narrator.core.fronts import change_clock
+
         events = []
-        clocks = self.state.data.get("relojes", {})
         for name in sorted(totals):
-            clock = clocks.get(name)
-            if clock is None:
-                continue
-            before = int(clock.get("llenos", 0))
-            maximum = int(clock.get("segmentos", 6))
-            after = min(max(0, before + totals[name]), maximum)
-            clock["llenos"] = after
-            events.append(f"reloj {name}: {before}->{after}")
-            # El evento de frente lleno solo nace al cruzar el umbral; un reloj
-            # ya lleno no re-dispara infinitamente.
-            if before < maximum <= after:
-                events.append(f"frente {name} lleno")
+            # Umbrales, frente lleno e interacción entre frentes viven en fronts.
+            events.extend(change_clock(self.state, name, totals[name], actor="CausalityEngine"))
         return events
 
     def _apply_secondary_effects(
