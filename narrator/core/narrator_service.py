@@ -200,6 +200,9 @@ class NarratorService:
         if composed:
             proposal_result = self.apply_proposal_with_fallback(composed, app_state=app_state)
             contract.record_proposal_result(proposal_result)
+        _, echoed = agent.strip_context_echo(raw)
+        if echoed:
+            contract.record_error("context_echo")
         text = agent.strip_system_tags(raw)
         leaks = secrets.find_leaks(text, self.state_manager)
         if leaks:
@@ -213,6 +216,7 @@ class NarratorService:
             "proposal": composed or None,
             "proposal_result": proposal_result,
             "leaks": leaks,
+            "context_echo": echoed,
             "contract": persisted,
         }
 

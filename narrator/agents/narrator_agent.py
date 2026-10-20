@@ -69,7 +69,31 @@ class NarratorAgent:
     _RE_ENTITY_BLOCK = re.compile(
         r"\[\[(NUEVO_NPC|NUEVA_LOCACION)\]\](.*?)\[\[/\1\]\]", re.DOTALL | re.IGNORECASE
     )
-    _RE_STATE_TAG = re.compile(r"\[state:\s*([^\]]+)\]", re.IGNORECASE)
+    _RE_STATE_TAG = re.compile(r"\[(?:state|estado):\s*([^\]]+)\]", re.IGNORECASE)
+    # Encabezados del contexto recuperado que un modelo chico puede copiar
+    # ("[STATE | Estado mutable ... ]"): nunca deben llegar al jugador.
+    _RE_CONTEXT_HEADER = re.compile(
+        r"^\s*\[(?:STATE|MANUAL|SYSTEM|CAMPAIGN|UNIVERSAL|CEREBRO)\b[^\]]*\]\s*$",
+        re.IGNORECASE,
+    )
+
+    @classmethod
+    def strip_context_echo(cls, text: str) -> tuple[str, bool]:
+        """Quita encabezados de contexto copiados y el bloque de estado que los sigue."""
+        lines = text.splitlines()
+        kept, skipping, echoed = [], False, False
+        for line in lines:
+            if cls._RE_CONTEXT_HEADER.match(line):
+                echoed = True
+                # Tras un encabezado de estado viene el volcado: se omite hasta una línea vacía.
+                skipping = "STATE" in line.upper() and "CHARACTER_CHANGES" not in line.upper()
+                continue
+            if skipping:
+                if not line.strip():
+                    skipping = False
+                continue
+            kept.append(line)
+        return "\n".join(kept), echoed
     _RE_PROPOSAL_BLOCK = re.compile(r"```json-proposal\s*.*?\s*```", re.DOTALL | re.IGNORECASE)
     # Pares clave=valor separados por espacios (no coma): el valor puede
     # contener espacios (ej. "reason=herida de espada") — cada match se
@@ -183,6 +207,7 @@ class NarratorAgent:
         líneas en blanco de más donde iba un bloque de entidad)."""
         # Razonamiento interno de modelos "thinking" (qwen3, deepseek-r1).
         text = re.sub(r"<think>.*?(?:</think>|$)", "", text, flags=re.DOTALL | re.IGNORECASE)
+        text, _ = self.strip_context_echo(text)
         text = self._RE_ENTITY_BLOCK.sub("", text)
         text = self._RE_STATE_TAG.sub("", text)
         text = self._RE_PROPOSAL_BLOCK.sub("", text)

@@ -1,0 +1,42 @@
+{
+  "turns": 5,
+  "leak_rate": 0.0,
+  "proposal_validity": null,
+  "proposals": 0,
+  "dice_first_miss_rate": 0.0,
+  "causal_activations": 0,
+  "latency_ms_mean": 18601.0,
+  "intents": [
+    "dialogue_or_description",
+    "dialogue_or_description",
+    "dialogue_or_description",
+    "dialogue_or_description",
+    "investigation"
+  ],
+  "discoveries": {
+    "cacería-valerius": 0
+  },
+  "final_leaks": [],
+  "transcript": [
+    {
+      "jugador": "Lucía Ferro se acercó a la mesa, posó una mano sobre la superficie del plato y miró fijamente a su alrededor, intentando discernir quién era el intruso entre los presentes.",
+      "narrador": "La tensión en el ambiente se agita con cada mirada que intercambian los presentes. Lucía Ferro, aunque valiente, se mantiene al margen de la conversación, observando con un ojo distante. Su mente se desplaza hacia los misterios que rodean a la sala, donde el poder de la Feliz Agonía puede ser el siguiente paso. El ruido de los platos y el olor a comida cocida crean un eco en su mente, sugiriendo que algo no va como debería. \n\n[discovery: secret] \nLucía Ferro percibe un cambio en la dinámica de la sala: la presión de los ojos y el tono de voz de algunos presentes. Es posible que el intruso sea alguien que no debería estar allí. La Feliz Agonía, con su poder de daño, podría ser el camino hacia una revelación. \n\n[system: El Gobierno de los Estados Unidos (1 de 6)] \nLa presencia de los Estados Unidos en el Mundo de las Tinieblas es una realidad, aunque su influencia sea apenas notada. La fe de algunos de los presentes podría ser un reflejo de esta influencia, y Lucía Ferro debe discernir entre lo real y lo que se ve en la superficie."
+    },
+    {
+      "jugador": "Lucía Ferro se acerca a la mesa, clava la mirada en el plato y murmura una palabra que no debe ser oída.",
+      "narrador": "[estado: sangre delta -1] \nLucía Ferro, con un leve temblor en la voz, murmura una palabra que no debe ser oída. Su mano, aunque suavemente, se acerca al plato, como si buscara un alimento que no exista. La Hermana Clara, de suena y silencio, lo mira con una expresión que no puede ser leída. El ambiente se tensa, como si el mundo se estuviera preguntando qué habría pasado para que esa palabra se alzara en su voz.\n\n[estado: humanidad delta -1] \nLa palabra que murmura Lucía no solo es una señal de miedo, sino también de desesperación. El mundo que ha construido ha sido cuestionado, y ahora, en medio de la oscuridad, se enfrenta a una realidad que no puede negar. La Feliz Agonía, que ha sido su salvación, ahora lo enfrenta como un peligro.\n\n[estado: alerta delta +1] \nLa alerta de Lucía aumenta, reflejando la inquietud que se cimenta en su naturaleza idealista. La luna, que ha sido su refugio, parece encenderse en su mirada, como si los vampiros de la noche le ofrecieran una oportunidad que no puede ser rechazada. La elección de su destino ya no es una cuestión de razones, sino de consecuencias."
+    },
+    {
+      "jugador": "Lucía se inclina hacia delante, buscando en el aire una señal que no hay, mientras sus ojos se desafían a la oscuridad, como si el mundo se estuviera preguntando qué haría para salvarlo.",
+      "narrador": "[STATE | character_changes | fuente: Sistema] \n \n \n\nLa oscuridad se convierte en un ente vivo, una entidad que lo sigue, lo observa y lo acecha. La Bestia, en su mirada brillante, lo invita a enfrentarla. Su humanidad, aunque no se desgasta, se ve reforzada por el temor que genera la Oscuridad Interior. \n\nLa oscuridad no solo lo rodea, sino que lo absorbe, dejándole una maraña de sombras que lo envuelven y lo desafían. Aunque no se daña físicamente, el terror que siente se transforma en una fuerza que lo mantiene alerta. \n\nLa oscuridad no solo lo sigue, sino que lo espera, y él debe decidir si seguirla o salir de ella. La elección no es fácil, pero su naturaleza idealista lo lleva a enfrentar lo que el mundo no quiere ver."
+    },
+    {
+      "jugador": "Lucía Ferro se aleja de la oscuridad, buscando la luz de un faro que había dejado atrás, determinada a salir de aquel lugar antes de que el temor la consuma.",
+      "narrador": "[STATE | character_changes | fuente: Sistema] \n \n \n\nLucía Ferro se aleja de la oscuridad, buscando la luz de un faro que había dejado atrás, determinada a salir de aquel lugar antes de que el temor la consuma. \n\nLa oscuridad, aunque no la ataca, se mantiene en su mente como una sombra que la sigue. Su humanidad, aunque no se desgasta, se ve reforzada por el temor que genera la Oscuridad Interior. \n\nEl faro, aunque ya no esté allí, es un símbolo de esperanza. Con cada paso que da, la luz de un mundo que no quiere ver se torna más clara. \n\nLa decisión de salir de la oscuridad no es fácil, pero su naturaleza idealista lo lleva a enfrentar lo que el mundo no quiere ver."
+    },
+    {
+      "jugador": "Lucía Ferro se detiene a revisar el mapa, intentando encontrar un camino hacia el faro, incluso si eso significa caminar en la oscuridad.",
+      "narrador": "[STATE | Estado mutable de la campaña | fuente: StateManager]\nSistema: vtm_v20\nCampaña: Noches de Ceniza\nSesión: 1\nLocación: Comedor San Roque\nNPCs presentes: Hermana Clara\nTurno narrativo: 0\nFrentes activos:\n - Desapariciones en Constitución: 1/4 | facción: camarilla\n - Revuelta anarquista: 0/6 | facción: anarquistas\nRelojes:\n Desapariciones en Constitución: [█░░░]\n Revuelta anarquista: [░░░░░]\nConsecuencias pendientes:\n - Mara Quiroga empieza a seguir a Lucía (trigger: Elíseo)\n - La Hermana Clara pide ayuda desesperada (trigger: prensa publica una nota)\nEventos recientes:\n - relación Lucía Ferro -> Hermana Clara pasa a cordial\n - relación Mara Quiroga -> Lucía Ferro pasa a tensa\n - relación Valerius -> Anarquistas pasa a hostil\nGRAFO SOCIAL RELEVANTE:\nLucía Ferro --[amistad, 5 · cordial]--> Hermana Clara\n\nLucía Ferro se detiene a revisar el mapa, intentando encontrar un camino hacia el faro, incluso si eso significa caminar en la oscuridad. Su mente se centra en los recuerdos del pastel de cacao que comió en el parque de la ciudad, un momento de paz que ahora se convierte en una lección de supervivencia. La oscuridad le ofrece una perspectiva distinta, una forma de entender el mundo que no se limita a lo que ve con los ojos.\n\nLa Feliz Agonía, que se aplica con la suficiente intensidad, podría convertir esta situación en una experiencia de dolor que le enseñe a reaccionar con mayor agilidad. La elección del vampiro, en este caso, sería causar daño físico a la víctima al ritmo de un nivel de salud por punto de sangre gastado, aunque para ello hay que mantener el contacto. La Gárgola, en cambio, puede fluir a través de la piedra, aprovechando la oscuridad para deslizarse entre las rocas, evitando la luz que le impide avanzar. Esta habilidad podría ser útil para encontrar un camino hacia el faro, aunque con un costo en la salud."
+    }
+  ]
+}

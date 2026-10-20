@@ -37,6 +37,7 @@ def summarize(turns: list[dict]) -> dict:
         "proposal_validity": round(len(applied) / len(proposals), 3) if proposals else None,
         "proposals": len(proposals),
         "dice_first_miss_rate": round(sum(1 for t in turns if t.get("dice_first_miss")) / n, 3),
+        "context_echo_rate": round(sum(1 for t in turns if t.get("context_echo")) / n, 3),
         "causal_activations": sum(
             int((t["contract"].get("causal_metrics") or {}).get("activations", 0)) for t in turns),
         "latency_ms_mean": round(sum(latencies) / n, 1),

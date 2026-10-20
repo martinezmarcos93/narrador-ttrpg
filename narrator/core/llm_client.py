@@ -20,6 +20,41 @@ class LLMClient:
         self.temperature = 0.85
         self.top_p = 0.9
         self.timeout = 120
+        self._thinking: bool | None = None
+
+    def supports_thinking(self) -> bool:
+        """True si el modelo razona (qwen3, deepseek-r1...): se le pide no hacerlo,
+        porque el razonamiento consume el presupuesto de tokens del narrador."""
+        if self._thinking is None:
+            try:
+                r = requests.post(f"{self.base_url}/api/show", json={"model": self.model}, timeout=5)
+                caps = r.json().get("capabilities", []) if r.status_code == 200 else []
+                self._thinking = "thinking" in caps
+            except Exception as e:
+                logger.info("No pude consultar capacidades de %s: %s", self.model, e)
+                self._thinking = False
+        return self._thinking
+
+    def _base_payload(self, messages: list[dict], max_tokens: int, stream: bool) -> dict:
+        payload = {
+            "model": self.model,
+            "messages": messages,
+            "stream": stream,
+            "options": {
+                "temperature": self.temperature,
+                "top_p": self.top_p,
+                "num_predict": max_tokens,
+            },
+        }
+        if self.supports_thinking():
+            payload["think"] = False
+        return payload
+
+    @staticmethod
+    def strip_thinking(text: str) -> str:
+        import re
+
+        return re.sub(r"<think>.*?(?:</think>|$)", "", text or "", flags=re.DOTALL).strip()
 
     # ── Model management ──────────────────────────────────────
     def get_models(self) -> list[str]:
@@ -37,23 +72,14 @@ class LLMClient:
     # ── Sync call ─────────────────────────────────────────────
     def chat(self, messages: list[dict], max_tokens: int = 300) -> str:
         """Non-streaming call. Returns full response text."""
-        payload = {
-            "model": self.model,
-            "messages": messages,
-            "stream": False,
-            "options": {
-                "temperature": self.temperature,
-                "top_p": self.top_p,
-                "num_predict": max_tokens,
-            },
-        }
+        payload = self._base_payload(messages, max_tokens, stream=False)
         try:
             r = requests.post(
                 f"{self.base_url}/api/chat",
                 json=payload,
                 timeout=self.timeout,
             )
-            return r.json().get("message", {}).get("content", "")
+            return self.strip_thinking(r.json().get("message", {}).get("content", ""))
         except Exception as e:
             logger.error("Fallo en llamada síncrona al LLM: %s", e, exc_info=True)
             return f"[Error LLM: {e}]"
@@ -70,16 +96,7 @@ class LLMClient:
         Streaming call. Invoca on_chunk por cada token recibido
         y on_done con el texto completo al terminar.
         """
-        payload = {
-            "model": self.model,
-            "messages": messages,
-            "stream": True,
-            "options": {
-                "temperature": self.temperature,
-                "top_p": self.top_p,
-                "num_predict": max_tokens,
-            },
-        }
+        payload = self._base_payload(messages, max_tokens, stream=True)
         try:
             with requests.post(
                 f"{self.base_url}/api/chat",
