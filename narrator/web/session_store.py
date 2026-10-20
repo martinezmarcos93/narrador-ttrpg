@@ -27,10 +27,11 @@ class SessionStore:
         self._sessions: dict[str, WebSession] = {}
         self._lock = RLock()
 
-    def create(self, *, campaign: str, system: str) -> WebSession:
+    def create(self, *, campaign: str, system: str, owner: str = "local") -> WebSession:
         with self._lock:
             session_id = token_urlsafe(32)
             session = WebSession(session_id=session_id, campaign=campaign, system=system)
+            session.data["owner"] = owner
             self._sessions[session_id] = session
             return session
 
@@ -41,3 +42,17 @@ class SessionStore:
     def delete(self, session_id: str) -> None:
         with self._lock:
             self._sessions.pop(session_id, None)
+
+    def save(self, session: WebSession) -> None:
+        """En memoria la sesión ya es el objeto vivo; existe por simetría con WebStore."""
+
+    def listar_sesiones(self, owner: str | None = None) -> list[WebSession]:
+        with self._lock:
+            return [s for s in self._sessions.values()
+                    if owner is None or s.data.get("owner") == owner]
+
+    def hay_claves_activas(self) -> bool:
+        return False
+
+    def owner_de_clave(self, token: str) -> str | None:
+        return None

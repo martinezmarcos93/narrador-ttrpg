@@ -170,7 +170,7 @@ class NarratorService:
         )
 
     def run_turn(self, app_state: dict, player_text: str, llm, *, max_tokens: int = 600,
-                 history: int = 8) -> dict:
+                 history: int = 8, on_chunk=None) -> dict:
         """Turno completo sin interfaz: contrato → LLM → propuesta → fugas → persistencia.
 
         Lo usan la API web y los scripts headless. ``llm`` expone ``chat(messages,
@@ -185,7 +185,14 @@ class NarratorService:
         contract = self.prepare_turn(app_state)
         recent = [m for m in app_state["messages"] if m.get("role") in {"user", "assistant"}]
         messages = [{"role": "system", "content": contract.narrative_prompt}, *recent[-history:]]
-        raw = llm.chat(messages, max_tokens=max_tokens) or ""
+        if on_chunk is not None and hasattr(llm, "stream_chat"):
+            holder: dict = {}
+            llm.stream_chat(messages, on_chunk=on_chunk,
+                            on_done=lambda full: holder.setdefault("text", full),
+                            max_tokens=max_tokens)
+            raw = holder.get("text", "")
+        else:
+            raw = llm.chat(messages, max_tokens=max_tokens) or ""
         contract.mark_llm_output(raw)
 
         agent = self.narrator_agent

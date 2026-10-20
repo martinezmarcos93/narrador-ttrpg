@@ -42,3 +42,6 @@ temp/
 .DS_Store
 Thumbs.db
 Thumbs.db:encdata
+
+# Base de la capa web (sesiones y claves de API)
+data/web/
