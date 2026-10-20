@@ -148,6 +148,15 @@ def ubicar_toc(lineas: list, toc: list) -> "tuple[dict, dict]":
     return marcas, virtuales
 
 
+def titulo_legible(texto: str) -> bool:
+    """Descarta rótulos que son ruido de OCR ("lt-----1-MA -+-----~-"): un
+    título por tamaño de letra necesita al menos 3 letras y que las letras
+    sean la mayoría de sus caracteres visibles."""
+    visibles = [c for c in texto or "" if not c.isspace()]
+    letras = sum(1 for c in visibles if c.isalpha())
+    return letras >= 3 and letras / max(1, len(visibles)) >= 0.6
+
+
 def construir_arbol(lineas: list, toc: list, titulo_raiz: str,
                     titulos_por_letra: bool) -> Nodo:
     marcas, virtuales = ubicar_toc(lineas, toc)
@@ -181,7 +190,7 @@ def construir_arbol(lineas: list, toc: list, titulo_raiz: str,
             nivel, titulo = marcas[i]
             abrir(titulo, nivel, ln.pagina)
             nivel_toc = nivel
-        elif titulos_por_letra and ln.es_titulo:
+        elif titulos_por_letra and ln.es_titulo and titulo_legible(ln.texto):
             rango = min(tamanos.index(round(ln.tam)), 3)
             abrir(ln.texto, nivel_toc + 1 + rango, ln.pagina)
         else:

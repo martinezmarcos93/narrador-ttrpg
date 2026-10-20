@@ -1,9 +1,9 @@
 ---
 id: universal-mapa
-titulo: Mapa del conocimiento rolistico universal
-capa: universal
-sistema: ""
-tipo: index
+title: Mapa del conocimiento rolistico universal
+system: universal
+kind: index
+layer: universal
 tags: [universal, mapa, ttrpg]
 ---
 
@@ -47,3 +47,10 @@ Este nodo conecta los conceptos universales del cerebro.
 - [[universal-estado-ficcion]] — estado mecánico y estado ficcional
 - [[universal-presupuesto-contexto]] — presupuesto de contexto
 - [[universal-continuidad-temporal]] — continuidad temporal
+- [[universal-facciones]] — facciones y agendas
+- [[universal-ritmo-entre-sesiones]] — downtime y tiempo entre sesiones
+- [[universal-dilemas-morales]] — dilemas morales
+- [[universal-improvisacion]] — improvisación del director
+- [[universal-progresion]] — progresión y recompensas
+- [[universal-seguridad-mesa]] — seguridad y consentimiento en la mesa
+- [[universal-sobrenatural]] — lo sobrenatural y sus límites

@@ -1,0 +1,39 @@
+# Conceptos TTRPG universales que el cerebro debe cubrir (auditoría B1).
+# Un concepto está cubierto si alguna neurona universal contiene una de sus
+# keywords en su id, título o tags (comparación sin tildes ni mayúsculas).
+conceptos:
+  agencia: {keywords: [agencia]}
+  escena: {keywords: [escena]}
+  resolucion: {keywords: [resolucion]}
+  grados_exito: {keywords: [grados, exito parcial]}
+  consecuencias: {keywords: [consecuencia]}
+  frentes_relojes: {keywords: [frente, reloj]}
+  investigacion: {keywords: [investigacion, pistas]}
+  npc: {keywords: [npc]}
+  combate: {keywords: [combate]}
+  exploracion: {keywords: [exploracion]}
+  creacion_personajes: {keywords: [creacion]}
+  tono: {keywords: [tono, horror]}
+  recursos: {keywords: [recursos, economia]}
+  estado_persistente: {keywords: [estado persistente, estado-persistente]}
+  reglas_vs_lore: {keywords: [lore]}
+  fallo_con_avance: {keywords: [fallo]}
+  causalidad: {keywords: [causalidad]}
+  conocimiento: {keywords: [conocimiento, informacion]}
+  transiciones: {keywords: [transicion]}
+  conflicto_social: {keywords: [social]}
+  incertidumbre: {keywords: [incertidumbre]}
+  continuidad_temporal: {keywords: [continuidad]}
+  presupuesto_contexto: {keywords: [presupuesto, contexto]}
+  # Huecos detectados en la primera auditoría (2026-10-19):
+  ritmo: {keywords: [ritmo, pacing]}
+  progresion: {keywords: [progresion, recompensa, experiencia]}
+  facciones: {keywords: [faccion, facciones]}
+  secretos: {keywords: [secreto, revelacion]}
+  seguridad_mesa: {keywords: [seguridad, lineas y velos, consentimiento]}
+  improvisacion: {keywords: [improvisacion]}
+  viaje: {keywords: [viaje, travesia]}
+  sobrenatural: {keywords: [sobrenatural, magia]}
+  descanso_downtime: {keywords: [downtime, descanso, entre sesiones]}
+  dilemas_morales: {keywords: [dilema, moral]}
+  dificultad: {keywords: [dificultad]}
