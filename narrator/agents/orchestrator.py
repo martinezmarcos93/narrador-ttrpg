@@ -468,7 +468,11 @@ class Orchestrator:
         """
         system_slug = self.get_active_system(app_state)
         input_text = self._get_last_user_message(app_state)
-        causal_result = self.evaluate_causality("", next_turn=True)
+        # La cascada se alimenta con los hechos registrados desde el último turno
+        # (eventos de propuestas, avances de mundo, relaciones, secretos).
+        new_events = self.state.pending_causal_events()
+        causal_result = self.evaluate_causality(" | ".join(new_events), next_turn=True)
+        self.state.mark_causal_events_consumed()
         contract = TurnContract(
             input_text=input_text,
             system_slug=system_slug,

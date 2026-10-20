@@ -305,15 +305,43 @@ class StateManager:
         """Registra un evento factual que puede afectar turnos posteriores."""
         if not str(event).strip():
             return
-        self.data.setdefault("eventos", []).append({
+        self._append_event(str(event).strip(), actor=actor, location=location)
+        self.save()
+
+    def _append_event(self, text: str, *, actor: str = "", location: str = "") -> dict:
+        """Único punto de escritura de eventos: asigna un número de secuencia
+        monotónico que usa el cursor de causalidad (ver pending_causal_events)."""
+        meta = self.data.setdefault("meta", {})
+        seq = int(meta.get("eventos_seq", 0) or 0) + 1
+        meta["eventos_seq"] = seq
+        entry = {
+            "seq": seq,
             "sesion": self.get_session_number(),
             "turno": self.data.get("escena_actual", {}).get("turno_narrativo", 0),
-            "evento": str(event).strip(),
+            "evento": text,
             "actor": actor,
             "locacion": location,
             "timestamp": datetime.now().isoformat(),
-        })
+        }
+        self.data.setdefault("eventos", []).append(entry)
         del self.data["eventos"][:-200]
+        return entry
+
+    def pending_causal_events(self) -> list[str]:
+        """Eventos nuevos desde la última evaluación causal (excluye los que
+        generó la propia cascada, que ya se procesaron en ella)."""
+        cursor = int(self.data.get("meta", {}).get("causal_cursor", 0) or 0)
+        return [
+            str(item.get("evento", ""))
+            for item in self.data.get("eventos", [])
+            if int(item.get("seq", 0) or 0) > cursor
+            and item.get("actor") != "CausalityEngine"
+            and str(item.get("evento", "")).strip()
+        ]
+
+    def mark_causal_events_consumed(self) -> None:
+        meta = self.data.setdefault("meta", {})
+        meta["causal_cursor"] = int(meta.get("eventos_seq", 0) or 0)
         self.save()
 
     def add_pending_consequence(
@@ -493,16 +521,8 @@ class StateManager:
             text = str(event).strip()
             if not text:
                 continue
-            self.data.setdefault("eventos", []).append({
-                "sesion": self.get_session_number(),
-                "turno": self.data.get("escena_actual", {}).get("turno_narrativo", 0),
-                "evento": text,
-                "actor": "",
-                "locacion": self.get_location() or "",
-                "timestamp": datetime.now().isoformat(),
-            })
+            self._append_event(text, location=self.get_location() or "")
             changes.append(f"event:{text}")
-        del self.data["eventos"][:-200]
 
         escena = self.data.setdefault("escena_actual", {})
         present = escena.setdefault("npcs_presentes", [])
@@ -656,15 +676,10 @@ class StateManager:
                 clock["llenos"] = min(max(0, before + delta), int(clock.get("segmentos", 6)))
                 changes.append(f"causal:clock:{name} {before}->{clock['llenos']}")
 
-        self.data.setdefault("eventos", []).append({
-            "sesion": self.get_session_number(),
-            "turno": escena.get("turno_narrativo", 0),
-            "evento": f"Consecuencia activada: {entry.get('consecuencia', '')}",
-            "actor": "CausalityEngine",
-            "locacion": self.get_location() or "",
-            "timestamp": datetime.now().isoformat(),
-        })
-        del self.data["eventos"][:-200]
+        self._append_event(
+            f"Consecuencia activada: {entry.get('consecuencia', '')}",
+            actor="CausalityEngine", location=self.get_location() or "",
+        )
         self.save()
         return {"applied": True, "changes": changes}
 

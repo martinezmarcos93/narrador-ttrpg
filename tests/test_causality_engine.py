@@ -177,3 +177,44 @@ def test_threshold_event_emitted_once_for_aggregated_step(tmp_path):
     assert state.data["relojes"]["culto"]["llenos"] == 4
     assert [a.consequence for a in activations].count("reacción") == 1
     assert state.get_player_fact("portal") == "abierto"
+
+
+def test_event_cursor_feeds_new_facts_to_causality_once(tmp_path):
+    state = StateManager(str(tmp_path / "estado.yaml"))
+    state.add_pending_consequence("Llegan refuerzos", trigger="alarma")
+    state.record_event("Suena la alarma del banco")
+    assert state.pending_causal_events() == ["Suena la alarma del banco"]
+
+    result = CausalityEngine(state).evaluate(" | ".join(state.pending_causal_events()))
+    state.mark_causal_events_consumed()
+    assert len(result) == 1
+    # Los eventos generados por la cascada no se vuelven a alimentar.
+    assert state.pending_causal_events() == []
+
+
+def test_prepare_turn_activates_trigger_from_previous_proposal(tmp_path, monkeypatch):
+    from pathlib import Path
+
+    from narrator.agents.orchestrator import Orchestrator
+
+    root = Path(__file__).resolve().parent.parent
+    monkeypatch.setattr("narrator.core.embedder.Embedder.is_available", lambda self: False)
+    config = tmp_path / "config.yaml"
+    config.write_text(
+        f"systems_path: {root / 'data' / 'systems'}\n"
+        f"vault:\n  path: {tmp_path / 'vault'}\n"
+        f"cerebro:\n  path: {tmp_path / 'cerebro'}\n"
+        f"estado:\n  path: {tmp_path / 'estado.yaml'}\n",
+        encoding="utf-8",
+    )
+    orch = Orchestrator(config_path=str(config))
+    app_state = {"system_slug": "generic", "messages": [{"role": "user", "content": "Espero"}]}
+    applied = orch.validate_and_apply_proposal({
+        "events": ["El grupo rompe el sello de la cripta"],
+        "consequences": [{"text": "Los guardianes despiertan", "trigger": "sello de la cripta",
+                          "effects": [{"type": "world_fact", "key": "guardianes", "value": "despiertos"}]}],
+    }, app_state)
+    assert applied["applied"]
+    contract = orch.prepare_turn(app_state)
+    assert orch.state.get_world_fact("guardianes") == "despiertos"
+    assert contract.causal_metrics["activations"] == 1
