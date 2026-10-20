@@ -245,8 +245,18 @@ def test_front_clock_progression_is_persistent_and_bounded(tmp_path):
     assert result.applied
     assert state.data["relojes"]["Culto"]["llenos"] == 3
 
+    # Una propuesta que excede el reloj se rechaza entera (no se recorta).
     result = ProposalExecutor(state).execute({
         "clock_changes": [{"name": "Culto", "delta": 9}],
     })
+    assert not result.applied
+    assert any(i.code == "clock_out_of_bounds" for i in result.report.errors)
+    assert state.data["relojes"]["Culto"]["llenos"] == 3
+
+    result = ProposalExecutor(state).execute({
+        "clock_changes": [{"name": "Culto", "delta": 1}],
+    })
     assert result.applied
-    assert state.data["relojes"]["Culto"]["llenos"] == 4
+    reloaded = StateManager(str(tmp_path / "estado.yaml"))
+    assert reloaded.load()
+    assert reloaded.data["relojes"]["Culto"]["llenos"] == 4

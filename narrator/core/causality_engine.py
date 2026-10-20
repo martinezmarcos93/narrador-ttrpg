@@ -235,10 +235,11 @@ class CausalityEngine:
                     depth=depth,
                     provenance_id=provenance_id,
                 )
+                # El motor es el único que aplica efectos: el StateManager solo
+                # marca la consecuencia como resuelta (evita doble aplicación).
                 self.state.apply_causal_activation(
                     index,
                     outcome=f"Activada automáticamente ({reason}, profundidad {depth})",
-                    effects=effects,
                 )
                 emitted.extend(self._apply_secondary_effects(effects, parent_id=provenance_id))
                 activations.append(activation)

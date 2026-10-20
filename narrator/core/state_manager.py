@@ -7,6 +7,7 @@ import yaml
 from narrator.logger import logger
 from narrator.core.initiative import InitiativeQueue
 from pathlib import Path
+from copy import deepcopy
 from datetime import datetime
 from typing import Any, Optional
 
@@ -305,17 +306,32 @@ class StateManager:
         del self.data["eventos"][:-200]
         self.save()
 
-    def add_pending_consequence(self, consequence: str, *, trigger: str = "", due: str = "") -> None:
-        """Planta una consecuencia futura sin resolverla prematuramente."""
+    def add_pending_consequence(
+        self,
+        consequence: str,
+        *,
+        trigger: str = "",
+        due: str = "",
+        effects: list[dict] | None = None,
+    ) -> None:
+        """Planta una consecuencia futura sin resolverla prematuramente.
+
+        ``effects`` son efectos declarativos que CausalityEngine aplicará al
+        activarse la consecuencia (ver ContinuityValidator para los tipos).
+        """
         if not str(consequence).strip():
             return
-        self.data.setdefault("consecuencias_pendientes", []).append({
+        entry = {
             "consecuencia": str(consequence).strip(),
             "trigger": trigger,
             "due": due,
             "estado": "pendiente",
             "sesion_creacion": self.get_session_number(),
-        })
+        }
+        clean_effects = [dict(e) for e in (effects or []) if isinstance(e, dict)]
+        if clean_effects:
+            entry["effects"] = clean_effects
+        self.data.setdefault("consecuencias_pendientes", []).append(entry)
         self.save()
 
     def resolve_pending_consequence(self, index: int, outcome: str = "") -> dict:
@@ -508,13 +524,21 @@ class StateManager:
         for item in proposal.consequences:
             consequence = str(item.get("text") or item.get("consequence") or "").strip()
             if consequence:
-                self.data.setdefault("consecuencias_pendientes", []).append({
+                entry = {
                     "consecuencia": consequence,
                     "trigger": str(item.get("trigger") or ""),
                     "due": str(item.get("due") or ""),
                     "estado": "pendiente",
                     "sesion_creacion": self.get_session_number(),
-                })
+                }
+                # Los efectos ya fueron validados por ContinuityValidator; se
+                # conservan para que CausalityEngine los ejecute al activarse.
+                effects = [
+                    deepcopy(e) for e in (item.get("effects") or []) if isinstance(e, dict)
+                ]
+                if effects:
+                    entry["effects"] = effects
+                self.data.setdefault("consecuencias_pendientes", []).append(entry)
                 changes.append(f"consequence:+{consequence}")
         del self.data["consecuencias_pendientes"][:-200]
 

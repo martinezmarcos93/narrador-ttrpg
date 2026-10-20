@@ -170,19 +170,25 @@ def test_cross_front_consequences_progress_multiple_clocks_and_persist(tmp_path)
     assert result.applied
 
     # La consecuencia está plantada; la cascada siguiente la resuelve.
+    # El servicio delega en el Orchestrator; se arma uno mínimo sin config.
+    from narrator.agents.orchestrator import Orchestrator
     from narrator.core.narrator_service import NarratorService
+    orchestrator = Orchestrator.__new__(Orchestrator)
+    orchestrator.state = state
+    orchestrator.causality = CausalityEngine(state)
     service = NarratorService.__new__(NarratorService)
-    service.state = state
-    service.causality = CausalityEngine(state)
+    service.orchestrator = orchestrator
     activated = service.evaluate_causality("alarma")
     assert activated["activated"]
-    assert state.data["relojes"]["Culto"]["llenos"] == 2
-    assert state.data["relojes"]["Guardia"]["llenos"] == 1
+    # Culto +3 llena su reloj (máx 3) -> "frente Culto lleno" -> Guardia +2.
+    assert activated["count"] == 2
+    assert state.data["relojes"]["Culto"]["llenos"] == 3
+    assert state.data["relojes"]["Guardia"]["llenos"] == 3
 
     reloaded = StateManager(str(path))
     assert reloaded.load()
-    assert reloaded.data["relojes"]["Culto"]["llenos"] == 2
-    assert reloaded.data["relojes"]["Guardia"]["llenos"] == 1
+    assert reloaded.data["relojes"]["Culto"]["llenos"] == 3
+    assert reloaded.data["relojes"]["Guardia"]["llenos"] == 3
 
 
 def test_restart_preserves_relations_consequences_and_perspective(tmp_path):
