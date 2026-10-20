@@ -30,7 +30,7 @@ _FACT_EFFECTS = {"fact", "world_fact", "player_fact", "character_fact"}
 _KNOWN_EFFECTS = {
     "fact", "flag", "npc_presence", "scene_location", "clock_delta",
     "event", "queue_consequence", "world_fact", "character_fact",
-    "player_fact", "relation", "front_clock_delta",
+    "player_fact", "relation", "front_clock_delta", "reveal_clue",
 }
 
 

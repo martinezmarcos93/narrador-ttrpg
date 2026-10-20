@@ -552,6 +552,16 @@ class StateManager:
                 changes.append(f"consequence:+{consequence}")
         del self.data["consecuencias_pendientes"][:-200]
 
+        from narrator.core.secrets import reveal_clue
+
+        for item in getattr(proposal, "discoveries", []) or []:
+            secret = str(item.get("secret") or "").strip()
+            character = str(item.get("character") or "").strip()
+            result = reveal_clue(self, secret, character=character, source="narrative_proposal")
+            if result.get("advanced"):
+                who = character or "jugador"
+                changes.append(f"discovery:{secret} {who} {result['known']} ({result['status']})")
+
         for item in proposal.clock_changes:
             name = str(item.get("name") or "").strip()
             if not name or name not in self.data.get("relojes", {}):

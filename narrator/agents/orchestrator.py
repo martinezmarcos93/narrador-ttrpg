@@ -9,7 +9,7 @@ import yaml
 
 from narrator import resolve_path
 from narrator.agents.narrator_agent import NarratorAgent
-from narrator.core import lorebook, mention_detector
+from narrator.core import lorebook, mention_detector, secrets
 from narrator.core.causality_engine import CausalityEngine
 from narrator.core.entity_registry import EntityRegistry
 from narrator.core.intent_classifier import classify_intent
@@ -251,9 +251,18 @@ class Orchestrator:
         if character_name:
             relation_entities.append(str(character_name))
         relation_graph = self.state.get_relation_graph_text(relation_entities, max_edges=10)
+        scene_entities = list(relation_entities)
+        location = self.state.get_location()
+        if location:
+            scene_entities.append(location)
+        secrets_text = secrets.narrator_section(
+            self.state, scene_entities=scene_entities,
+        )
         parts = [base]
         if knowledge:
             parts.append(knowledge)
+        if secrets_text:
+            parts.append(secrets_text)
         if relation_graph:
             parts.append("GRAFO SOCIAL RELEVANTE:\n" + relation_graph)
         return "\n".join(parts)

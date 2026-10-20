@@ -179,6 +179,18 @@ class CausalityEngine:
                         target_type=str(effect.get("target_type") or "npc"),
                         reason=str(effect.get("reason") or "causalidad"),
                     )
+            elif kind == "reveal_clue":
+                from narrator.core.secrets import SecretError, reveal_clue
+
+                try:
+                    result = reveal_clue(
+                        self.state, str(effect.get("secret") or ""),
+                        character=str(effect.get("character") or ""), source="causality_engine",
+                    )
+                except SecretError:
+                    continue
+                if result.get("status") == "revelado":
+                    emitted_events.append(f"secreto {effect.get('secret')} revelado")
             elif kind == "queue_consequence":
                 consequence = str(
                     effect.get("consequence") or effect.get("text") or ""

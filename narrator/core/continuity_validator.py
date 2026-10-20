@@ -116,6 +116,12 @@ class ContinuityValidator:
             issues,
         )
         self._check_temporal(proposal.get("session"), issues)
+        from narrator.core.secrets import validate_discoveries
+
+        for message in validate_discoveries(
+            self.state if self.stateful else None, proposal.get("discoveries")
+        ):
+            issues.append(ContinuityIssue("invalid_discovery", "error", message))
         self._check_clock_aggregate(
             proposal.get("clock_changes", []), proposal.get("consequences", []), issues
         )
@@ -509,7 +515,7 @@ class ContinuityValidator:
         allowed = {
             "fact", "flag", "npc_presence", "scene_location", "clock_delta",
             "event", "queue_consequence", "world_fact", "character_fact",
-            "player_fact", "relation", "front_clock_delta",
+            "player_fact", "relation", "front_clock_delta", "reveal_clue",
         }
         seen_clock_deltas: dict[str, int] = {}
         for effect in effects:
@@ -539,6 +545,7 @@ class ContinuityValidator:
                 "player_fact": ("key", "value"),
                 "relation": ("source", "target", "relation"),
                 "front_clock_delta": ("name", "delta"),
+                "reveal_clue": ("secret",),
             }[kind]
             if any(key not in effect for key in required):
                 issues.append(ContinuityIssue(
@@ -601,6 +608,16 @@ class ContinuityValidator:
                     issues.append(ContinuityIssue(
                         "invalid_fact_effect", "error",
                         f"{kind} requiere key no vacío.",
+                    ))
+            elif kind == "reveal_clue":
+                secret = str(effect.get("secret") or "").strip()
+                if not secret:
+                    issues.append(ContinuityIssue(
+                        "invalid_discovery", "error", "reveal_clue requiere secret.",
+                    ))
+                elif self.stateful and secret not in self.data.get("secretos", {}):
+                    issues.append(ContinuityIssue(
+                        "invalid_discovery", "error", f"secreto inexistente: {secret}",
                     ))
             elif kind == "flag" and not str(effect.get("name") or "").strip():
                 issues.append(ContinuityIssue(
