@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from narrator.core.entity_registry import NameSet
+
 
 @dataclass(frozen=True)
 class ContinuityIssue:
@@ -59,11 +61,25 @@ class ContinuityValidator:
 
     MAX_EFFECT_DEPTH = 5
 
-    def __init__(self, state_manager=None):
+    def __init__(self, state_manager=None, entity_registry=None):
         # Sin estado, el validador solo comprueba la forma de la propuesta:
         # no puede afirmar que un NPC, reloj o frente "no existe".
         self.state = state_manager if state_manager is not None else _NullState()
         self.stateful = state_manager is not None
+        # Registro opcional de entidades del vault (EntityRegistry): amplía lo
+        # que se considera "existente" más allá del estado vivo.
+        self.registry = entity_registry
+
+    def _registry_names(self, kind: str) -> NameSet:
+        if self.registry is None:
+            return NameSet()
+        try:
+            return self.registry.names(kind)
+        except Exception as exc:  # el vault es secundario: no bloquea la validación
+            from narrator.logger import logger
+
+            logger.error("EntityRegistry falló al listar '%s': %s", kind, exc, exc_info=True)
+            return NameSet()
 
     @property
     def data(self) -> dict[str, Any]:
@@ -110,13 +126,13 @@ class ContinuityValidator:
             if isinstance(item, dict) and str(item.get(field) or "").strip()
         }
 
-    def _known_npcs(self) -> set[str]:
+    def _known_npcs(self) -> NameSet:
         scene = self.data.get("escena_actual", {})
-        known = {
+        known = NameSet(
             str(name).strip()
             for name in scene.get("npcs_presentes", [])
             if str(name).strip()
-        }
+        ) | self._registry_names("npc")
         for relation in self.data.get("relaciones", {}).values():
             if isinstance(relation, dict):
                 for key in ("source", "target"):
@@ -125,13 +141,14 @@ class ContinuityValidator:
                         known.add(value)
         return known
 
-    def _known_locations(self) -> set[str]:
+    def _known_locations(self) -> NameSet:
         current = str(self.data.get("escena_actual", {}).get("locacion") or "").strip()
-        known = {current} if current else set()
+        known = NameSet([current] if current else [])
         scenes = self.data.get("escenas", {})
         if isinstance(scenes, dict):
-            known.update(str(name).strip() for name in scenes if str(name).strip())
-        return known
+            for name in scenes:
+                known.add(name)
+        return known | self._registry_names("locacion")
 
     def _check_facts(self, facts: Any, issues: list[ContinuityIssue]) -> None:
         if not isinstance(facts, dict):
@@ -167,7 +184,7 @@ class ContinuityValidator:
     def _check_npcs(
         self,
         presence: Any,
-        known_npcs: set[str],
+        known_npcs: NameSet,
         issues: list[ContinuityIssue],
     ) -> None:
         if not isinstance(presence, dict):
@@ -258,7 +275,7 @@ class ContinuityValidator:
     def _check_scene_changes(
         self,
         changes: Any,
-        known_locations: set[str],
+        known_locations: NameSet,
         issues: list[ContinuityIssue],
     ) -> None:
         if not isinstance(changes, dict):
@@ -351,7 +368,7 @@ class ContinuityValidator:
     def _check_relations(
         self,
         relations: Any,
-        known_npcs: set[str],
+        known_npcs: NameSet,
         issues: list[ContinuityIssue],
     ) -> None:
         if relations is None:
@@ -418,18 +435,22 @@ class ContinuityValidator:
                 ))
             seen.add(key)
 
-    def _known_factions(self) -> set[str]:
-        return {
+    def _known_factions(self) -> NameSet:
+        known = NameSet(
             str(name).strip()
             for name in self.data.get("facciones", {})
             if str(name).strip()
-        }
+        )
+        for item in self.data.get("facciones", {}).values():
+            if isinstance(item, dict) and item.get("nombre"):
+                known.add(item["nombre"])
+        return known | self._registry_names("faccion")
 
     def _check_consequences(
         self,
         consequences: Any,
-        known_npcs: set[str],
-        known_locations: set[str],
+        known_npcs: NameSet,
+        known_locations: NameSet,
         issues: list[ContinuityIssue],
     ) -> None:
         if not isinstance(consequences, list):
@@ -472,8 +493,8 @@ class ContinuityValidator:
     def _check_effects(
         self,
         effects: list[Any],
-        known_npcs: set[str],
-        known_locations: set[str],
+        known_npcs: NameSet,
+        known_locations: NameSet,
         issues: list[ContinuityIssue],
         _depth: int = 0,
     ) -> None:
@@ -632,7 +653,7 @@ class ContinuityValidator:
         self,
         kind: str,
         effect: dict[str, Any],
-        known_npcs: set[str],
+        known_npcs: NameSet,
         issues: list[ContinuityIssue],
     ) -> None:
         if kind == "relation":
@@ -676,7 +697,8 @@ class ContinuityValidator:
                     "front_clock_delta requiere name.",
                 ))
                 return
-            if self.stateful and name not in self.data.get("frentes", {}):
+            known_fronts = NameSet(self.data.get("frentes", {})) | self._registry_names("frente")
+            if self.stateful and name not in known_fronts:
                 issues.append(ContinuityIssue(
                     "unknown_front", "error",
                     f"El frente '{name}' no existe en el estado de campaña.",

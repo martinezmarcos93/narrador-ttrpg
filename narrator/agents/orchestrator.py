@@ -11,6 +11,7 @@ from narrator import resolve_path
 from narrator.agents.narrator_agent import NarratorAgent
 from narrator.core import lorebook, mention_detector
 from narrator.core.causality_engine import CausalityEngine
+from narrator.core.entity_registry import EntityRegistry
 from narrator.core.knowledge_router import KnowledgeRouter
 from narrator.core.knowledge_visibility import KnowledgeVisibility
 from narrator.core.prompt_builder import PromptBuilder
@@ -73,10 +74,12 @@ class Orchestrator:
         self._last_retrieval_metrics: dict = {}
         self.narrator_agent = NarratorAgent()
         self.vault_writer = VaultWriter(vault_path=vault_path)
+        self.entity_registry = EntityRegistry(vault_path)
         self.proposal_executor = ProposalExecutor(
             self.state,
             narrator_agent=self.narrator_agent,
             vault_writer=self.vault_writer,
+            entity_registry=self.entity_registry,
         )
         self.causality = CausalityEngine(self.state)
         self.knowledge_visibility = KnowledgeVisibility(self.state)

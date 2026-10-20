@@ -33,12 +33,13 @@ class ProposalExecutor:
         character_schema=None,
         vault_writer=None,
         allowed_fronts=None,
+        entity_registry=None,
     ):
         self.state = state_manager
         self.narrator_agent = narrator_agent
         self.character_schema = character_schema or {}
         self.vault_writer = vault_writer
-        self.continuity = ContinuityValidator(state_manager)
+        self.continuity = ContinuityValidator(state_manager, entity_registry=entity_registry)
         self.allowed_fronts = set(allowed_fronts or [])
         self.validator = ProposalValidator(
             self.continuity,
