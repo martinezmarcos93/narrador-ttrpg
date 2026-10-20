@@ -45,3 +45,6 @@ Thumbs.db:encdata
 
 # Base de la capa web (sesiones y claves de API)
 data/web/
+
+# Respaldos locales de partidas
+backups/
