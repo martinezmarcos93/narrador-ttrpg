@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-
 _NEXT_TURN = {"siguiente turno", "next turn", "proximo turno", "próximo turno"}
 _MAX_CASCADE_DEPTH = 8
 

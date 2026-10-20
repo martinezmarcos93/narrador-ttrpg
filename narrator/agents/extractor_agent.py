@@ -8,18 +8,15 @@ Pipeline:
 """
 
 import json
-from narrator.logger import logger
 import re
-import shutil
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable
 
+from narrator.core import json_repair
+from narrator.core.embedder import Embedder
 from narrator.core.llm_client import LLMClient
 from narrator.core.npc_psyche import validate_psyche
 from narrator.core.prompt_builder import PromptBuilder
-from narrator.core.embedder import Embedder
-from narrator.core import json_repair
-
 
 # ── Plantillas de frontmatter por tipo ────────────────────────────────────────
 
@@ -369,7 +366,7 @@ def _build_dashboard(
     npcs: list, locations: list, factions: list, fronts: list, system_name: str
 ) -> str:
     npc_links = " | ".join(f"[[{n.get('nombre', '?')}]]" for n in npcs[:10])
-    loc_links = " | ".join(f"[[{l.get('nombre', '?')}]]" for l in locations[:8])
+    loc_links = " | ".join(f"[[{loc.get('nombre', '?')}]]" for loc in locations[:8])
     faction_links = " | ".join(f"[[{f.get('nombre', '?')}]]" for f in factions[:6])
     front_links = " | ".join(f"[[Frente_{_safe_filename(f.get('nombre', '?'))}]]" for f in fronts)
 

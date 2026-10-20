@@ -13,6 +13,7 @@ from typing import Any
 
 from narrator.core.continuity_validator import ContinuityValidator
 from narrator.core.proposal_contract import NarrativeProposal, ProposalValidator
+from narrator.logger import logger
 
 
 @dataclass
@@ -95,8 +96,8 @@ class ProposalExecutor:
             if rollback and created_paths:
                 try:
                     rollback(created_paths)
-                except Exception:
-                    pass
+                except Exception as rb_exc:
+                    logger.error("Rollback de entidades creadas falló: %s", rb_exc, exc_info=True)
             raise
 
         return changes, created_paths
@@ -123,11 +124,12 @@ class ProposalExecutor:
         except Exception:
             # El rollback de memoria ya ocurrió; como último recurso evitamos
             # dejar un batch abierto, sin depender de campos privados.
+            logger.error("No se pudo persistir el rollback de la propuesta", exc_info=True)
             try:
                 while self.state.batch_depth > 0:
                     self.state.rollback_batch()
-            except Exception:
-                pass
+            except Exception as close_exc:
+                logger.error("No se pudo cerrar el batch tras rollback: %s", close_exc, exc_info=True)
 
     def execute(
         self,
@@ -193,9 +195,10 @@ class ProposalExecutor:
             if rollback and created_paths:
                 try:
                     rollback(created_paths)
-                except Exception:
-                    pass
+                except Exception as rb_exc:
+                    logger.error("Rollback de entidades creadas falló: %s", rb_exc, exc_info=True)
 
+            logger.error("Propuesta revertida por error de ejecución: %s", exc, exc_info=True)
             self._persist_rollback(state_file_existed)
 
             report.valid = False

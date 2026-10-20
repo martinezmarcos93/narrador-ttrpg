@@ -1,5 +1,5 @@
-import pytest
 from narrator.app import detect_system
+
 
 def test_detect_vampiro():
     text = "Este juego utiliza el sistema de Narrador de Vampiro la Mascarada. La Sangre, clanes y disciplinas."

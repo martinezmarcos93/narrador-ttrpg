@@ -1,7 +1,6 @@
-from pathlib import Path
 
-from narrator.core.system_pack import SystemPack, KnowledgePolicy
-from narrator.core.knowledge_router import KnowledgeRouter, KnowledgeRoute
+from narrator.core.knowledge_router import KnowledgeRouter
+from narrator.core.system_pack import KnowledgePolicy, SystemPack
 
 
 class FakeRetriever:

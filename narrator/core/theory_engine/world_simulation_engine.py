@@ -1,11 +1,14 @@
 # ai-narrator/narrator/core/theory_engine/world_simulation_engine.py
 
-import yaml
-from narrator.logger import logger
 import json
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
+
+import yaml
+
+from narrator.logger import logger
+
 
 class WorldSimulationEngine:
     """

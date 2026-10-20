@@ -1,10 +1,9 @@
-from narrator.core.knowledge_router import KnowledgeRouter
-from narrator.core.context_contract import ContextFragment
-from narrator.core.narrator_service import NarratorService
 from narrator.core.causality_engine import CausalityEngine
+from narrator.core.context_contract import ContextFragment
+from narrator.core.knowledge_router import KnowledgeRouter
+from narrator.core.narrator_service import NarratorService
 from narrator.core.state_manager import StateManager
 from narrator.core.system_pack import KnowledgePolicy, SystemPack
-from narrator.core.prompt_builder import PromptBuilder
 
 
 class _Retriever:

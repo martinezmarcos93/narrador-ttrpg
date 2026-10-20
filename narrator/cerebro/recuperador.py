@@ -16,10 +16,9 @@ import re
 import unicodedata
 from pathlib import Path
 
-from narrator.core.embedder import Embedder
 from narrator.cerebro.indexador import IndiceCerebro
 from narrator.core.context_contract import ContextFragment
-
+from narrator.core.embedder import Embedder
 
 _TOKEN_RE = re.compile(r"[\wáéíóúüñÁÉÍÓÚÜÑ]{3,}")
 

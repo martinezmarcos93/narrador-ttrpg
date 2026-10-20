@@ -6,8 +6,8 @@ consultadas. La autoridad final sigue definida por ContextFragment.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from collections import Counter
+from dataclasses import dataclass, field
 from time import perf_counter
 from typing import TYPE_CHECKING
 
@@ -157,7 +157,6 @@ class KnowledgeRouter:
         rendered = self._render_unique(fragments, max_words)
         scores = [float(fragment.score) for fragment in fragments]
         layer_count = len(set(fragment.layer for fragment in fragments))
-        source_count = len(set(fragment.source for fragment in fragments))
         source_words = sum(len(fragment.text.split()) for fragment in fragments)
         rendered_words = len(rendered.split())
         metrics = RetrievalMetrics(

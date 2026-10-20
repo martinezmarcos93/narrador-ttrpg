@@ -4,7 +4,6 @@ Cada NPC tiene un pool de acciones. El agente elige según estado del mundo.
 """
 
 from narrator.core.llm_client import LLMClient
-from narrator.logger import logger
 from narrator.core.prompt_builder import PromptBuilder
 from narrator.core.state_manager import StateManager
 

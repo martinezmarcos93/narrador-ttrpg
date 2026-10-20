@@ -1,6 +1,7 @@
 import json
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
 from narrator.logger import logger
 
 SAVE_DIR = Path.home() / ".ai_narrator"

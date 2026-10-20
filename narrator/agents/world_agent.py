@@ -5,7 +5,6 @@ acciones de NPCs de alta amenaza, y genera un informe de downtime narrativo.
 """
 
 import json
-from narrator.logger import logger
 import re
 from datetime import datetime
 from pathlib import Path
@@ -14,7 +13,7 @@ from typing import Callable, Optional
 from narrator.core.llm_client import LLMClient
 from narrator.core.retriever import VaultRetriever
 from narrator.core.state_manager import StateManager
-
+from narrator.logger import logger
 
 _ADVANCE_FRONTS_PROMPT = """Sos el Game Master de una crónica de rol. Pasaron días desde la última sesión.
 Decidí qué Frentes activos avanzan su reloj y cuánto.
@@ -175,6 +174,7 @@ class WorldAgent:
             result = json.loads(response.strip())
             return result[:3] if isinstance(result, list) else []
         except Exception as e:
+            logger.warning("WorldAgent: respuesta del LLM no es JSON válido: %s", e)
             return []
 
     # ── Aplicar avances al vault ──────────────────────────────

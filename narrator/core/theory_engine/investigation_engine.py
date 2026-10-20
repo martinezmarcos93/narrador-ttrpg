@@ -1,11 +1,14 @@
 # ai-narrator/narrator/core/theory_engine/investigation_engine.py
 
 import json
-from narrator.logger import logger
-import yaml
 import random
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Any
+from typing import Dict, List, Optional
+
+import yaml
+
+from narrator.logger import logger
+
 
 class InvestigationEngine:
     """
@@ -315,9 +318,9 @@ class InvestigationEngine:
         """
         solutions = [
             f"Un PNJ amigable se acerca y menciona un rumor sobre el misterio '{mystery_id}'.",
-            f"Un encuentro casual revela una pista que habían pasado por alto.",
-            f"Alguien deja caer un objeto que contiene información clave.",
-            f"Una visión o sueño proporciona una pista críptica pero útil."
+            "Un encuentro casual revela una pista que habían pasado por alto.",
+            "Alguien deja caer un objeto que contiene información clave.",
+            "Una visión o sueño proporciona una pista críptica pero útil."
         ]
         return random.choice(solutions)
 
@@ -348,7 +351,7 @@ class InvestigationEngine:
                 'clue_id': chosen_clue['id'],
                 'location': chosen_clue.get('location', 'global'),
                 'description': chosen_clue.get('description', 'Una pista misteriosa.'),
-                'instruction': f"El narrador debe presentar esta pista de manera natural en la escena actual."
+                'instruction': "El narrador debe presentar esta pista de manera natural en la escena actual."
             }
 
         # Si no hay pistas activas, el misterio no se puede resolver con lo actual
@@ -359,7 +362,7 @@ class InvestigationEngine:
             'clue_id': new_clue['id'],
             'location': 'current_scene',
             'description': new_clue['description'],
-            'instruction': f"El narrador debe crear un evento o un objeto en la escena actual que revele esta pista."
+            'instruction': "El narrador debe crear un evento o un objeto en la escena actual que revele esta pista."
         }
 
     def get_active_mysteries_summary(self) -> str:

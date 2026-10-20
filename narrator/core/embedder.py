@@ -6,11 +6,13 @@ Guarda el índice en vault/.embeddings.json para no re-generar en cada sesión.
 """
 
 import json
-from narrator.logger import logger
 import math
-import requests
 from pathlib import Path
 from typing import Optional
+
+import requests
+
+from narrator.logger import logger
 
 
 class Embedder:
@@ -37,6 +39,7 @@ class Embedder:
             models = [m["name"] for m in r.json().get("models", [])]
             self._available = any(self.model in m for m in models)
         except Exception as e:
+            logger.info("Embeddings no disponibles (%s): %s", self.model, e)
             self._available = False
         return self._available
 
@@ -57,6 +60,7 @@ class Embedder:
             )
             return r.json().get("embedding", [])
         except Exception as e:
+            logger.warning("Fallo al generar embedding con %s: %s", self.model, e)
             return []
 
     # ── Similitud coseno ──────────────────────────────────────
@@ -81,6 +85,7 @@ class Embedder:
         try:
             return json.loads(idx_path.read_text(encoding="utf-8"))
         except Exception as e:
+            logger.error("Índice de embeddings ilegible en %s: %s", idx_path, e, exc_info=True)
             return {}
 
     def save_index(self, index: dict[str, list[float]], vault_path: Path):

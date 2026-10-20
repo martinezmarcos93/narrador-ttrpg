@@ -8,7 +8,6 @@ import json
 from narrator.cerebro.recuperador import RecuperadorCerebro
 from narrator.core.retrieval_evaluator import RetrievalCase, evaluate_cases
 
-
 CASES = (
     RetrievalCase(
         "investigacion",

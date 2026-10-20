@@ -1,10 +1,13 @@
 # ai-narrator/narrator/core/theory_engine/master_move_engine.py
 
-import yaml
-from narrator.logger import logger
 import random
 from pathlib import Path
 from typing import Dict, List, Optional
+
+import yaml
+
+from narrator.logger import logger
+
 
 class MasterMoveEngine:
     """

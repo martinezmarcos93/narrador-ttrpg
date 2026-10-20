@@ -60,7 +60,8 @@ class IndiceCerebro:
             return {}, raw
         try:
             meta = yaml.safe_load(parts[1]) or {}
-        except Exception:
+        except yaml.YAMLError as e:
+            logger.warning("Frontmatter inválido en neurona: %s", e)
             meta = {}
         return meta if isinstance(meta, dict) else {}, parts[2].lstrip()
 
@@ -70,14 +71,16 @@ class IndiceCerebro:
                 self._index = json.loads(
                     self.index_path.read_text(encoding="utf-8")
                 ) if self.index_path.exists() else {}
-            except Exception:
+            except Exception as e:
+                logger.error("Índice del cerebro ilegible (%s): %s", self.index_path, e, exc_info=True)
                 self._index = {}
         if self._metadata is None:
             try:
                 self._metadata = yaml.safe_load(
                     self.metadata_path.read_text(encoding="utf-8")
                 ) or {}
-            except Exception:
+            except Exception as e:
+                logger.error("Metadata del cerebro ilegible (%s): %s", self.metadata_path, e, exc_info=True)
                 self._metadata = {}
 
     def build(self, on_progress: Callable[[str], None] | None = None) -> int:

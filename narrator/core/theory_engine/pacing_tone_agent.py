@@ -1,12 +1,14 @@
 # ai-narrator/narrator/core/theory_engine/pacing_tone_agent.py
 
-import yaml
-from narrator.logger import logger
-import random
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 from collections import deque
-from datetime import datetime, timedelta
+from datetime import datetime
+from pathlib import Path
+from typing import Dict
+
+import yaml
+
+from narrator.logger import logger
+
 
 class PacingToneAgent:
     """

@@ -4,12 +4,13 @@ Mantiene el contexto total dentro de un budget de palabras para modelos pequeño
 """
 
 import json
-from narrator.logger import logger
-from narrator.core.resolution_schema import ResolutionSchemaError, validate_resolution
-from narrator.core.system_pack import SystemPack
-import yaml
 from pathlib import Path
 
+import yaml
+
+from narrator.core.resolution_schema import ResolutionSchemaError, validate_resolution
+from narrator.core.system_pack import SystemPack
+from narrator.logger import logger
 
 NARRATIVE_PRINCIPLES = """PRINCIPIOS NARRATIVOS:
 - La historia EMERGE de las decisiones del jugador. Nunca está pre-escrita.

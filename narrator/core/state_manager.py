@@ -3,13 +3,15 @@ State Manager — gestiona estado_campana.yaml.
 Relojes de frentes, flags de eventos, historial de sesiones, escena actual.
 """
 
-import yaml
-from narrator.logger import logger
-from narrator.core.initiative import InitiativeQueue
-from pathlib import Path
 from copy import deepcopy
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Optional
+
+import yaml
+
+from narrator.core.initiative import InitiativeQueue
+from narrator.logger import logger
 
 
 class StateManager:

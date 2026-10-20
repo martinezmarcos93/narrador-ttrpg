@@ -57,6 +57,7 @@ def test_rollback_batch_discards_pending_persistence(tmp_path):
 
 def test_atomic_save_preserves_previous_file_when_replace_fails(tmp_path, monkeypatch):
     import os
+
     import yaml
 
     path = tmp_path / "estado.yaml"

@@ -5,11 +5,12 @@ Sprint 3: búsqueda semántica via Embedder (fallback a keyword si no disponible
 """
 
 import re
-from narrator.logger import logger
-from narrator.core import lorebook
-from narrator.core.npc_psyche import format_psyche_line
 from pathlib import Path
 from typing import Optional
+
+from narrator.core import lorebook
+from narrator.core.npc_psyche import format_psyche_line
+from narrator.logger import logger
 
 try:
     import frontmatter as fm
@@ -17,9 +18,9 @@ try:
 except ImportError:
     _HAS_FRONTMATTER = False
 
-from narrator.core.embedder import Embedder
 from narrator.cerebro.recuperador import RecuperadorCerebro
 from narrator.core.context_contract import ContextFragment, render_context
+from narrator.core.embedder import Embedder
 
 
 def _parse_file(path: Path) -> tuple[dict, str]:

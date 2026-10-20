@@ -6,10 +6,11 @@ y el estado de campaña. Obsidian lo ve automáticamente al refrescar.
 
 import json
 import re
-from narrator.logger import logger
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+
+from narrator.logger import logger
 
 
 def _safe_filename(name: str) -> str:
@@ -308,7 +309,7 @@ class VaultWriter:
             f"**Sesión:** {session_number} | **Última actualización:** {date_str}\n\n"
             f"**Locación actual:** {location or 'No definida'}\n\n"
             + (f"**Frentes activos:**\n{active_fronts_summary}\n\n" if active_fronts_summary else "")
-            + f"<!-- /estado -->"
+            + "<!-- /estado -->"
         )
 
         if "<!-- estado -->" in content and "<!-- /estado -->" in content:

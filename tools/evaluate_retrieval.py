@@ -8,11 +8,9 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
 
 from narrator.agents.orchestrator import Orchestrator
 from narrator.core.retrieval_benchmark import benchmark_router, load_cases
-from narrator.core.system_pack import SystemPack
 
 
 def run(

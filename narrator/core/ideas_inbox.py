@@ -11,6 +11,8 @@ import re
 from datetime import datetime
 from pathlib import Path
 
+from narrator.logger import logger
+
 try:
     import frontmatter as fm
     _HAS_FRONTMATTER = True
@@ -28,8 +30,8 @@ def _read(path: Path) -> "tuple[dict, str]":
         try:
             post = fm.loads(text)
             return dict(post.metadata), post.content
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Frontmatter inválido en %s: %s", path, e)
     return {}, text
 
 

@@ -3,10 +3,12 @@ LLM Client — wrapper para Ollama local.
 Maneja streaming y llamadas síncronas, gestión de modelos.
 """
 
-import requests
-from narrator.logger import logger
 import json
 from typing import Callable
+
+import requests
+
+from narrator.logger import logger
 
 OLLAMA_DEFAULT_URL = "http://localhost:11434"
 
@@ -53,6 +55,7 @@ class LLMClient:
             )
             return r.json().get("message", {}).get("content", "")
         except Exception as e:
+            logger.error("Fallo en llamada síncrona al LLM: %s", e, exc_info=True)
             return f"[Error LLM: {e}]"
 
     # ── Streaming call ────────────────────────────────────────
@@ -88,7 +91,7 @@ class LLMClient:
                     # p.ej. 404 si el modelo no existe en Ollama
                     try:
                         err = resp.json().get("error", resp.text[:200])
-                    except Exception:
+                    except ValueError:
                         err = resp.text[:200]
                     on_done(f"[Error LLM ({resp.status_code}): {err}]")
                     return

@@ -10,6 +10,8 @@ import json
 import struct
 import zlib
 
+from narrator.logger import logger
+
 _SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 
@@ -57,6 +59,7 @@ def read_chara_chunk(png_bytes: bytes) -> "dict | None":
             try:
                 decoded = base64.b64decode(content[len(b"chara\x00"):])
                 return json.loads(decoded.decode("utf-8"))
-            except Exception:
+            except Exception as e:
+                logger.warning("Chunk 'chara' de la card PNG ilegible: %s", e)
                 return None
     return None
