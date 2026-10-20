@@ -233,6 +233,8 @@ class Orchestrator:
             include_player=True,
         )
         relation_entities = list(self.state.data.get("escena_actual", {}).get("npcs_presentes", []))
+        if character_name:
+            relation_entities.append(str(character_name))
         relation_graph = self.state.get_relation_graph_text(relation_entities, max_edges=10)
         parts = [base]
         if knowledge:

@@ -19,6 +19,9 @@ def test_executor_applies_valid_campaign_proposal(tmp_path):
     result = executor.execute({
         "facts": {"puerta_abierta": True},
         "events": ["El grupo abre la puerta"],
+        # Un NPC nuevo debe declararse en la misma propuesta para poder
+        # entrar en escena (ContinuityValidator rechaza referencias huérfanas).
+        "npcs": [{"nombre": "Guardia"}],
         "npc_presence": {"Guardia": True},
         "consequences": [{"text": "El ruido alerta a los guardias", "trigger": "siguiente turno"}],
         "clock_changes": [{"name": "alarma", "delta": 1}],

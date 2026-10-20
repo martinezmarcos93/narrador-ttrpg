@@ -101,7 +101,9 @@ class StateManager:
         allowed = set(entities or [])
         edges = []
         for item in self.get_relations():
-            if allowed and item.get("source") not in allowed and item.get("target") not in allowed:
+            # Solo aristas entre entidades de la escena: una relación con alguien
+            # ausente no es contexto relevante para este turno.
+            if allowed and not (item.get("source") in allowed and item.get("target") in allowed):
                 continue
             edges.append(
                 f"{item.get('source')} --[{item.get('relation')}, {item.get('strength', 0)}]--> {item.get('target')}"

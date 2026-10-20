@@ -1,3 +1,5 @@
+import pytest
+
 from narrator.core.retrieval_evaluator import (
     RetrievalCase,
     evaluate_cases,
@@ -18,7 +20,7 @@ def test_score_case_binary_relevance():
         k=3,
     )
 
-    assert score.precision_at_k == 2 / 3
+    assert score.precision_at_k == pytest.approx(2 / 3, abs=1e-6)
     assert score.recall_at_k == 1.0
     assert score.reciprocal_rank == 1.0
     assert score.ndcg_at_k > 0.9

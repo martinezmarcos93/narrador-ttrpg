@@ -13,6 +13,7 @@ Ranking:
 from __future__ import annotations
 
 import re
+import unicodedata
 from pathlib import Path
 
 from narrator.core.embedder import Embedder
@@ -21,6 +22,12 @@ from narrator.core.context_contract import ContextFragment
 
 
 _TOKEN_RE = re.compile(r"[\wáéíóúüñÁÉÍÓÚÜÑ]{3,}")
+
+
+def _fold(text: str) -> str:
+    """Minúsculas sin tildes: 'Investigación' y 'investigacion' coinciden."""
+    decomposed = unicodedata.normalize("NFKD", str(text).lower())
+    return "".join(ch for ch in decomposed if not unicodedata.combining(ch))
 
 
 class RecuperadorCerebro:
@@ -46,12 +53,12 @@ class RecuperadorCerebro:
 
     @staticmethod
     def _lexical_score(query: str, meta: dict, body: str) -> float:
-        q = set(t.lower() for t in _TOKEN_RE.findall(query))
+        q = set(_fold(t) for t in _TOKEN_RE.findall(query))
         if not q:
             return 0.0
-        title = str(meta.get("title", "")).lower()
-        tags = " ".join(map(str, meta.get("tags", []))).lower()
-        text = f"{title} {tags} {body[:5000]}".lower()
+        title = _fold(meta.get("title", ""))
+        tags = _fold(" ".join(map(str, meta.get("tags", []))))
+        text = f"{title} {tags} {_fold(body[:5000])}"
         hits = sum(1 for token in q if token in text)
         title_hits = sum(1 for token in q if token in title)
         return hits / len(q) + (title_hits / len(q)) * 1.5
@@ -135,7 +142,8 @@ class RecuperadorCerebro:
             if score > 0:
                 scored.append((score, path))
 
-        scored.sort(reverse=True)
+        # Desempate determinista: mayor score primero, luego ruta alfabética.
+        scored.sort(key=lambda item: (-item[0], item[1]))
         selected = scored[:max_results]
         selected_paths = {p for _, p in selected}
 
@@ -149,7 +157,7 @@ class RecuperadorCerebro:
                     selected_paths.add(neighbor)
                     if len(selected) >= max_results + 2:
                         break
-            selected.sort(reverse=True)
+            selected.sort(key=lambda item: (-item[0], item[1]))
 
         results = []
         for score, path in selected[:max_results]:

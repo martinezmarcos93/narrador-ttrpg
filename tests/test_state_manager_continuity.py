@@ -24,4 +24,6 @@ def test_turn_context_includes_recent_causality_state(tmp_path):
     context = manager.get_turn_context_text()
     assert "El grupo abrió la cripta" in context
     assert "Los guardianes investigarán la intrusión" in context
-    assert "cripta_abierta=True" in context
+    # Los hechos legacy no entran al contexto neutral: su exposición depende
+    # de KnowledgeVisibility (ver test_legacy_known_facts_do_not_bypass...).
+    assert "cripta_abierta" not in context

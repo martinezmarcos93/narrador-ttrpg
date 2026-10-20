@@ -44,7 +44,9 @@ def test_router_can_retrieve_campaign_and_state_without_second_rag():
         ),
     )
     assert router.retrieve("pista", pack) == ""
-    assert retriever.calls == [("campaign", 4), ("state", 4)]
+    # campaign pide el doble: los fragmentos restringidos se descartan después
+    # y el router igual intenta entregar `limit` fragmentos visibles.
+    assert retriever.calls == [("campaign", 8), ("state", 4)]
 
 
 def test_router_incluye_estado_vivo_como_fuente_autoritativa():
