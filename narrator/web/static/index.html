@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Narrador TTRPG</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>Narrador</h1>
+    <div class="session" aria-live="polite" id="session-status">Sin sesión</div>
+  </header>
+
+  <main class="layout">
+    <section class="panel setup" aria-labelledby="setup-title">
+      <h2 id="setup-title">Sesión</h2>
+      <form id="session-form">
+        <label for="api-key">Clave de API (opcional en modo local)</label>
+        <input id="api-key" type="password" autocomplete="off">
+        <label for="campaign">Campaña</label>
+        <input id="campaign" value="Noches de Ceniza" required maxlength="120">
+        <label for="system">Sistema</label>
+        <select id="system">
+          <option value="vtm_v20">Vampiro V20</option>
+          <option value="wta_w20">Hombre Lobo W20</option>
+          <option value="coc_7e">La Llamada de Cthulhu 7e</option>
+          <option value="dnd_5e">D&amp;D 5e</option>
+          <option value="pathfinder_2e">Pathfinder 2e</option>
+          <option value="generic">Genérico</option>
+        </select>
+        <button type="submit">Crear sesión</button>
+      </form>
+      <h2>Mundo</h2>
+      <button type="button" id="world-btn" disabled>Ver estado del mundo</button>
+      <pre id="world" class="world" aria-live="polite"></pre>
+    </section>
+
+    <section class="panel chat" aria-labelledby="chat-title">
+      <h2 id="chat-title" class="visually-hidden">Partida</h2>
+      <ol id="log" class="log" aria-live="polite" aria-relevant="additions"></ol>
+      <form id="turn-form" class="turn">
+        <label for="action" class="visually-hidden">Tu acción</label>
+        <textarea id="action" rows="2" maxlength="12000" placeholder="¿Qué hace tu personaje?" disabled></textarea>
+        <button type="submit" id="send" disabled>Enviar</button>
+      </form>
+      <p id="error" class="error" role="alert"></p>
+    </section>
+  </main>
+  <script src="/static/app.js" defer></script>
+</body>
+</html>

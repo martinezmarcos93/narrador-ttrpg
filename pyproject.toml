@@ -39,7 +39,7 @@ build-backend = "setuptools.build_meta"
 include = ["narrator*"]
 
 [tool.setuptools.package-data]
-narrator = ["**/*.yaml"]
+narrator = ["**/*.yaml", "web/static/*"]
 
 [tool.ruff]
 line-length = 100

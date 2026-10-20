@@ -15,6 +15,7 @@ from collections import defaultdict, deque
 from uuid import uuid4
 
 from flask import Flask, Response, jsonify, request, stream_with_context
+from werkzeug.exceptions import HTTPException
 
 from narrator.core.narrator_service import NarratorService
 from narrator.web.schemas import (
@@ -54,7 +55,7 @@ def create_app(
     narrator_service: NarratorService | None = None,
     web_service: WebApplicationService | None = None,
 ) -> Flask:
-    app = Flask(__name__)
+    app = Flask(__name__, static_folder="static", static_url_path="/static")
     app.config.from_mapping(
         MAX_CONTENT_LENGTH=int(os.getenv("NARRATOR_MAX_REQUEST_BYTES", str(256 * 1024))),
         JSON_SORT_KEYS=False,
@@ -88,8 +89,14 @@ def create_app(
     @app.before_request
     def assign_request_id() -> None:
         request.request_id = request.headers.get("X-Request-ID") or uuid4().hex
-        if request.path == "/api/v1/health":
-            return
+        limit = app.config["MAX_CONTENT_LENGTH"]
+        if request.content_length is not None and request.content_length > limit:
+            return jsonify(error_payload(
+                "payload_too_large", "request body exceeds configured limit",
+                request_id=request.request_id,
+            )), 413
+        if request.path == "/api/v1/health" or request.path == "/" or request.path.startswith("/static/"):
+            return  # la página y sus recursos son públicos; la API exige clave
         supplied = request.headers.get("Authorization", "")
         token = supplied[7:].strip() if supplied.startswith("Bearer ") else ""
         stored_keys = service.sessions.hay_claves_activas()
@@ -122,7 +129,16 @@ def create_app(
         response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers.setdefault("Referrer-Policy", "no-referrer")
         response.headers.setdefault("Cache-Control", "no-store")
+        response.headers.setdefault(
+            "Content-Security-Policy",
+            "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; "
+            "connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
+        )
         return response
+
+    @app.get("/")
+    def index():
+        return app.send_static_file("index.html")
 
     @app.get("/api/v1/health")
     def health():
@@ -215,6 +231,14 @@ def create_app(
             "payload_too_large", "request body exceeds configured limit",
             request_id=request.request_id,
         )), 413
+
+    @app.errorhandler(HTTPException)
+    def http_error(exc):
+        # 404/405/... conservan su código; antes caían en el 500 genérico.
+        code = (exc.name or "http_error").lower().replace(" ", "_")
+        return jsonify(error_payload(
+            code, exc.name or "error", request_id=getattr(request, "request_id", ""),
+        )), exc.code or 500
 
     @app.errorhandler(Exception)
     def unexpected_error(_exc):

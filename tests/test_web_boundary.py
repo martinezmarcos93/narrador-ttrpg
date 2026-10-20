@@ -163,3 +163,22 @@ def test_rate_limit_returns_429(tmp_path, monkeypatch):
     codes = [client.get("/api/v1/sessions").status_code for _ in range(3)]
     assert codes == [200, 200, 429]
     assert client.get("/api/v1/health").status_code == 200  # health no consume cupo
+
+
+def test_web_ui_is_served_with_strict_csp():
+    client = _app().test_client()
+    page = client.get("/")
+    assert page.status_code == 200
+    assert b'<script src="/static/app.js" defer>' in page.data
+    assert "script-src 'self'" in page.headers["Content-Security-Policy"]
+    assert client.get("/static/app.js").status_code == 200
+    assert b"<script>" not in page.data  # sin JS inline: compatible con la CSP
+
+
+def test_unknown_route_is_404_not_500_and_oversized_body_is_413(monkeypatch):
+    monkeypatch.setenv("NARRATOR_MAX_REQUEST_BYTES", "1024")
+    client = _app().test_client()
+    missing = client.get("/static/..%2f..%2fconfig%2fconfig.yaml")
+    assert missing.status_code == 404
+    assert missing.json["error"]["code"] == "not_found"
+    assert client.post("/api/v1/turns", data="x" * 5000).status_code == 413
